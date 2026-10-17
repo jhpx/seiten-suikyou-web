@@ -10,19 +10,18 @@
  * 调用各 feature 模块注册进来的渲染器 —— 这样 core 不依赖任何 feature，零循环依赖。
  */
 
+import { API_BASE } from './env.js'
+
 export const $ = (id) => document.getElementById(id)
 
 /* ───────────────── 部署基址（只有前后端分开托管时才用得上） ─────────────────
    默认一台机器一个进程（npm run server 既给页面又给接口），地址写根绝对路径 /api/ 就完事。
-   前端可以单独托管（比如丢到 GitHub Pages），那时要把接口指到另一台机器，填这里：
-     API_BASE —— 接口基址。留空 = 跟页面同源（默认）。跨域部署时填后端地址，如 https://gs.example.com（末尾别带 /）。
-   图片不用配：接口返回的就是相对路径（assets/...），浏览器按页面所在目录解析即可。
-   基址在 index.html 的 <meta> 里改，改完刷新即可（前端文件每请求现读盘）。 */
-const metaContent = (name) => document.querySelector(`meta[name="${name}"]`)?.content?.trim() || ''
+   前端可以单独托管（比如丢到 GitHub Pages），那时要把接口指到另一台机器：
+   改 env.js 里的 API_BASE（留空 = 跟页面同源，默认），改完刷新即可（前端文件每请求现读盘）。
+   图片不用配：接口返回的就是相对路径（assets/...），浏览器按页面所在目录解析即可。 */
 /* 页面自己所在的目录（末尾带 /）。切语言、进明细页改写地址栏时用它拼 ——
    写根绝对路径（/?uid=…）在 Pages 那种 /<repo>/ 子路径部署下会被打回域名根，刷新即 404。 */
 export const PAGE_BASE = new URL('.', document.baseURI).href
-export const API_BASE = metaContent('api-base')
 
 export const RANK_ORDER = ['MAX', 'ACE', 'SSS', 'SS', 'S', 'A', 'B', 'C', 'D']
 export const SLOT_GLYPH = { 1: '花', 2: '羽', 3: '沙', 4: '杯', 5: '冠' }

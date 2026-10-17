@@ -4,7 +4,7 @@
 
 为什么需要这一步：前端零构建，「导出」不打包、不编译，就是复制文件 ——
 唯一必须改的东西是接口地址：单独托管时页面和后端不同源，要把后端地址写进
-index.html 的 <meta name="api-base">，前端 core.js 的 API_BASE 会读它（留空 = 同源）。
+env.js 的 API_BASE，前端 core.js 从那里 import（留空 = 同源）。
 后端那边对应加 --cors-origin=<前端地址>，否则浏览器拦掉跨域请求。
 
 本仓库根目录就是前端本身（index.html / *.js / *.css / assets/），导出即从中摘文件。
@@ -23,7 +23,9 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 # 只认这三种扩展名：仓库根目录还有 README.md / tools/ 之类不该进发布目录的东西
 CODE_EXTS = {".html", ".js", ".css"}
-META_RE = r'(<meta\s+name="api-base"\s+content=")[^"]*(")'
+# 行首锚定（(?m)^）：env.js 头注释里有行可拷贝的示例 export const API_BASE = '...'，
+# 不锚的话替换会命中注释里的示例而不是真正的导出行（静默不生效）
+ENV_RE = r"(?m)^(export\s+const\s+API_BASE\s*=\s*['\"])[^'\"]*(['\"])"
 
 
 def human (n: float) -> str:
@@ -53,14 +55,14 @@ def copy_assets (out: pathlib.Path) -> int:
 
 
 def set_api_base (out: pathlib.Path, base: str) -> bool:
-    """把 <meta name="api-base"> 的 content 改成后端地址。找不到那行就报 False。"""
+    """把 env.js 里 API_BASE 的值改成后端地址。找不到那行就报 False。"""
     import re
-    html = out / "index.html"
-    text = html.read_text(encoding="utf-8")
-    new, n = re.subn(META_RE, lambda m: m.group(1) + base + m.group(2), text, count=1)
+    env = out / "env.js"
+    text = env.read_text(encoding="utf-8")
+    new, n = re.subn(ENV_RE, lambda m: m.group(1) + base + m.group(2), text, count=1)
     if n != 1:
         return False
-    html.write_text(new, encoding="utf-8")
+    env.write_text(new, encoding="utf-8")
     return True
 
 
@@ -84,7 +86,7 @@ def main () -> int:
     assets = 0 if args.no_assets else copy_assets(out)
     if args.api_base:
         if not set_api_base(out, args.api_base):
-            print("[ERR] index.html 里没找到 <meta name=\"api-base\">，后端地址没写进去")
+            print("[ERR] env.js 里没找到 export const API_BASE，后端地址没写进去")
             return 1
 
     total = sum(f.stat().st_size for f in out.rglob("*") if f.is_file())
