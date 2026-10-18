@@ -4,8 +4,10 @@
  * 那时调 T() 会回退成裸键（之前就因此显示成「排序-sortScore」）。文案在渲染时现取。
  *
  * 按钮文案必须**自己说清当前排成什么样**（用户 2026-10-14）：
- *   单条件 → 「排序：评价等级 ↓」（字段 + 方向一个都不能少，否则看不出是升还是降）
+ *   单条件 → 「排序：评价等级 ▼」（字段 + 方向一个都不能少，否则看不出是升还是降）
  *   多条件 → 「排序：条件排序」（三条名字全铺上去按钮放不下，只报性质）
+ * 方向只出现在**末尾那一个实心三角**上（降序 ▼ / 升序 ▲），文案里不再另写 ↑↓ ——
+ * 同一个按钮上摆两个朝下的符号是重复（用户 2026-10-18 明确要求「只要一个实心箭头」）。
  * 弹窗里勾的是草稿，确定才写回 —— 和筛选同一个规矩，不然每点一下箭头整页闪一次。
  */
 
@@ -23,21 +25,24 @@ const sortFieldLabel = (key) => {
 }
 
 /* 排序按钮 + 弹窗。按钮只报「当前排成什么样」，具体编辑在弹窗里做。
-   caret 用 ▾（表意「展开」）—— 升降序已经写在按钮文案里了，不需要再用 ↕ 提示。 */
+   箭头只在**单条件**时出现，它表示那一个条件的方向（降序 ▼ / 升序 ▲）。
+   条件排序（多条）和没排序时都不画箭头 —— 多条件没有统一方向，画个 ▼ 是假的（用户 2026-10-18）。
+   弹窗里切方向用的也是同一套 ▲/▼ —— 全站排序只有这一种三角，别的地方别再写 ▴▾ 或 ↑↓。 */
 function sortPanel () {
   const wrap = el('div', 'rf-sort')
   const btn = el('button', 'rf-dd-btn')
   btn.type = 'button'
   const text = el('span', 'rf-dd-text')
-  btn.append(text, el('span', 'rf-caret', '▾'))
+  const caret = el('span', 'rf-caret')
+  btn.append(text, caret)
 
   const paintBtn = () => {
     const n = state.sort.length
     if (!n) text.textContent = T('sortBy')
-    else if (n === 1) {
-      const s = state.sort[0]
-      text.textContent = `${T('sortBy')}：${sortFieldLabel(s.key)} ${s.dir === 'asc' ? '↑' : '↓'}`
-    } else text.textContent = `${T('sortBy')}：${T('sortMulti')}`
+    else if (n === 1) text.textContent = `${T('sortBy')}：${sortFieldLabel(state.sort[0].key)}`
+    else text.textContent = `${T('sortBy')}：${T('sortMulti')}`
+    /* 单条件才有方向可报；多条件/没排序留空，别画一个不成立的 ▼ */
+    caret.textContent = n === 1 ? (state.sort[0].dir === 'asc' ? '▲' : '▼') : ''
     btn.classList.toggle('active', n > 0)
   }
 

@@ -476,7 +476,10 @@ body {
 }
 /* 组名和值共用这一个 span：长了省略号截，按钮宽度就不跟着文案乱跳 */
 .rf-dd-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rf-caret { font-size: 9px; line-height: 1; opacity: .7; }
+/* 实心三角当方向指示用，9px 会糊成一个小点，11px 才和 12px 的按钮文字配得上 */
+.rf-caret { font-size: 11px; line-height: 1; opacity: .7; }
+/* 条件排序/没排序时 caret 是空的，留着会白占一个 gap 的右内边距 */
+.rf-caret:empty { display: none; }
 .rf-dd-btn:hover { border-color: rgba(211, 188, 142, .5); }
 /* 展开态 = 金描边 + 金晕；选中态再加淡金底。和顶栏按钮 hover 是同一支金 */
 .rf-dd.open .rf-dd-btn {
