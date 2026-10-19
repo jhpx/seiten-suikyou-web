@@ -40,7 +40,7 @@ async function fetchUid (uid) {
     /* 刷新 = 让后端拿这个 uid 去打一次 enka。uid 在路径里、locale 在 query 里，
        没有请求体，所以也不用带 Content-Type。 */
     const data = await api(
-      `/api/accounts/${encodeURIComponent(uid)}/refresh?locale=${encodeURIComponent(state.locale)}`,
+      `accounts/${encodeURIComponent(uid)}/refresh?locale=${encodeURIComponent(state.locale)}`,
       { method: 'POST' }
     )
     state.selectedAvatarId = null

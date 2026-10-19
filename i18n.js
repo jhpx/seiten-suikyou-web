@@ -7,7 +7,7 @@ import { $, state, T, api, uidApiUrl, syncUrl, showLoading, renderAll, banner, r
 
 /* 拉一次界面文字表 —— 语言解析的规则在后端，这里只负责拿回来 */
 async function loadMeta (locale) {
-  const meta = await api(`/api/meta?locale=${encodeURIComponent(locale)}`)
+  const meta = await api(`meta?locale=${encodeURIComponent(locale)}`)
   state.ui = meta.ui || {}
   state.weightOptions = meta.weightOptions || []
   return meta

@@ -14,7 +14,6 @@
 | `roster.js` `filter.js` `sort.js` `detail.js` `history.js` `i18n.js` | 各管一摊的 feature 模块 |
 | `miao.css` `style.css` | 样式 |
 | `assets/` | 约 101MB 图片素材（角色立绘 / 套装图标 / UI 小图），**必须跟着前端一起发布** |
-| `tools/export_pages.py` | 导出可静态托管的目录（见下） |
 
 ## 本地预览
 
@@ -27,18 +26,17 @@ python -m http.server 8080        # 或者 npx serve
 打开 http://127.0.0.1:8080/ 。页面要拉到数据，得指到后端：
 
 - **同源**（本地推荐）：直接跑母仓库的 `npm run server`，访问 http://127.0.0.1:8787/ —— 页面、接口、图片全从根路径取，无需任何配置；
-- **跨域**：把 `env.js` 里 `export const API_BASE = ''` 填上后端地址（如 `'https://gs.example.com'`，末尾不带 `/`），并确认后端放了对应 `--cors-origin`，否则浏览器拦掉请求。
+- **跨域**：把 `env.js` 里的 `API_BASE` 改成接口根地址（含 `/api` 这一段，如 `'https://gs.example.com/api'`，末尾不带 `/`），并确认后端放了对应 `--cors-origin`，否则浏览器拦掉请求。
 
 图片不用配：全是相对路径，浏览器按页面所在目录解析，Pages 那种 `/<仓库名>/` 子路径也自动落对位置。
 
 ## 发布到静态托管（GitHub Pages / 对象存储 / nginx）
 
-```bash
-python tools/export_pages.py --out dist/pages --api-base https://<你的后端地址>
-```
+前端零构建、没有打包编译，直接把本仓库整仓推上去即可：
 
-导出 = 复制文件 + 把后端地址写进 `env.js` 的 `API_BASE`（零构建，没有打包编译）。
-把 `dist/pages/` 整个推上去即可；`--no-assets` 跳过 101MB 素材，仅改样式图快用，正式发布别加。
+- 先把 `env.js` 里的 `API_BASE` 改成你的接口根地址（**含 /api 这一段**，如 `'https://gs.example.com/api'`，末尾别带 `/`）；
+- `assets/` 约 101MB 图片素材**必须跟着一起发布**；
+- 跨域：后端要加 `--cors-origin=<前端地址>`，否则浏览器拦掉请求。
 
 ## 图片素材同步
 
