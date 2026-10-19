@@ -10,9 +10,24 @@
  * 调用各 feature 模块注册进来的渲染器 —— 这样 core 不依赖任何 feature，零循环依赖。
  */
 
-import { API_BASE } from './env.js'
+/* 接口根地址从哪儿来：**有 env.js 就用它的，没有就同源 /api**。
+ *
+ * 为什么是动态 import 而不是文件顶上一句 `import { API_BASE } from './env.js'`：
+ * 静态 import 一个不存在的文件，浏览器会直接判整个 core.js 加载失败（404 打断模块图，页面全白），
+ * 连"退回默认值"的机会都没有。动态 import 失败是可以 catch 的，所以能做成可选配置。
+ *
+ * 为什么在顶层 await：下面 core 里所有拼地址的地方（还有别的模块）都直接用 API，
+ * 地址得在模块求值期间就定死。代价是首屏等一个 env.js 的请求 —— 本地就几百字节。 */
+let API_BASE = ''
+try {
+  ({ API_BASE } = await import('./env.js'))
+} catch (e) {
+  /* 文件不存在时浏览器抛的是 TypeError（Failed to fetch dynamically imported module），静默退回同源即可；
+     其它错误（env.js 里语法写错、导出名不对）是真配错了，别悄悄吞掉，留一条提示方便排查。 */
+  if (!(e instanceof TypeError)) console.warn('[env.js] 加载出错，已退回同源 /api：', e)
+}
 
-/* API_BASE（env.js）是接口根地址，这里规整成「末尾带一个 /」；各接口路径用不带头斜杠的相对形式，
+/* API_BASE 是接口根地址，这里规整成「末尾带一个 /」；各接口路径用不带头斜杠的相对形式，
    例如 API + 'accounts/123' → 'https://x.com/api/accounts/123'。 */
 export const API = (API_BASE || '/api').replace(/\/+$/, '') + '/'
 
