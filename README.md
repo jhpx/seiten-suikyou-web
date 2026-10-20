@@ -1,13 +1,14 @@
 # seiten-suikyou-web · 星天水镜前端
 
 原神角色养成评估器「星天水镜」的前端：纯静态站点，原生 ES 模块、零框架、零构建。
+接口契约与部署形态见母仓库 [seiten-suikyou](https://github.com/jhpx/seiten-suikyou)（docs/API.md / docs/DEPLOY.md）。
 
 ## 目录
 
 | 路径 | 干什么 |
 | --- | --- |
 | `index.html` | 入口 |
-| `env.js` | 部署配置：`API_BASE` 写后端地址（含 `/api` 这一段）。只有前后端分开托管（GitHub Pages 等）才用得上；跑 `npm run server` 时后端会把 `/env.js` 覆盖成空，自动退回同源 `/api` |
+| `env.js` | **可选**的部署配置：`API_BASE` 指后端地址；没有这个文件时自动走同源 `/api` |
 | `bootstrap.js` | 引齐各 feature 模块（加载时把渲染器注册进 core.reg） |
 | `core.js` | 基座：全局 state / 取文案 T() / DOM 小工具 / 调后端 api / 视图切换与编排 |
 | `roster.js` `filter.js` `sort.js` `detail.js` `history.js` `i18n.js` | 各管一摊的 feature 模块 |
