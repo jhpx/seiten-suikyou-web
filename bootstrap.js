@@ -13,7 +13,15 @@ import './sort.js'
 import './detail.js'
 import { loadMeta, applyStaticUi, changeLocale } from './i18n.js'
 import { persistUid, renderUidHistory } from './history.js'
-import { $, state, T, el, api, uidApiUrl, banner, showLoading, applyView, renderAll, showView, reg } from './core.js'
+import { $, state, T, el, api, uidApiUrl, banner, showLoading, applyView, renderAll, showView, reg, isValidUid } from './core.js'
+
+/* 输入框里的 UID：空 / 非 9–10 位纯数字都先拦下，给本地化提示，不往后端发。 */
+function readUid () {
+  const raw = $('uid').value.trim()
+  if (!raw) { banner(T('needUid'), 'err'); return null }
+  if (!isValidUid(raw)) { banner(T('badUid'), 'err'); return null }
+  return Number(raw)
+}
 
 async function loadUid (uid, { keepSelection = false } = {}) {
   if (!keepSelection) state.selectedAvatarId = null
@@ -25,7 +33,7 @@ async function loadUid (uid, { keepSelection = false } = {}) {
   } catch (e) {
     state.view = null
     renderAll()
-    banner(e.message, 'err')
+    banner(e?.code === 'bad_uid' ? T('badUid') : e.message, 'err')
   }
 }
 
@@ -48,7 +56,7 @@ async function fetchUid (uid) {
     applyView(data)
     banner(T('fetchDone', { n: data.count }), 'ok')
   } catch (e) {
-    banner(T('fetchFail', { msg: e.message }), 'err')
+    banner(e?.code === 'bad_uid' ? T('badUid') : T('fetchFail', { msg: e.message }), 'err')
     if (state.uid) await loadUid(state.uid, { keepSelection: true })
   } finally {
     state.busy = false
@@ -79,12 +87,12 @@ async function boot () {
     banner(T('metaFail', { msg: e.message }), 'err')
   }
 
-  const wanted = Number(params.get('uid') || localStorage.getItem('st.uid') || 0)
+  const wantedRaw = params.get('uid') || localStorage.getItem('st.uid') || ''
   const wantedChar = Number(params.get('char') || 0)
-  if (!wanted) { renderAll(); return }
+  if (!isValidUid(wantedRaw)) { renderAll(); return }
 
-  $('uid').value = wanted
-  await loadUid(wanted)
+  $('uid').value = wantedRaw
+  await loadUid(Number(wantedRaw))
   if (wantedChar) {
     state.selectedAvatarId = wantedChar
     reg.renderDetail?.()
@@ -94,13 +102,12 @@ async function boot () {
 
 $('query').addEventListener('submit', (e) => {
   e.preventDefault()
-  const uid = Number($('uid').value.trim())
-  if (uid) loadUid(uid)
+  const uid = readUid()
+  if (uid != null) loadUid(uid)
 })
 $('fetch').addEventListener('click', () => {
-  const uid = Number($('uid').value.trim())
-  if (!uid) { banner(T('needUid'), 'err'); return }
-  fetchUid(uid)
+  const uid = readUid()
+  if (uid != null) fetchUid(uid)
 })
 $('locale').addEventListener('change', (e) => changeLocale(e.target.value))
 

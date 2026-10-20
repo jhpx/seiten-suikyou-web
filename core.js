@@ -33,6 +33,10 @@ export const API = (API_BASE || '/api').replace(/\/+$/, '') + '/'
 
 export const $ = (id) => document.getElementById(id)
 
+/* 原神 UID 合法校验：9 位（首位 1–9）或 10 位（仅 18 开头）。规则与后端 src/common/util.ts 保持一致。 */
+export const UID_RE = /^(?:[1-9]\d{8}|18\d{8})$/
+export const isValidUid = (v) => UID_RE.test(String(v ?? '').trim())
+
 /* 页面自己所在的目录（末尾带 /）。切语言、进明细页改写地址栏时用它拼 ——
    写根绝对路径（/?uid=…）在 Pages 那种 /<repo>/ 子路径部署下会被打回域名根，刷新即 404。 */
 export const PAGE_BASE = new URL('.', document.baseURI).href
@@ -99,7 +103,9 @@ export async function api (path, opts) {
   let body = null
   try { body = await res.json() } catch {}
   if (!res.ok || (body && body.ok === false)) {
-    throw new Error(body?.error?.message || `HTTP ${res.status}`)
+    const err = new Error(body?.error?.message || `HTTP ${res.status}`)
+    if (body?.error?.code) err.code = body.error.code
+    throw err
   }
   return body.data
 }
