@@ -7,6 +7,7 @@ import {
   $, state, T, el, setBg, rankOf, slotGlyph, backToRoster, richText,
   weaponFallback, weightClass, W_ATTR_TITLE, api, reg
 } from './core.js'
+import { downloadDetailCard } from './share.js'
 
 function renderDetail () {
   const box = $('view-detail')
@@ -18,7 +19,7 @@ function renderDetail () {
     return
   }
 
-  /* 顶部返回栏：画布之外，不跟着缩放 */
+  /* 顶部返回栏：画布之外不跟着缩放；与下方 600px 卡片同宽，故右缘对齐卡片 */
   const bar = el('div', 'detail-bar')
   const back = el('button', 'btn back', '← ' + T('back'))
   back.addEventListener('click', backToRoster)
@@ -26,6 +27,16 @@ function renderDetail () {
      这儿再来一遍是重复，而且灰色小字跟金色按钮挨着，视觉上把按钮的分量分走了一半 ——
      删掉，让「← 返回」独占这一行（2026-10-07）。 */
   bar.append(back)
+
+  /* 分享钮：与「返回」同行右端，纯图标无文字（仅 aria-label 给读屏） */
+  const share = el('button', 'btn share')
+  share.setAttribute('aria-label', '分享')
+  share.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>'
+  share.addEventListener('click', () => onShare(share))
+  bar.append(share)
+
   box.append(bar)
 
   /* 600px 画布。元素类名照 miao 的 elemLayout 挂在容器上，CSS 据此选背景图 */
@@ -172,6 +183,19 @@ function renderDetail () {
   cont.append(el('div', 'pd-scored-at', `${T('scoredAt')} ${av.fetchedAt || '—'}`))
 
   fitDetailZoom()
+}
+
+/* 分享：截整张卡并下载；过程中置灰，失败打 console */
+async function onShare (btn) {
+  if (btn.disabled) return
+  btn.disabled = true
+  try {
+    await downloadDetailCard()
+  } catch (e) {
+    console.error('[share] 截图失败:', e)
+  } finally {
+    btn.disabled = false
+  }
 }
 
 /*
