@@ -1,14 +1,13 @@
 # seiten-suikyou-web · 星天水镜前端
 
 原神角色养成评估器「星天水镜」的前端：纯静态站点，原生 ES 模块、零框架、零构建。
-接口契约与部署形态见母仓库 [seiten-suikyou](https://github.com/jhpx/seiten-suikyou)（docs/API.md / docs/DEPLOY.md）。
 
 ## 目录
 
 | 路径 | 干什么 |
 | --- | --- |
 | `index.html` | 入口 |
-| `env.js` | 部署配置：`API_BASE` 在这里配后端地址（只有前后端分开托管才用得上） |
+| `env.js` | 部署配置：`API_BASE` 写后端地址（含 `/api` 这一段）。只有前后端分开托管（GitHub Pages 等）才用得上；跑 `npm run server` 时后端会把 `/env.js` 覆盖成空，自动退回同源 `/api` |
 | `bootstrap.js` | 引齐各 feature 模块（加载时把渲染器注册进 core.reg） |
 | `core.js` | 基座：全局 state / 取文案 T() / DOM 小工具 / 调后端 api / 视图切换与编排 |
 | `roster.js` `filter.js` `sort.js` `detail.js` `history.js` `i18n.js` | 各管一摊的 feature 模块 |
@@ -17,33 +16,32 @@
 
 ## 本地预览
 
-没有构建步骤，任意静态服务器即可：
-
-```bash
-python -m http.server 8080        # 或者 npx serve
-```
-
-打开 http://127.0.0.1:8080/ 。页面要拉到数据，得指到后端：
-
-- **同源**（本地推荐）：直接跑母仓库的 `npm run server`，访问 http://127.0.0.1:8787/ —— 页面、接口、图片全从根路径取，无需任何配置；
-- **跨域**：把 `env.js` 里的 `API_BASE` 改成接口根地址（含 `/api` 这一段，如 `'https://gs.example.com/api'`，末尾不带 `/`），并确认后端放了对应 `--cors-origin`，否则浏览器拦掉请求。
-
-图片不用配：全是相对路径，浏览器按页面所在目录解析，Pages 那种 `/<仓库名>/` 子路径也自动落对位置。
-
-## 发布到静态托管（GitHub Pages / 对象存储 / nginx）
-
-前端零构建、没有打包编译，直接把本仓库整仓推上去即可：
-
-- 先把 `env.js` 里的 `API_BASE` 改成你的接口根地址（**含 /api 这一段**，如 `'https://gs.example.com/api'`，末尾别带 `/`）；
-- `assets/` 约 101MB 图片素材**必须跟着一起发布**；
-- 跨域：后端要加 `--cors-origin=<前端地址>`，否则浏览器拦掉请求。
+没有构建步骤，任意静态服务器即可。要连后端就在母仓库根目录跑 `npm run server`（默认 `http://127.0.0.1:8787`），它直接把这个目录当静态根。
 
 ## 图片素材同步
 
 `assets/` 来自上游 miao-plugin，**统一在母仓库同步**：`npm run sync`（唯一入口，三步 miao → i18n → assets）。
 同步完，素材的变动在本仓库提交；母仓库里对应更新子模块指针。
 
-## 和母仓库的关系
+## 上游与致谢
 
-母仓库 [seiten-suikyou](https://github.com/jhpx/seiten-suikyou) 以 git submodule 挂载本仓库：
-clone 母仓库要带 `--recursive`（或 clone 后跑 `git submodule update --init`），否则本地起服务时页面 404。
+### miao-plugin
+
+评分算法、角色数据、i18n 文案，以及这里的 `assets/` 图片素材，全部来自
+[yoimiya-kokomi/miao-plugin](https://github.com/yoimiya-kokomi/miao-plugin) —— 一个 Yunzai-Bot 的角色面板 / 角色查询插件。
+
+- 作者：Yoimiya（[@yoimiya-kokomi](https://github.com/yoimiya-kokomi)）
+- 许可：[MIT License](https://github.com/yoimiya-kokomi/miao-plugin/blob/master/LICENSE)，Copyright (c) 2023 Yoimiya
+
+
+### 数据来源
+
+角色面板数据由 [Enka.Network](https://enka.network/) 提供，miao-plugin 已获 Enka 官方授权（见其 issue #63）。
+上游还致谢了 MiniGG-Api（@MiniGrayGay）与 Snap.Hutao（DGP Studio 胡桃 API），一并致谢。
+
+### 素材与非商业声明
+
+上游声明其「图片与其他素材均来自于网络，仅供交流学习使用，如有侵权请联系，会立即删除」。
+本项目同样**不用于任何盈利目的**；若权利人提出异议，会立即移除相关素材。
+
+原神（Genshin Impact）及其角色、图标等素材版权归米哈游（miHoYo / HoYoverse）所有，本项目与米哈游无隶属关系。
