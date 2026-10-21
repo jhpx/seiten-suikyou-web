@@ -77,7 +77,7 @@ function openSortDialog (paintBtn) {
       if (pos < 0) {
         const name = el('span', 'rf-sort-name', sortFieldLabel(key))
         const add = el('button', 'rf-sort-mini rf-sort-add')
-        add.type = 'button'; add.textContent = '+'; add.title = T('sortAdd')
+        add.type = 'button'; add.textContent = '+'
         add.disabled = draft.length >= 3
         add.addEventListener('click', () => {
           if (draft.length < 3) draft.push({ key, dir: 'desc' })
@@ -91,23 +91,22 @@ function openSortDialog (paintBtn) {
         const dir = el('button', 'rf-sort-mini')
         dir.type = 'button'
         dir.textContent = cond.dir === 'asc' ? '▲' : '▼'
-        dir.title = cond.dir === 'asc' ? T('sortAsc') : T('sortDesc')
         dir.addEventListener('click', () => {
           cond.dir = cond.dir === 'asc' ? 'desc' : 'asc'
           paintBody()
         })
         const up = el('button', 'rf-sort-mini')
-        up.type = 'button'; up.textContent = '↑'; up.title = T('sortUp'); up.disabled = pos === 0
+        up.type = 'button'; up.textContent = '↑'; up.disabled = pos === 0
         up.addEventListener('click', () => {
           if (pos > 0) { [draft[pos - 1], draft[pos]] = [draft[pos], draft[pos - 1]]; paintBody() }
         })
         const down = el('button', 'rf-sort-mini')
-        down.type = 'button'; down.textContent = '↓'; down.title = T('sortDown'); down.disabled = pos === draft.length - 1
+        down.type = 'button'; down.textContent = '↓'; down.disabled = pos === draft.length - 1
         down.addEventListener('click', () => {
           if (pos < draft.length - 1) { [draft[pos + 1], draft[pos]] = [draft[pos], draft[pos + 1]]; paintBody() }
         })
         const rm = el('button', 'rf-sort-mini')
-        rm.type = 'button'; rm.textContent = '×'; rm.title = T('sortRemove')
+        rm.type = 'button'; rm.textContent = '×'
         rm.addEventListener('click', () => { draft.splice(pos, 1); paintBody() })
         row.append(badge, name, dir, up, down, rm)
       }

@@ -317,7 +317,6 @@ body {
 .adv-panel-title {
   margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .06em;
   color: var(--gold-lt);
-  cursor: help;   /* 悬停出分档口径（title 挂在它身上） */
 }
 .adv-panel-scope { font-size: 10px; color: var(--ink-3); }
 .adv-empty { margin: 0; font-size: 12px; color: var(--ink-3); }
@@ -346,9 +345,10 @@ body {
   background-size: 78%; background-position: center; background-repeat: no-repeat;
   box-shadow: inset 0 0 0 1px var(--line);
 }
-/* 名字吃掉剩下的宽度，太长的由省略号收尾；成色条按卡宽的 24% 走（见下），
- * 所以八张卡的名字、条、数字都上下对得齐。全名在 nameRow 的 title 里。 */
-.adv-main { flex: 1 1 0; min-width: 0; display: flex; align-items: center; }
+/* 名字紧跟在套装图后面，用完自己的宽度就停（不再 flex: 1 撑满整行），太长由省略号收尾。
+ * 底宽 78px（约六个汉字）：窄屏先压条，别把套名截成「昔日宗…」——
+ * 条短了还能看旁边的件数，名字截了就看不出在说哪套了。 */
+.adv-main { flex: 0 1 auto; min-width: 78px; display: flex; align-items: center; }
 .adv-name {
   display: flex; align-items: center; gap: 6px;
   min-width: 0;
@@ -362,25 +362,30 @@ body {
   flex: 0 0 auto; font-size: 9px; font-weight: 400;
   color: var(--ink-3); border: 1px solid var(--line);
   border-radius: 4px; padding: 0 4px;
-  cursor: help;
 }
 
-/* 成色条：**一件一段**，段色由 .mark-<档位> 给的 color 决定（background: currentColor），
+/* 成色条：**一件一格**，方格色由 .mark-<档位> 给的 color 决定（background: currentColor），
  * 所以它和下面的件分、明细页的评级是同一套颜色，面板里没有第二份色表。
- * 段宽相等（flex: 1 1 0）—— 条表达「成色」而不是「件数」，件数由右边的数字说。
- * 宽度取卡宽的 24%（上下限 40~108px）：八张卡一样宽，所以条也一样长、上下对得齐；
- * 换成定长的话，英文长名会把它挤到只剩几个像素，反而像坏了。 */
+ * 每格定宽（flex: 0 0 5px）—— 条的总长就是件数，多一件多一格，一眼能比出谁的池子大。
+ * 排在行尾（数字后面），太长时（窄屏）整条等比缩，格子仍然一样长；
+ * 上限 48% 是给名字留位置，不然英文长名会被挤成省略号。 */
 .adv-bar {
-  flex: 0 0 auto; width: 24%; min-width: 40px; max-width: 108px;
-  display: flex; gap: 1px; height: 4px; opacity: .9;
+  flex: 0 1 auto; width: max-content; max-width: 48%; overflow: hidden;
+  display: flex; gap: 1px; height: 5px; opacity: .9;
 }
-.adv-seg { flex: 1 1 0; min-width: 0; border-radius: 1px; background: currentColor; }
+/* ⚠️ 两个反直觉的写法，都试出来的：
+   ① 条上必须写 `width: max-content` —— 只写 `flex-basis: auto` 时浏览器按**最小内容宽度**
+      算它（每格 1px），十五件被压成 29px，长短全一样。
+   ② 格子必须 `flex: 0 0 5px`（不许缩）—— 一旦允许收缩，条的最大内容宽度又退化成最小内容宽度，
+      长短照样看不出来。窄屏真撑不下时由条的 `max-width: 48%` 截断（多出的格子裁掉）。 */
+.adv-seg { flex: 0 0 5px; border-radius: 1px; background: currentColor; }
 /* 内核的 mark-D 是给浅底卡片调的灰，压在深底上几乎看不见 —— 只在本面板里提亮一档 */
 .adv-bar .mark-D { color: #9aa4b6; }
 
-/* 件数 / 人数：图标 + 数字，说明文字全塞进 title */
+/* 人数 / 件数：图标 + 数字，跟在套名后面。定个最小宽度让数字位宽稳定，
+ * 各行成色条的起点差别就只来自套名长短，而不是「5” 和 “15” 的宽度差。 */
 .adv-own {
-  flex: 0 0 auto; display: flex; align-items: center;
+  flex: 0 0 auto; min-width: 60px; display: flex; align-items: center;
   font-size: 11px; color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
@@ -389,10 +394,12 @@ body {
 .adv-ico { display: inline-flex; width: 11px; height: 11px; color: var(--ink-3); }
 .adv-ico svg { width: 100%; height: 100%; }
 
-/* 收起时右边给一个小三角，暗示可展开 */
+/* 收起时右边给一个小三角，暗示可展开。
+ * margin-left: auto 把它顶到行最右 —— 前面的套装图/名字/数字/色条全是靠左排的，
+ * 尾部留白不给它，三角就会紧贴在色条后面，右边缘参差不齐。 */
 .adv-head::after {
-  content: '▾'; flex: 0 0 auto;
-  font-size: 10px; color: var(--ink-3);
+  content: '▾'; flex: 0 0 auto; margin-left: auto;
+  font-size: 14px; line-height: 1; color: var(--ink-3);
   transition: transform .15s;
 }
 .adv-set:not([open]) .adv-head::after { transform: rotate(-90deg); }
@@ -440,8 +447,6 @@ body {
 /* 内核的 mark-D 是 #6b7280，给的是浅底卡片上的灰。这块是深底小标签，
    原色几乎看不见 —— 只在本面板里提亮一档，不动全站的 .mark-D */
 .adv-piece .ap-mark.mark-D { color: #9aa4b6; }
-/* 2 件套的件：右上角一个小 2，提示「这件换了就完事，不用凑 4 件」 */
-.adv-piece .ap-n { position: relative; top: -4px; font-size: 8px; line-height: 1; color: var(--ink-3); }
 
 /* ───────────────────────── 首页：筛选条 ─────────────────────────
  *

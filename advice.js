@@ -82,12 +82,9 @@ function charLine (g, setIcon) {
       cell.append(el('span', 'ap-glyph', slotGlyph(p.pos)))
     }
     cell.append(el('b', 'ap-mark mark-' + (p.markClass || 'D'), p.markText))
-    /* 只吃 2 件的角色：这件换了就完事，不用凑 4 件套 */
-    if (p.setCount < 4) cell.append(el('i', 'ap-n', String(p.setCount)))
     line.append(cell)
   }
 
-  line.title = `${g.name} · ${T('tapToView')}`
   line.addEventListener('click', () => openDetail(g.avatarId))
   return line
 }
@@ -104,52 +101,50 @@ function charRows (s) {
   return rows
 }
 
-/* 成色条：**一件一段**，颜色就是那件的档位色，按档位从差到好排。
+/* 成色条：**一件一格**，格子颜色就是那件的档位色，按档位从差到好排。
  * 比「D-B 3 · A-S 6 · SS 6」一行字快：左边一片冷色 = 这套还差得远，
- * 右边泛紫 = 大部分已经毕业。段宽相等，所以条的总长不表达件数（件数在右边写着）。 */
+ * 右边泛紫 = 大部分已经毕业。每格定宽，所以**整条的长度就是件数** ——
+ * 件多的高一截，一眼比得出谁的池子大（件数右边也写着，条只是让「多」看得见）。 */
 function heatBar (s) {
   const bar = el('span', 'adv-bar')
   const list = allPieces(s).sort((a, b) =>
     (CLASS_RANK[a.markClass] ?? 9) - (CLASS_RANK[b.markClass] ?? 9) || a.mark - b.mark)
   for (const p of list) {
     const seg = el('i', 'adv-seg mark-' + (p.markClass || 'D'))
-    seg.title = `${p.name} · ${p.posName} · ${p.markText}（${p.markClass}）`
     bar.append(seg)
   }
   return bar
 }
 
-/* 件数与人数：图标 + 数字，文字全塞进提示里 */
+/* 人数与件数：图标 + 数字。人数在前 —— 一行从左往右是
+   「哪套 → 几个人穿 → 一共几件 → 成色怎样」，先认套装再认量 */
 function ownBox (s) {
   const box = el('span', 'adv-own')
-  box.title = T('adviceOwn', { pieces: s.count.total, owners: s.count.owners })
-  box.append(icon('piece'), el('b', '', String(s.count.total)))
   box.append(icon('owner'), el('b', '', String(s.count.owners)))
+  box.append(icon('piece'), el('b', '', String(s.count.total)))
   return box
 }
 
-/* 一个套装一张卡。只展开第一张（最该刷的），其余收着 —— 卡不短，
-   全展开会把这块拉成两屏，而它只是「看结论」的地方，不是清单页 */
-function setCard (s, open) {
+/* 一个套装一张卡。**全部默认收起**：这块是「看结论」的地方，不是清单页，
+   全展开会拉成两屏；要看得自己点开 —— 手机上一屏能扫完 8 个套装比什么都强 */
+function setCard (s) {
   const card = el('details', 'adv-set')
-  if (open) card.open = true
 
   const head = el('summary', 'adv-head')
   const mark = setBg(el('span', 'adv-icon'), s.icon)
 
   const main = el('span', 'adv-main')
   const nameRow = el('span', 'adv-name')
-  nameRow.title = s.name
   nameRow.append(el('span', 'adv-name-text', s.name))
   if (!s.farmable) {
-    const tag = el('span', 'adv-tag', T('adviceUnfarmable'))
-    tag.title = T('adviceUnfarmableTip')
-    nameRow.append(tag)
+    nameRow.append(el('span', 'adv-tag', T('adviceUnfarmable')))
   }
   main.append(nameRow)
 
-  /* 一行里四段：套装图 | 名字（可省略）| 成色条 | 件数/人数 */
-  head.append(mark, main, heatBar(s), ownBox(s))
+  /* 一行里四段，从左到右：套装图 | 名字（可省略）| 人数/件数 | 成色条。
+     先认是哪套，再看多少人、多少件，最后一条色带扫成色；
+     全部靠左排，名字不再撑满整行，尾部留白比两端拉开更好扫。 */
+  head.append(mark, main, ownBox(s), heatBar(s))
   card.append(head)
 
   const body = el('div', 'adv-body')
@@ -164,10 +159,10 @@ function renderAdvice () {
 
   const box = el('section', 'adv-panel')
   const head = el('div', 'adv-panel-head')
-  const title = el('h2', 'adv-panel-title', T('adviceTitle'))
-  /* 分档口径挂在标题上：这三个字母不解释的话，没人知道分数线在哪 */
-  title.title = T('adviceGroupTip')
-  head.append(title, el('span', 'adv-panel-scope', T('adviceScope', { lv: adv.minLevel })))
+  head.append(
+    el('h2', 'adv-panel-title', T('adviceTitle')),
+    el('span', 'adv-panel-scope', T('adviceScope', { lv: adv.minLevel }))
+  )
   box.append(head)
 
   if (!adv.sets.length) {
@@ -176,7 +171,7 @@ function renderAdvice () {
   }
 
   const list = el('div', 'adv-list')
-  adv.sets.forEach((s, i) => list.append(setCard(s, i === 0)))
+  adv.sets.forEach(s => list.append(setCard(s)))
   box.append(list)
   return box
 }

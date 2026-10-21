@@ -63,13 +63,6 @@ function renderCharCard (av) {
 
   const top = el('div', 'cc-top')
   top.append(bg, face, elem, lv, score, badge)
-  /* 画像区提示：只报这个人自己的四项，不掺武器 */
-  top.title = [
-    av.name,
-    `${T('tipLevel')} ${av.level ?? '?'}`,
-    `${T('tipScore')} ${av.score.mark}`,
-    `${T('tipScoreTier')} ${rank}`
-  ].join(' · ')
 
   /* 武器块：白底。没武器（或 miao 不认识这把）也要出这一块，整排高度才整齐。
      左边图标一整栏、右边名字 + 等级·精炼两行 —— 短名字也不会在底部空出一块。 */
@@ -85,11 +78,6 @@ function renderCharCard (av) {
 
   const wp = el('div', 'cc-weapon')
   wp.append(setBg(el('div', 'cc-wicon'), av.weapon?.icon), wText)
-  /* 武器区提示：只报这把武器。没武器时只剩「无武器」一个词，不再补空字段 */
-  const wTip = [wName]
-  if (av.weapon?.level) wTip.push(`${T('tipLevel')} ${av.weapon.level}`)
-  if (av.weapon?.affix) wTip.push(`${T('tipRefineTier')} ${av.weapon.affix}`)
-  wp.title = wTip.join(' · ')
 
   card.append(top, wp)
   card.addEventListener('click', () => openDetail(av.avatarId))
@@ -126,8 +114,6 @@ function setIconBox (sets) {
   }
   box.append(piece(sets[0].icon))
   if (sets.length > 1) box.append(piece(sets[1].icon))
-  /* 两套时图标区整体挂提示：光看半张花认不出是哪两套，名字还得给一次 */
-  if (sets.length > 1) box.title = sets.map(s => `${s.name} ×${s.count}`).join(' · ')
   return box
 }
 function renderArtiCard (av) {
@@ -153,13 +139,6 @@ function renderArtiCard (av) {
 
   const top = el('div', 'cc-top')
   top.append(bg, face, elem, lv, score, badge)
-  /* 画像区提示：和武器卡同一套四项，切视图不该让「这是谁」的答案变 */
-  top.title = [
-    av.name,
-    `${T('tipLevel')} ${av.level ?? '?'}`,
-    `${T('tipScore')} ${av.score.mark}`,
-    `${T('tipScoreTier')} ${rank}`
-  ].join(' · ')
 
   const sets = (av.sets || []).slice().sort((a, b) => b.count - a.count)
   const sp = el('div', 'cc-sets')
@@ -173,11 +152,6 @@ function renderArtiCard (av) {
       box.append(row)
     }
     sp.append(setIconBox(sets), box)
-    /* 套装区提示：五件部位的名字太长，这里报「几套什么、各几件」就够认了 */
-    sp.title = [
-      av.name,
-      ...sets.map(s => `${s.name} ×${s.count}`)
-    ].join(' · ')
   }
 
   card.append(top, sp)
