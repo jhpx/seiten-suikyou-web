@@ -5,6 +5,9 @@
  * 面板回答的是「接下来该刷哪个本」，所以按套装排，不按角色排：
  * 一个套装一张卡，卡里**每人一行**，点一行进那个角色的明细页。
  *
+ * 行里只画**属于这张卡的件**，缺的部位留空占着列 —— 于是各行的花永远落在同一列，
+ * 竖着扫下来像一张表，「这套里谁的沙最烂」一眼比得出。
+ *
  * 页面里**不分层**：颜色本身就是等级 —— 每件的分数用全站同一套档位色
  * （miao.css 的 .mark-<档位>，明细页、卡片评级也是这套）。分成「D-B / A-S / SS」
  * 三行等于把同一件事说两遍：颜色已经告诉你它有多差，再套一个分组标题反而多了块灰。
@@ -14,6 +17,10 @@
  */
 
 import { state, T, el, setBg, slotGlyph, openDetail, reg } from './core.js'
+
+/* 口径开关：SS 件算不算。默认**不算** —— SS 已经接近毕业，算进去只会把「还差多少」摊薄。
+   接口一次给了两份（advice / advice.withSS），所以切换只是换一份数据重画，不走网络。 */
+let includeSS = false
 
 /* 档位从差到好 —— 只用来排序（成色条、行序），颜色仍由 .mark-<档位> 给 */
 const CLASS_RANK = { D: 0, C: 1, B: 2, A: 3, S: 4, SS: 5, SSS: 6, ACE: 7, MAX: 8 }
@@ -35,11 +42,6 @@ function icon (name) {
   return i
 }
 
-/* 套装图是「.../imgs/<套装>/1.webp」（1 = 生之花），把末段换成部位号就是该部位的图 */
-function slotIcon (setIcon, pos) {
-  return setIcon ? setIcon.replace(/[^/]+$/, pos + '.webp') : ''
-}
-
 /*
  * 按角色合并成一个人一份：一个套装里同一个人常有 4~5 件，
  * 一件一个 chip 的话名字要重复四遍，件数与人头数也被看花。
@@ -58,32 +60,61 @@ function byChar (list) {
   return [...map.values()]
 }
 
-/* 一行 = 一个角色：人名 + 他的若干部「部位图 + 分」。件按部位 1→5 排，
-   各行之间对得齐（都是花羽沙杯冠的顺序），看谁的沙烂一眼扫下来就行。
+/* 五个部位 = 五列，编号固定：1 花 2 羽 3 沙 4 杯 5 冠 */
+const POSITIONS = [1, 2, 3, 4, 5]
+
+/* 套装图是「.../imgs/<套装>/1.webp」（1 = 生之花），把末段换成部位号就是该部位的图 */
+function slotIcon (setIcon, pos) {
+  return setIcon ? setIcon.replace(/[^/]+$/, pos + '.webp') : ''
+}
+
+/* 一件 = 一个「部位图 + 分」的小标签 */
+function pieceChip (p, setIcon) {
+  const cell = el('span', 'adv-piece')
+  const src = slotIcon(setIcon, p.pos)
+  if (src) {
+    const pic = el('img', 'ap-icon')
+    pic.src = src
+    pic.alt = p.posName
+    pic.onerror = () => {
+      pic.remove()
+      cell.prepend(el('span', 'ap-glyph', slotGlyph(p.pos)))
+    }
+    cell.append(pic)
+  } else {
+    cell.append(el('span', 'ap-glyph', slotGlyph(p.pos)))
+  }
+  /* 初始 3 / 4 词条：角标压在部位图角上（不占宽度 —— 一行五件再加五个数字会换行）。
+     认不出词条数（null）就不画，别拿 0 或问号凑一个。 */
+  if (p.initSubs === 3 || p.initSubs === 4) {
+    cell.append(el('i', 'ap-init', String(p.initSubs)))
+  }
+  cell.append(el('b', 'ap-mark mark-' + (p.markClass || 'D'), p.markText))
+  return cell
+}
+
+/* 一行 = 一个角色：人名 + **五个固定槽位**（花羽沙杯冠）。
+   缺的那件也占着列 —— 各行的花永远落在同一列，扫下来像一张表，
+   而不是「有几件画几件」那样每行各自挤成一堆、对不齐。
    不带头像：16px 的脸认不出是谁（名字就在左边），只是往整齐的色块里再塞一团噪点。 */
 function charLine (g, setIcon) {
   const line = el('button', 'adv-line')
   line.type = 'button'
   line.append(el('span', 'adv-char', g.name))
 
-  for (const p of g.items.sort((a, b) => a.pos - b.pos)) {
-    const cell = el('span', 'adv-piece')
-    const src = slotIcon(setIcon, p.pos)
-    if (src) {
-      const pic = el('img', 'ap-icon')
-      pic.src = src
-      pic.alt = p.posName
-      pic.onerror = () => {
-        pic.remove()
-        cell.prepend(el('span', 'ap-glyph', slotGlyph(p.pos)))
-      }
-      cell.append(pic)
-    } else {
-      cell.append(el('span', 'ap-glyph', slotGlyph(p.pos)))
-    }
-    cell.append(el('b', 'ap-mark mark-' + (p.markClass || 'D'), p.markText))
-    line.append(cell)
+  const byPos = new Map()
+  const extra = []
+  for (const p of g.items) {
+    /* 同一个人同一个部位只有一件。真碰上重复或越界（脏数据）就顺序补在五列后面，
+       宁可多画一格也别把数据咽下去 */
+    if (POSITIONS.includes(p.pos) && !byPos.has(p.pos)) byPos.set(p.pos, p)
+    else extra.push(p)
   }
+  for (const pos of POSITIONS) {
+    const p = byPos.get(pos)
+    line.append(p ? pieceChip(p, setIcon) : el('span', 'adv-blank'))
+  }
+  for (const p of extra) line.append(pieceChip(p, setIcon))
 
   line.addEventListener('click', () => openDetail(g.avatarId))
   return line
@@ -153,16 +184,48 @@ function setCard (s) {
   return card
 }
 
-function renderAdvice () {
+/* 当前口径下的那份数据：不含 SS 是主份（默认），含 SS 的挂在它下面的 withSS */
+function adviceData () {
   const adv = state.view?.advice
+  if (!adv) return null
+  return includeSS ? adv.withSS : adv
+}
+
+/* 换口径只重画面板本身，不走 renderRoster：网格、筛选条、滚动位置都别动。
+   套装卡会重建（默认全收起），所以点开关之后看到的就是新的一份排名。 */
+function repaintPanel () {
+  const old = document.querySelector('.adv-panel')
+  const next = renderAdvice()
+  if (old && next) old.replaceWith(next)
+}
+
+/* 口径开关。文字直接写「含 / 不含 SS 件」，不靠颜色猜状态 ——
+   手机上没 hover，一点下去就该知道自己切到了哪边。 */
+function scopeToggle () {
+  const btn = el('button', 'adv-toggle' + (includeSS ? ' on' : ''),
+    T(includeSS ? 'adviceSSOn' : 'adviceSSOff'))
+  btn.type = 'button'
+  btn.addEventListener('click', () => {
+    includeSS = !includeSS
+    repaintPanel()
+  })
+  return btn
+}
+
+function renderAdvice () {
+  const adv = adviceData()
   if (!adv) return null
 
   const box = el('section', 'adv-panel')
   const head = el('div', 'adv-panel-head')
-  head.append(
+  const top = el('div', 'adv-panel-top')
+  top.append(
     el('h2', 'adv-panel-title', T('adviceTitle')),
-    el('span', 'adv-panel-scope', T('adviceScope', { lv: adv.minLevel }))
+    scopeToggle()
   )
+  /* 「及以下」那个档位字母跟着开关走：算 SS 就是 SS 及以下，不算就是 S 及以下 */
+  head.append(top, el('span', 'adv-panel-scope',
+    T('adviceScope', { lv: adv.minLevel, cls: includeSS ? 'SS' : 'S' })))
   box.append(head)
 
   if (!adv.sets.length) {

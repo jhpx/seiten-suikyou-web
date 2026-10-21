@@ -310,13 +310,34 @@ body {
  */
 .adv-panel { margin: 22px 0 10px; }
 .adv-panel-head {
-  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  display: flex; flex-direction: column; gap: 5px;
   padding: 14px 2px 10px;
   border-top: 1px solid var(--line);
+}
+/* 标题与开关同一行、分居两端；口径说明单独一行铺满 ——
+   两者挤在一行时，说明文字在 320 宽会把开关顶下去，读起来像开关属于说明 */
+.adv-panel-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
 .adv-panel-title {
   margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .06em;
   color: var(--gold-lt);
+}
+/* 口径开关：一个胶囊，选中的那侧描金。字小但点得准（6px 上下内边距 → 24px 高，
+   和顶栏控件同一个手感，不做成小到点不中的装饰） */
+.adv-toggle {
+  flex: 0 0 auto;
+  font: inherit; font-size: 10px; line-height: 1;
+  padding: 6px 10px; border-radius: 999px;
+  color: var(--ink-2); background: transparent;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.adv-toggle.on {
+  color: var(--gold-lt);
+  border-color: var(--gold-line-hi);
+  background: var(--ctrl-bg);
 }
 .adv-panel-scope { font-size: 10px; color: var(--ink-3); }
 .adv-empty { margin: 0; font-size: 12px; color: var(--ink-3); }
@@ -409,44 +430,100 @@ body {
 .adv-body { padding: 2px 11px 9px; border-top: 1px solid var(--line); }
 .adv-rows { display: flex; flex-direction: column; }
 
-/* 一行 = 一个角色：人名 + 若干部「部位图 + 分」。整行可点。
-   左右各借 4px（负 margin + 等量 padding），hover 底色比文字略宽，而文字仍和套装名对齐 */
+/* 一行 = 一个角色：人名 + 五个**固定槽位**（花羽沙杯冠）。整行可点。
+ *
+ * 用定宽网格，不是 flex 排队 —— 每个部位一列、缺件也占着列，
+ * 各行的花才永远落在同一列，竖着扫下去就是一张表。
+ * flex + gap 的写法里，缺一件后面四件会整体左移一格，「谁的沙最烂」根本没法比。
+ *
+ * 槽位宽写死（不随屏幕拉伸）：宽屏上五件也不会被抻成一排忽大忽小的格子。
+ * 320 这种窄屏靠文件末尾那两档尺寸覆盖，保证五列都塞得下（换算见那里的注释）。
+ * 左右各借 4px（负 margin + 等量 padding），hover 底色比文字略宽，而文字仍和套装名对齐 */
 .adv-line {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 3px;
+  --adv-name: 54px;    /* 人名一列 */
+  --adv-slot: 54px;    /* 一个部位的槽位 */
+  --adv-ic: 18px;      /* 部位图 */
+  --adv-fs: 11px;      /* 分数 */
+  --adv-pl: 4px;       /* 标签左右内边 */
+  --adv-pr: 4px;
+  --adv-gap: 3px;      /* 标签内「图 ↔ 分」的间距 */
+  display: grid; align-items: center; gap: 2px;
+  grid-template-columns: var(--adv-name) repeat(5, minmax(0, var(--adv-slot)));
   margin: 0 -4px; padding: 2px 4px;
   background: none; border: 0; border-radius: 6px;
   font: inherit; color: var(--ink-2); text-align: left;
   cursor: pointer;
 }
 .adv-line:hover { background: var(--bg-4); }
-/* 名字占一栏：各行的第一个部位图才对得齐，扫下来像一张表而不是一堆散标签。
-   中文名 1~4 字都落在 58px 里，5 字（珊瑚宫心海）与英文长名撑到 104px 上限后省略 ——
-   整行的 title 里带着全名，点进去也能看到是谁 */
+/* 名字占一列（宽度由网格给，所以各行起点天然对齐）。
+   54px 装得下 5 个汉字（10.5px）；更长的（英文全名、日文长名）省略，
+   点进去能看到是谁。 */
 .adv-char {
-  flex: 0 0 auto; min-width: 58px; max-width: 104px;
-  font-size: 11px; color: var(--ink-2);
+  min-width: 0;
+  font-size: 10.5px; color: var(--ink-2);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .adv-line:hover .adv-char { color: var(--ink); }
 
 /* 一件 = 一个小标签（淡底 + 部位图 + 分）。裸图标在深底上会散成一片色斑，
-   给个底托之后五件才是一串整齐的格子 */
+   给个底托之后五件才是一串整齐的格子。
+   `width: 100%` 让每格撑满自己的槽位 —— 五格的左右边缘因此完全对齐，
+   哪怕数字位数不同（6.9 / 35.3）也不会一格宽一格窄 */
 .adv-piece {
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 0 5px 0 4px;
+  position: relative;
+  display: inline-flex; align-items: center;
+  width: 100%; min-width: 0;
+  gap: var(--adv-gap);
+  padding: 0 var(--adv-pr) 0 var(--adv-pl);
   border-radius: 5px;
   background: rgba(255, 255, 255, .07);
 }
+/* 缺的部位：占着格子，什么都不画。留白本身就是信息 —— 这件还没有 */
+.adv-blank { min-width: 0; }
+/* 初始词条数（3 / 4）压在部位图右下角：**绝对定位**，不占宽度 ——
+ * 一行五件各多 6px 就塞不下了，而这条信息是给扫视用的，不该改变行高。
+ * 锚在图标右边缘（标签左内边 + 图标宽），translateX(-100%) 把角标自身的右边缘
+ * 对齐过去 —— 换档尺寸（图标 18/16/14）也不用重算。
+ * 底色取卡片色，压在彩色小图上也不糊。 */
+.adv-piece .ap-init {
+  position: absolute; left: calc(var(--adv-pl) + var(--adv-ic)); bottom: 0;
+  transform: translateX(-100%);
+  font-size: 8px; font-style: normal; line-height: 1;
+  font-weight: 700; color: var(--ink-2);
+  background: var(--bg-3);
+  border-radius: 2px; padding: 0 1px;
+  pointer-events: none;
+}
 /* 部位图是 16px 的彩色小图，原样贴着会发闷 —— 提一点亮度才认得出花和冠 */
 .adv-piece .ap-icon {
-  width: 18px; height: 18px; object-fit: contain;
+  width: var(--adv-ic); height: var(--adv-ic); object-fit: contain;
   filter: brightness(1.25) saturate(1.05);
 }
 .adv-piece .ap-glyph { font-size: 9px; color: var(--ink-3); }
-.adv-piece .ap-mark { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.adv-piece .ap-mark { font-size: var(--adv-fs); font-weight: 600; font-variant-numeric: tabular-nums; }
 /* 内核的 mark-D 是 #6b7280，给的是浅底卡片上的灰。这块是深底小标签，
    原色几乎看不见 —— 只在本面板里提亮一档，不动全站的 .mark-D */
 .adv-piece .ap-mark.mark-D { color: #9aa4b6; }
+
+/* 窄屏两档：五列定宽在 390 上刚好占到 334px（54 + 5×54 + 5×2），再窄就得整体收一收。
+ * 每档只改「一格要多宽」相关的几个量（图标、字号、人名列、内边），列数不变 ——
+ * 一改列数，各行又对不齐了。
+ *   380 以上：一格 4+18+3+23.5+4 = 52.5（4 位数字最宽 23.5）
+ *   353~379：图标 16、字号 10.5 → 一格 47.4
+ *   ≤352（含 320）：人名 44、图标 14、字号 10 → 一格 42.4，320 上分到 42.8 */
+@media (max-width: 379px) {
+  .adv-line {
+    --adv-ic: 16px; --adv-fs: 10.5px;
+    --adv-pl: 3px; --adv-pr: 4px; --adv-gap: 2px;
+  }
+}
+@media (max-width: 352px) {
+  .adv-line {
+    --adv-name: 44px; --adv-slot: 44px;
+    --adv-ic: 14px; --adv-fs: 10px;
+    --adv-pl: 2px; --adv-pr: 3px; --adv-gap: 2px;
+  }
+}
 
 /* ───────────────────────── 首页：筛选条 ─────────────────────────
  *
