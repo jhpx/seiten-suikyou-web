@@ -8,6 +8,7 @@
 
 /* 引 side-effect：这些模块在加载时把自己的渲染器写进 core.reg */
 import './roster.js'
+import './advice.js'
 import './filter.js'
 import './sort.js'
 import './detail.js'

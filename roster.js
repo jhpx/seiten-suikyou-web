@@ -213,6 +213,11 @@ function renderRoster () {
   const slot = el('div', 'rf-grid')
   box.append(slot)
   renderRosterGrid(slot)
+
+  /* 刷圣遗物建议放在角色列表**后面**：它是「翻完人再看」的整号结论，
+     放上面会把首屏的角色挤走；而筛选/排序是「找人」的操作，得紧贴网格。 */
+  const advice = reg.renderAdvice?.()
+  if (advice) box.append(advice)
 }
 
 function renderRosterGrid (slot) {

@@ -294,6 +294,155 @@ body {
 .acct-meta b { font-size: 15px; }
 .acct-meta span { font-size: 11px; color: var(--ink-3); }
 
+/* ───────────────────────── 首页：刷圣遗物建议 ─────────────────────────
+ *
+ * 位置：**角色列表下面**。它是「翻完人再看」的整号结论，放上面会挤掉首屏的角色；
+ * 放下面是「先看人，再看该刷什么」的自然顺序，所以这块不带背景盒子，
+ * 只有一条顶边 + 一张张独立的小卡。
+ *
+ * 三档的配色不是紧迫度色，而是**该档上限那一档的内核色**：
+ *   D-B → B 蓝 / A-S → S 绿 / SS → SS 梅紫
+ * 值抄自 miao.css:697-701 的 .mark-B / .mark-S / .mark-SS（那边改了要同步这里）。
+ * 这样层级条、档位徽章、件分评级是同一套色，卡片里不会再出现第二套语义。
+ *
+ * 省文字靠图标：部位用的是套装图同目录的 1~5.webp（文件名就是部位号），
+ * 件数/人数是两个内联小图（advice.js 的 ICONS），分数仍走 mark-<档位>。
+ */
+.adv-panel { margin: 22px 0 10px; }
+.adv-panel-head {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  padding: 14px 2px 10px;
+  border-top: 1px solid var(--line);
+}
+.adv-panel-title {
+  margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .06em;
+  color: var(--gold-lt);
+  cursor: help;   /* 悬停出分档口径（title 挂在它身上） */
+}
+.adv-panel-scope { font-size: 10px; color: var(--ink-3); }
+.adv-empty { margin: 0; font-size: 12px; color: var(--ink-3); }
+
+.adv-list { display: flex; flex-direction: column; gap: 9px; }
+.adv-set {
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: border-color .15s;
+}
+.adv-set[open] { border-color: var(--gold-line); }
+.adv-set:hover { border-color: var(--gold-line); }
+
+.adv-head {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 11px;
+  cursor: pointer; list-style: none;
+}
+.adv-head::-webkit-details-marker { display: none; }
+
+.adv-icon {
+  flex: 0 0 auto; width: 34px; height: 34px;
+  border-radius: 9px;
+  background-color: var(--bg-4);
+  background-size: 78%; background-position: center; background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+/* 名字吃掉剩下的宽度，太长的由省略号收尾；成色条按卡宽的 24% 走（见下），
+ * 所以八张卡的名字、条、数字都上下对得齐。全名在 nameRow 的 title 里。 */
+.adv-main { flex: 1 1 0; min-width: 0; display: flex; align-items: center; }
+.adv-name {
+  display: flex; align-items: center; gap: 6px;
+  min-width: 0;
+  font-size: 13px; font-weight: 600; line-height: 1.2;
+}
+.adv-name-text {
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.adv-tag {
+  flex: 0 0 auto; font-size: 9px; font-weight: 400;
+  color: var(--ink-3); border: 1px solid var(--line);
+  border-radius: 4px; padding: 0 4px;
+  cursor: help;
+}
+
+/* 成色条：**一件一段**，段色由 .mark-<档位> 给的 color 决定（background: currentColor），
+ * 所以它和下面的件分、明细页的评级是同一套颜色，面板里没有第二份色表。
+ * 段宽相等（flex: 1 1 0）—— 条表达「成色」而不是「件数」，件数由右边的数字说。
+ * 宽度取卡宽的 24%（上下限 40~108px）：八张卡一样宽，所以条也一样长、上下对得齐；
+ * 换成定长的话，英文长名会把它挤到只剩几个像素，反而像坏了。 */
+.adv-bar {
+  flex: 0 0 auto; width: 24%; min-width: 40px; max-width: 108px;
+  display: flex; gap: 1px; height: 4px; opacity: .9;
+}
+.adv-seg { flex: 1 1 0; min-width: 0; border-radius: 1px; background: currentColor; }
+/* 内核的 mark-D 是给浅底卡片调的灰，压在深底上几乎看不见 —— 只在本面板里提亮一档 */
+.adv-bar .mark-D { color: #9aa4b6; }
+
+/* 件数 / 人数：图标 + 数字，说明文字全塞进 title */
+.adv-own {
+  flex: 0 0 auto; display: flex; align-items: center;
+  font-size: 11px; color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.adv-own b { font-weight: 600; color: var(--ink-2); margin-left: 3px; }
+.adv-own b + .adv-ico { margin-left: 10px; }
+.adv-ico { display: inline-flex; width: 11px; height: 11px; color: var(--ink-3); }
+.adv-ico svg { width: 100%; height: 100%; }
+
+/* 收起时右边给一个小三角，暗示可展开 */
+.adv-head::after {
+  content: '▾'; flex: 0 0 auto;
+  font-size: 10px; color: var(--ink-3);
+  transition: transform .15s;
+}
+.adv-set:not([open]) .adv-head::after { transform: rotate(-90deg); }
+
+/* 一人一行，不再分「D-B / A-S / SS」三组 —— 每件的分数已经有颜色，
+ * 再套分组标题等于把同一件事说两遍，还多出一块灰。 */
+.adv-body { padding: 2px 11px 9px; border-top: 1px solid var(--line); }
+.adv-rows { display: flex; flex-direction: column; }
+
+/* 一行 = 一个角色：人名 + 若干部「部位图 + 分」。整行可点。
+   左右各借 4px（负 margin + 等量 padding），hover 底色比文字略宽，而文字仍和套装名对齐 */
+.adv-line {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 3px;
+  margin: 0 -4px; padding: 2px 4px;
+  background: none; border: 0; border-radius: 6px;
+  font: inherit; color: var(--ink-2); text-align: left;
+  cursor: pointer;
+}
+.adv-line:hover { background: var(--bg-4); }
+/* 名字占一栏：各行的第一个部位图才对得齐，扫下来像一张表而不是一堆散标签。
+   中文名 1~4 字都落在 58px 里，5 字（珊瑚宫心海）与英文长名撑到 104px 上限后省略 ——
+   整行的 title 里带着全名，点进去也能看到是谁 */
+.adv-char {
+  flex: 0 0 auto; min-width: 58px; max-width: 104px;
+  font-size: 11px; color: var(--ink-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.adv-line:hover .adv-char { color: var(--ink); }
+
+/* 一件 = 一个小标签（淡底 + 部位图 + 分）。裸图标在深底上会散成一片色斑，
+   给个底托之后五件才是一串整齐的格子 */
+.adv-piece {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 0 5px 0 4px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, .07);
+}
+/* 部位图是 16px 的彩色小图，原样贴着会发闷 —— 提一点亮度才认得出花和冠 */
+.adv-piece .ap-icon {
+  width: 18px; height: 18px; object-fit: contain;
+  filter: brightness(1.25) saturate(1.05);
+}
+.adv-piece .ap-glyph { font-size: 9px; color: var(--ink-3); }
+.adv-piece .ap-mark { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* 内核的 mark-D 是 #6b7280，给的是浅底卡片上的灰。这块是深底小标签，
+   原色几乎看不见 —— 只在本面板里提亮一档，不动全站的 .mark-D */
+.adv-piece .ap-mark.mark-D { color: #9aa4b6; }
+/* 2 件套的件：右上角一个小 2，提示「这件换了就完事，不用凑 4 件」 */
+.adv-piece .ap-n { position: relative; top: -4px; font-size: 8px; line-height: 1; color: var(--ink-3); }
+
 /* ───────────────────────── 首页：筛选条 ─────────────────────────
  *
  * 一行三段：排序（左）｜武器/圣遗物切换（中）｜漏斗筛选（右）。
