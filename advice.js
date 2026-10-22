@@ -81,9 +81,11 @@ function slotIcon (setIcon, pos) {
   return setIcon ? setIcon.replace(/[^/]+$/, pos + '.webp') : ''
 }
 
-/* 一件 = 一个「部位图 + 分」的小标签 */
+/* 一件 = 一个「部位图 + 分」的小标签。
+   拼凑件（`missing`）同样走这里：部位图 + `---`，没有分数也没有词条角标 ——
+   它表示「这套缺这个部位」，不是一件真实装备。 */
 function pieceChip (p, setIcon) {
-  const cell = el('span', 'adv-piece')
+  const cell = el('span', 'adv-piece' + (p.missing ? ' is-missing' : ''))
   const src = slotIcon(setIcon, p.pos)
   if (src) {
     const pic = el('img', 'ap-icon')

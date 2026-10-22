@@ -513,6 +513,10 @@ body {
   border-radius: 2px; padding: 0 1px;
   pointer-events: none;
 }
+/* 拼凑件：这块是「缺的部位」，不是真装备 —— 图淡一点、分数位是 `---` */
+.adv-piece.is-missing .ap-icon,
+.adv-piece.is-missing .ap-glyph { opacity: .5; }
+.adv-piece.is-missing .ap-mark { color: var(--ink-3); letter-spacing: .06em; }
 /* 部位图是 18px 的彩色小图（窄档 16 / 14），原样贴着发闷 —— 提一点亮度才认得出花和冠 */
 .adv-piece .ap-icon {
   width: var(--adv-ic); height: var(--adv-ic); object-fit: contain;
