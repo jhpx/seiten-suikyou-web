@@ -123,9 +123,15 @@ function charLine (g, setIcon) {
     if (POSITIONS.includes(p.pos) && !byPos.has(p.pos)) byPos.set(p.pos, p)
     else extra.push(p)
   }
+  /* 这一行画几个框：卡片里这几件算（能进统计就说明凑够 2 件），
+     另外「他身上另一套凑够 2 件」占的格子由接口给（`framePos`）。
+     散件（那套只在他身上 1 件，吃不到套装效果）不画框 ——
+     于是 4+1 和 2+2+1 都是四个框 + 一个散件空位。 */
+  const framed = new Set(g.items[0]?.framePos || [])
   for (const pos of POSITIONS) {
     const p = byPos.get(pos)
-    line.append(p ? pieceChip(p, setIcon) : el('span', 'adv-blank'))
+    line.append(p ? pieceChip(p, setIcon)
+      : el('span', 'adv-blank' + (framed.has(pos) ? ' is-frame' : '')))
   }
   for (const p of extra) line.append(pieceChip(p, setIcon))
 

@@ -414,12 +414,15 @@ body {
 
 /* 成色条：一件一格，颜色由 .mark-<档位> 的 currentColor 给 —— 条长就是件数 */
 .adv-bar {
+  /* 格宽：390 档 10px；窄屏条只剩三四十 px 可放，格子太宽就只看得见两三格，所以往下收 */
+  --adv-seg: 10px;
   flex: 0 1 auto; width: max-content; max-width: 48%; overflow: hidden;
   display: flex; gap: 1px; height: 5px; opacity: .9;
 }
 /* ⚠️ 这两条缺一不可：① 条上必须 `width: max-content`，只靠 flex-basis 时浏览器按最小内容宽度
-   算（每格 1px），十五件和两件一样长；② 格子必须 `flex: 0 0 5px` 不许缩，一允许收缩又退化成最小宽度 */
-.adv-seg { flex: 0 0 5px; border-radius: 1px; background: currentColor; }
+   算（每格 1px），十五件和两件一样长；② 格子不许缩，一允许收缩又退化成最小宽度。
+   十几件的长条会被条的 `max-width: 48%` 裁掉尾巴，这是有意的 */
+.adv-seg { flex: 0 0 var(--adv-seg); border-radius: 2px; background: currentColor; }
 /* 内核的 mark-D 是给浅底卡片调的灰，压在深底上几乎看不见 —— 只在本面板里提亮一档 */
 .adv-bar .mark-D { color: #9aa4b6; }
 
@@ -453,12 +456,15 @@ body {
 .adv-line {
   --adv-name: 54px;    /* 人名一列 */
   --adv-slot: 54px;    /* 一个部位的槽位 */
-  --adv-ic: 18px;      /* 部位图 */
-  --adv-fs: 11px;      /* 分数 */
-  --adv-pl: 4px;       /* 标签左右内边 */
-  --adv-pr: 4px;
-  --adv-gap: 3px;      /* 标签内「图 ↔ 分」的间距 */
-  display: grid; align-items: center; gap: 2px;
+  --adv-ic: 16px;      /* 部位图 */
+  --adv-fs: 10.5px;    /* 分数 */
+  --adv-pl: 3px;       /* 块内左右留白：图不必贴着块边 */
+  --adv-pr: 3px;
+  --adv-pt: 2px;       /* 块内上下留白：块比图标高一点 */
+  --adv-gap: 2px;      /* 标签内「图 ↔ 分」的间距 */
+  --adv-col: 13px;     /* 块与块之间的间隔（窄屏按档收，见文件末尾那两档） */
+  --adv-fill: rgba(255, 255, 255, .07);    /* 真件与空框共用这块淡底 */
+  display: grid; align-items: center; gap: 2px var(--adv-col);
   grid-template-columns: var(--adv-name) repeat(5, minmax(0, var(--adv-slot)));
   margin: 0 -4px; padding: 2px 4px;
   background: none; border: 0; border-radius: 6px;
@@ -475,18 +481,27 @@ body {
 .adv-line:hover .adv-char { color: var(--ink); }
 
 /* 一件 = 一个标签（淡底 + 部位图 + 分）。`width: 100%` 撑满槽位，
-   位数不同（6.9 / 35.3）也不会一格宽一格窄 */
+   位数不同（6.9 / 35.3）也不会一格宽一格窄。
+   不加描边：真实件就是一块淡底的小方块，描边会让「框」比内容抢眼 */
 .adv-piece {
   position: relative;
   display: inline-flex; align-items: center;
   width: 100%; min-width: 0;
   gap: var(--adv-gap);
-  padding: 0 var(--adv-pr) 0 var(--adv-pl);
+  padding: var(--adv-pt) var(--adv-pr) var(--adv-pt) var(--adv-pl);
   border-radius: 5px;
-  background: rgba(255, 255, 255, .07);
+  background: var(--adv-fill);
 }
-/* 缺的部位：占着格子什么都不画 —— 留白就是「这件不在这套里」 */
+/* 缺的部位：占着格子默认什么都不画。`.is-frame` = 这格穿着他身上另一套（凑够 2 件的）——
+   只给和真件一样的淡底，**不画描边**（用户：空框不要边框，参考真件那块底）；
+   散件（别套只有 1 件）没有这个类，纯留白。 */
 .adv-blank { min-width: 0; }
+.adv-blank.is-frame {
+  /* 和真件同高：图标高 + 上下留白 */
+  height: calc(var(--adv-ic) + var(--adv-pt) * 2);
+  border-radius: 5px;
+  background: var(--adv-fill);
+}
 /* 初始词条数（3/4）压在部位图右下角：绝对定位不占宽度（一行五件各多 6px 就塞不下），
    锚在图标右边缘，换档尺寸（18/16/14）也不用重算。底色取卡片色，压在小图上不糊 */
 .adv-piece .ap-init {
@@ -504,25 +519,28 @@ body {
   filter: brightness(1.25) saturate(1.05);
 }
 .adv-piece .ap-glyph { font-size: 9px; color: var(--ink-3); }
-.adv-piece .ap-mark { font-size: var(--adv-fs); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* 行高压到 1：块的高度只由图标决定，空框才能照着算（否则窄档文字行高比图标高 1px） */
+.adv-piece .ap-mark { font-size: var(--adv-fs); line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
 /* 内核的 mark-D 是给浅底调的灰，压在深底上看不见 —— 只在本面板提亮一档 */
 .adv-piece .ap-mark.mark-D { color: #9aa4b6; }
 
-/* 窄屏两档：只改「一格多宽」相关的几个变量（图标/字号/人名列/内边），**列数不动**。
- *   380 以上：4+18+3+23.5+4 = 52.5；353~379：图标 16、字号 10.5 → 47.4；
- *   ≤352（含 320）：人名 44、图标 14、字号 10 → 42.4（320 实分 42.8） */
+/* 窄屏两档：只改「一块多宽 / 间隔多宽」相关的几个变量，**列数不动**。
+ * 块宽和间隔是此消彼长的 —— 一行就那么宽，间隔宽了块就窄，块窄到内容以下分数就要被裁：
+ *   380 以上：内容 3+16+2+19+3 = 43，块 44×20，间隔 13
+ *   353~379：内边收到 2，内容 41，块 41×20，间隔 10
+ *   ≤352（含 320）：人名 44、图标 14、字号 10，内容 37，块 38×18，间隔 7 */
 @media (max-width: 379px) {
-  .adv-line {
-    --adv-ic: 16px; --adv-fs: 10.5px;
-    --adv-pl: 3px; --adv-pr: 4px; --adv-gap: 2px;
-  }
+  .adv-line { --adv-pl: 2px; --adv-pr: 2px; --adv-col: 10px; }
+  .adv-bar { --adv-seg: 7px; }
 }
 @media (max-width: 352px) {
   .adv-line {
     --adv-name: 44px; --adv-slot: 44px;
     --adv-ic: 14px; --adv-fs: 10px;
-    --adv-pl: 2px; --adv-pr: 3px; --adv-gap: 2px;
+    --adv-pl: 1px; --adv-pr: 2px; --adv-gap: 2px;
+    --adv-col: 7px;
   }
+  .adv-bar { --adv-seg: 6px; }
 }
 
 /* ───────────────────────── 首页：筛选条 ─────────────────────────
