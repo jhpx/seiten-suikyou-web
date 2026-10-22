@@ -43,7 +43,7 @@ function allPieces (s) {
   return [...s.bad, ...s.mid, ...s.good]
 }
 
-/* 两个 12px 的内联图标：件（菱形 = 一件圣遗物）、人。颜色跟 currentColor 走 */
+/* 两个 11px 的内联图标：件（菱形 = 一件圣遗物）、人。颜色跟 currentColor 走 */
 const ICONS = {
   piece: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M8 1.9 14.1 8 8 14.1 1.9 8z"/></svg>',
   owner: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8" cy="5" r="2.5"/><path d="M3.4 13.8c0-2.6 2-4.4 4.6-4.4s4.6 1.8 4.6 4.4"/></svg>'
@@ -109,7 +109,7 @@ function pieceChip (p, setIcon) {
 /* 一行 = 一个角色：人名 + **五个固定槽位**（花羽沙杯冠）。
    缺的那件也占着列 —— 各行的花永远落在同一列，扫下来像一张表，
    而不是「有几件画几件」那样每行各自挤成一堆、对不齐。
-   不带头像：16px 的脸认不出是谁（名字就在左边），只是往整齐的色块里再塞一团噪点。 */
+   不带头像：格子这么小一张脸认不出是谁（名字就在左边），只是往整齐的色块里再塞一团噪点。 */
 function charLine (g, setIcon) {
   const line = el('button', 'adv-line')
   line.type = 'button'
@@ -291,7 +291,7 @@ function renderAdvice () {
   }
 
   const list = el('div', 'adv-list')
-  /* 序号 = 当前排序下的名次：和第 8 套之后被截掉的顺序同源，所以它跟着排序变 */
+  /* 序号 = 当前排序下的名次（接口已按该排序截断，这里只是按序画） */
   sets.forEach((s, i) => list.append(setCard(s, i + 1)))
   box.append(list)
   return box
