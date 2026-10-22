@@ -317,29 +317,114 @@ body {
 /* 标题与开关同一行、分居两端；口径说明单独一行铺满 ——
    两者挤在一行时，说明文字在 320 宽会把开关顶下去，读起来像开关属于说明 */
 .adv-panel-top {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
 }
 .adv-panel-title {
   margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .06em;
   color: var(--gold-lt);
 }
-/* 口径开关：一个胶囊，选中的那侧描金。字小但点得准（6px 上下内边距 → 24px 高，
-   和顶栏控件同一个手感，不做成小到点不中的装饰） */
+/* 面板头右边那组控件：排序下拉 + 口径开关。包一层才不会被 space-between 拆散。
+   `margin-left: auto` 是给窄屏折行用的：折到第二行时 tools 仍然靠右，不会飘到左边。
+   两颗**等高（26px）**：一个 26 一个 24 并排时，眼睛会先看见那 2px 的错位，
+   而不是去看它们各自写着什么。 */
+.adv-panel-tools { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; margin-left: auto; }
+
+/* 这两颗照抄人物筛选条右边那对「排序 + 漏斗」（.rf-dd-btn / .rf-dd-btn.active）：
+   8px 方角、深底、金描边。原来这里是透明底 + 灰边，跟面板里那些灰描边小字混在一起，
+   看着像说明文字而不是能点的控件。
+   ⚠️ **全站不写 hover**（手机没有 hover）—— 这里更是：悬停变亮会被读成「已经选上了」。
+   状态只由「是不是当前值」决定：
+     · 排序那颗显示的**永远是当前选中的那一项**，所以恒为 .active 那一档（金边 + 淡金底 + 金字）；
+     · SS 开关 off 时是常态那一档（淡金边 + 灰字），on 时才转金。
+   正好对上人物筛选条「排序（已选）+ 漏斗（未选）」并排的样子。 */
 .adv-toggle {
   flex: 0 0 auto;
-  font: inherit; font-size: 10px; line-height: 1;
-  padding: 6px 10px; border-radius: 999px;
-  color: var(--ink-2); background: transparent;
-  border: 1px solid var(--line);
+  display: inline-flex; align-items: center;
+  height: 26px; padding: 0 10px;
+  font: inherit; font-size: 11px; line-height: 1;
+  border-radius: 8px;
+  color: var(--ink-2);
+  background: var(--ctrl-bg);
+  border: 1px solid var(--gold-line);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: border-color .16s ease, background .16s ease, color .16s ease;
 }
 .adv-toggle.on {
   color: var(--gold-lt);
   border-color: var(--gold-line-hi);
-  background: var(--ctrl-bg);
+  background: rgba(211, 188, 142, .16);
 }
 .adv-panel-scope { font-size: 10px; color: var(--ink-3); }
+
+/* 排序控件：一颗按钮（灰标签 + 金色当前值 + ▼）＋ 自己画的下拉面板。
+   金边、深玻璃底、8px 方角照人物筛选条那颗「排序：评价等级 ▼」。
+   ⚠️ 上一版是「金底 + 亮金边 + 金字」三层全金，在深色页面上糊成一块土黄铜牌（用户：太丑）。
+   现在**金色只落在值上**：底回到深玻璃、边降成淡金、标签退成灰字，
+   视觉上就成了「一个灰色小标签 + 一句金色的当前选择」，而不是一块色块。
+   ⚠️ **面板不用原生 select**：它展开的那张列表是浏览器画的 —— 圆角、字号、行高、高亮色一样都不受控，
+   深色页面里弹出来是一条系统风的方角白条（用户：点击展开以后巨丑无比）。
+   所以这里是 button + .rf-menu 自绘，展开逻辑在 advice.js 的 sortSelect。 */
+.adv-sortdd { flex: 0 0 auto; }
+.adv-sortfield {
+  display: inline-flex; align-items: center;
+  height: 26px; padding: 0 8px 0 10px;
+  /* button 不继承字体族，不写会掉回 Arial（中文再回退一次，字重也跟着变） */
+  font: inherit; line-height: 1;
+  border-radius: 8px;
+  background: var(--ctrl-bg);
+  border: 1px solid var(--gold-line-hi);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* 标签：「排序」两字和当前值同色（金色），右边跟一条 1px 竖线当分隔 ——
+   直接用全角冒号时字距会空出一块（「排序： 综合权衡」读着断成两截），竖线更干净也更省地方。
+   ⚠️ 别用 --ink-3：那支 #6f7a8e 是给卡片辅助说明用的，放在深玻璃底上小字号一压就发黑
+   （用户：别把排序变成黑字）。也别用 --ink-2：用户要「全是金色的字」——
+   层次靠字号（10 vs 12）区分就够，颜色统一交给 --gold-lt。 */
+.adv-sortfield-key {
+  display: inline-flex; align-items: center;
+  font-size: 10px; line-height: 1; letter-spacing: .04em;
+  color: var(--gold-lt); white-space: nowrap;
+}
+/* 竖线也跟着走金，不然金字中间夹一条深灰竖线，看着像断开的两个字 */
+.adv-sortfield-key::after {
+  content: ''; width: 1px; height: 9px;
+  margin: 0 7px;
+  background: var(--gold-line);
+}
+/* 当前选中的那一项：整颗按钮里唯一发光的地方 */
+.adv-sortfield-val {
+  font-size: 12px; line-height: 1; letter-spacing: .02em;
+  color: var(--gold-lt);
+  white-space: nowrap;
+}
+/* 实心 ▼，不是线条 chevron —— 全站只有人物那颗和这里两个三角，别处别再发明第三种。
+   ⚠️ 这里的 ▼ 只表示「能展开」，没有方向含义；人物那颗的 ▼ 才表示降序 / 升序。
+   ⚠️ 所以**展开时千万别把它转成 ▲** —— 那颗的 ▲ 是「升序」，一转就撞语义了。
+   展开反馈只给外圈金晕（见下一条），够用且不误导。 */
+.adv-sortfield-caret {
+  flex: 0 0 auto; margin-left: 5px;
+  font-size: 10px; line-height: 1; color: var(--gold); opacity: .9;
+}
+/* 面板开着时外圈起一层淡金晕 —— 这是「开着」的状态反馈，不是 hover */
+.adv-sortdd.open .adv-sortfield { box-shadow: 0 0 0 3px rgba(211, 188, 142, .1); }
+/* 展开的下拉面板：壳全用 .rf-menu 那套（--bg-4 不透明底、1px 边、10px 圆角、
+   0 10px 28px 深阴影、z-index 20 压在卡片之上），这里只按 26px 的小按钮把宽度和行高收一收。
+   右对齐靠容器上的 .rf-dd-end（.rf-dd-end .rf-menu { left: auto; right: 0 }）——
+   控件贴着屏幕右边，左对齐会一路顶出去被 body 的 overflow-x 裁掉。
+   ⚠️ 底必须不透明：面板一开就压在套装卡上，半透明的话下面的字会透上来，两行字叠成一团。 */
+.adv-menu { min-width: 100%; padding: 4px; }
+/* 选项从 30px 降到 28px：4 项加起来刚好 120px，面板头下面不会顶掉半张卡 */
+.adv-menu .rf-opt { height: 28px; font-size: 12px; }
+/* 当前那一项：底色比 .rf-opt.active 默认的 .10 再深一档（默认在深底上几乎看不见），
+   末尾补一个 ✓ —— 光靠字色变金，一眼扫不出选的是哪个 */
+.adv-menu .rf-opt.active { background: rgba(211, 188, 142, .16); }
+.adv-menu .rf-opt.active::after {
+  content: '✓'; margin-left: auto;
+  font-size: 11px; line-height: 1; color: var(--gold);
+}
 .adv-empty { margin: 0; font-size: 12px; color: var(--ink-3); }
 
 .adv-list { display: flex; flex-direction: column; gap: 9px; }
@@ -358,6 +443,13 @@ body {
   cursor: pointer; list-style: none;
 }
 .adv-head::-webkit-details-marker { display: none; }
+
+/* 名次：定宽右对齐。今天 topN=8 只有个位，留 12px 是为了将来放宽也不用改版式 */
+.adv-rank {
+  flex: 0 0 auto; width: 12px;
+  font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--ink-3); text-align: right;
+}
 
 .adv-icon {
   flex: 0 0 auto; width: 34px; height: 34px;

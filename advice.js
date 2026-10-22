@@ -16,11 +16,24 @@
  * 件数/人数用两个内联小图，于是每行只剩「人名 + 一串部位图带分数」。
  */
 
-import { state, T, el, setBg, slotGlyph, openDetail, reg } from './core.js'
+import { state, T, el, setBg, slotGlyph, openDetail, closeMenus, reg } from './core.js'
 
 /* 口径开关：SS 件算不算。默认**不算** —— SS 已经接近毕业，算进去只会把「还差多少」摊薄。
    接口一次给了两份（advice / advice.withSS），所以切换只是换一份数据重画，不走网络。 */
 let includeSS = false
+
+/* 排序口径，默认「综合权衡」。四种名次都是接口算好的（adv.orders），
+   这里只负责换一条序列重画 —— 比较逻辑一行都不在前端。 */
+let sortKey = 'balance'
+
+/* 下拉框里的顺序（从「最常想看的」往下排）。改顺序就动这一行，别去动标签表的键序 */
+const SORTS = ['balance', 'owners', 'junk', 'boost']
+const SORT_LABEL = {
+  balance: 'adviceSortBalance',
+  junk: 'adviceSortJunk',
+  owners: 'adviceSortOwners',
+  boost: 'adviceSortBoost'
+}
 
 /* 档位从差到好 —— 只用来排序（成色条、行序），颜色仍由 .mark-<档位> 给 */
 const CLASS_RANK = { D: 0, C: 1, B: 2, A: 3, S: 4, SS: 5, SSS: 6, ACE: 7, MAX: 8 }
@@ -156,9 +169,8 @@ function ownBox (s) {
   return box
 }
 
-/* 一个套装一张卡。**全部默认收起**：这块是「看结论」的地方，不是清单页，
-   全展开会拉成两屏；要看得自己点开 —— 手机上一屏能扫完 8 个套装比什么都强 */
-function setCard (s) {
+/* 一个套装一张卡。**全部默认收起** */
+function setCard (s, rank) {
   const card = el('details', 'adv-set')
 
   const head = el('summary', 'adv-head')
@@ -172,10 +184,9 @@ function setCard (s) {
   }
   main.append(nameRow)
 
-  /* 一行里四段，从左到右：套装图 | 名字（可省略）| 人数/件数 | 成色条。
-     先认是哪套，再看多少人、多少件，最后一条色带扫成色；
-     全部靠左排，名字不再撑满整行，尾部留白比两端拉开更好扫。 */
-  head.append(mark, main, ownBox(s), heatBar(s))
+  /* 一行里五段，从左到右：名次 | 套装图 | 名字| 人数| 件数 | 成色条。
+     先认第几，再认是哪套，再看多少人、多少件，最后一条色带扫成色。 */
+  head.append(el('span', 'adv-rank', String(rank)), mark, main, ownBox(s), heatBar(s))
   card.append(head)
 
   const body = el('div', 'adv-body')
@@ -189,6 +200,15 @@ function adviceData () {
   const adv = state.view?.advice
   if (!adv) return null
   return includeSS ? adv.withSS : adv
+}
+
+/* 按当前排序取套装：`orders[排序]` 是接口算好并截断过的名字序列，
+   到全量 `sets` 里逐个取对象即可。名字对不上（接口改了名）就跳过，不画半个卡。 */
+function setsOf (adv) {
+  const seq = adv.orders && adv.orders[sortKey]
+  if (!seq) return adv.sets || []
+  const byName = new Map((adv.sets || []).map(s => [s.nameZh, s]))
+  return seq.map(n => byName.get(n)).filter(Boolean)
 }
 
 /* 换口径只重画面板本身，不走 renderRoster：网格、筛选条、滚动位置都别动。
@@ -212,6 +232,42 @@ function scopeToggle () {
   return btn
 }
 
+/* 排序做成下拉：这里照人物筛选条那套自绘（`.rf-dd` + `.rf-menu` + `.rf-opt`）：点面板外面、按 Esc、
+   选完一项都会走 core.js 的 closeMenus —— 它认的就是 `.rf-dd`，所以容器必须挂这个类。*/
+function sortSelect () {
+  const dd = el('div', 'rf-dd rf-dd-end adv-sortdd')
+  const btn = el('button', 'adv-sortfield')
+  btn.type = 'button'
+  btn.append(
+    el('span', 'adv-sortfield-key', T('sortBy')),
+    el('span', 'adv-sortfield-val', T(SORT_LABEL[sortKey])),
+    el('span', 'adv-sortfield-caret', '▼')
+  )
+
+  const menu = el('div', 'rf-menu adv-menu')
+  for (const k of SORTS) {
+    const opt = el('button', 'rf-opt' + (k === sortKey ? ' active' : ''), T(SORT_LABEL[k]))
+    opt.type = 'button'
+    opt.addEventListener('click', () => {
+      /* 先收面板再重画：repaintPanel 会把整块 .adv-panel 换掉，旧节点连同开着的菜单一起没了 */
+      closeMenus()
+      if (k === sortKey) return
+      sortKey = k
+      repaintPanel()
+    })
+    menu.append(opt)
+  }
+
+  /* 再点一次就收起来（开关式）。closeMenus 先清掉别的面板，免得两个同时开着 */
+  btn.addEventListener('click', () => {
+    const isOpen = dd.classList.contains('open')
+    closeMenus()
+    if (!isOpen) dd.classList.add('open')
+  })
+  dd.append(btn, menu)
+  return dd
+}
+
 function renderAdvice () {
   const adv = adviceData()
   if (!adv) return null
@@ -219,22 +275,24 @@ function renderAdvice () {
   const box = el('section', 'adv-panel')
   const head = el('div', 'adv-panel-head')
   const top = el('div', 'adv-panel-top')
-  top.append(
-    el('h2', 'adv-panel-title', T('adviceTitle')),
-    scopeToggle()
-  )
+  /* 右边两个控件包一层：标题靠左、这俩一起靠右。*/
+  const tools = el('div', 'adv-panel-tools')
+  tools.append(sortSelect(), scopeToggle())
+  top.append(el('h2', 'adv-panel-title', T('adviceTitle')), tools)
   /* 「及以下」那个档位字母跟着开关走：算 SS 就是 SS 及以下，不算就是 S 及以下 */
   head.append(top, el('span', 'adv-panel-scope',
     T('adviceScope', { lv: adv.minLevel, cls: includeSS ? 'SS' : 'S' })))
   box.append(head)
 
-  if (!adv.sets.length) {
+  const sets = setsOf(adv)
+  if (!sets.length) {
     box.append(el('p', 'adv-empty', T('adviceEmpty')))
     return box
   }
 
   const list = el('div', 'adv-list')
-  adv.sets.forEach(s => list.append(setCard(s)))
+  /* 序号 = 当前排序下的名次：和第 8 套之后被截掉的顺序同源，所以它跟着排序变 */
+  sets.forEach((s, i) => list.append(setCard(s, i + 1)))
   box.append(list)
   return box
 }
