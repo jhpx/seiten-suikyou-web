@@ -148,7 +148,7 @@ function filterModal (view, paintBadge) {
 /*
  * 漏斗筛选：一颗按钮，点了开弹窗。
  * 按钮平时只画漏斗；有选中时右上角挂数字角标（不写「已选 N 项」文字 ——
- * 按钮就那么宽，写上就把漏斗挤变形了，全称挂 title）。
+ * 按钮就那么宽，写上就把漏斗挤变形了，角标只报个数）。
  */
 function filterPanel (view) {
   const dd = el('div', 'rf-filter')
@@ -161,7 +161,6 @@ function filterPanel (view) {
     const n = state.filter.elem.length + state.filter.rank.length + state.filter.weight.length
     badge.textContent = n ? String(n) : ''
     badge.classList.toggle('on', n > 0)
-    btn.title = n ? T('filterActive', { n }) : T('filterTitle')
     btn.classList.toggle('active', n > 0)
   }
 
@@ -204,10 +203,7 @@ function viewSwitch () {
 
   const paint = () => {
     const i = Math.max(0, VIEWS.findIndex(v => v.key === state.rosterMode))
-    const next = VIEWS[(i + 1) % VIEWS.length]
     label.textContent = T(VIEWS[i].labelKey)
-    /* 提示报「下一个是什么」—— 按钮上写的是当前状态，光看文案不知道点下去会变成谁 */
-    btn.title = T('viewSwitchHint', { next: T(next.labelKey) })
     btn.dataset.mode = VIEWS[i].key
   }
 

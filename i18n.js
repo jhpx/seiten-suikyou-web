@@ -36,7 +36,6 @@ function applyStaticUi () {
   $('brandSub').textContent = `seiten-suikyou · ${T('subtitle')}`
   $('uidLabel').textContent = T('uidLabel')
   $('fetch').textContent = T('fetch')
-  $('fetch').title = T('fetchTip')
   $('localeLabel').textContent = T('localeLabel')
   $('uid').placeholder = T('uidLabel')
 }

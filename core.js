@@ -234,7 +234,6 @@ export function openDialog ({ title, onOk, onClear }) {
   const x = el('button', 'rf-modal-x')
   x.type = 'button'
   x.textContent = '×'
-  x.title = T('filterCancel')
   x.addEventListener('click', () => closeModal())
   head.append(x)
 
