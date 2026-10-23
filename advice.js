@@ -156,11 +156,23 @@ function charRows (s) {
 /* 成色条：**一件一格**，格子颜色就是那件的档位色，按档位从差到好排。
  * 比「D-B 3 · A-S 6 · SS 6」一行字快：左边一片冷色 = 这套还差得远，
  * 右边泛紫 = 大部分已经毕业。每格定宽，所以**整条的长度就是件数** ——
- * 件多的高一截，一眼比得出谁的池子大（件数右边也写着，条只是让「多」看得见）。 */
+ * 件多的高一截，一眼比得出谁的池子大（件数右边也写着，条只是让「多」看得见）。
+ *
+ * ⚠️ 条的总宽**必须在这里乘出来**写进 `--adv-w`，不能交给 CSS 的 `max-content`：
+ * 「flex item 上挂 max-content + max-width 百分比」这套，Firefox 和 Chrome 算出来
+ * 的宽度不一样（同一份数据，条的长度一长一短）。件数是 JS 已知的，乘出来是算术题，
+ * 各浏览器结果必然一致。`--adv-seg` 仍由 CSS 的媒体查询按屏宽给，宽度也跟着变。 */
 function heatBar (s) {
   const bar = el('span', 'adv-bar')
   const list = allPieces(s).sort((a, b) =>
     (CLASS_RANK[a.markClass] ?? 9) - (CLASS_RANK[b.markClass] ?? 9) || a.mark - b.mark)
+  /* 条宽 = n×格宽 + (n-1)×间隙。间隙要和 style.css 的 --adv-gap 一致（两边同源），
+     否则算出来的宽度和实际格子跨度差几像素、右边被裁掉一丝。
+     0 件时给 0px —— calc 里 (0-1)×1px 是负宽，不合法。 */
+  const n = list.length
+  const g = 'var(--adv-gap)'
+  bar.style.setProperty('--adv-w',
+    n ? `calc(${n} * var(--adv-seg) + ${n - 1} * ${g})` : '0px')
   for (const p of list) {
     const seg = el('i', 'adv-seg mark-' + (p.markClass || 'D'))
     bar.append(seg)
