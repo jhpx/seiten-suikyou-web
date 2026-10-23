@@ -414,23 +414,33 @@ body {
 
 /* 成色条：一件一格，颜色由 .mark-<档位> 的 currentColor 给 —— 条长就是件数
  *
- * ⚠️ 宽度**只能**用 heatBar() 写进来的 `--adv-w`（件数 × 格宽，JS 算的），三条缺一不可：
- *   ① 不许写 `width: max-content`。这条曾让 Firefox 和 Chrome 对同一条算出不同长度 ——
- *      flex item 挂 max-content 再叠 `max-width` 百分比，两家对内在宽度的取舍不一样
- *      （Chrome 按内容算完再截，Firefox 直接拿百分比当宽），于是同一个套装两台浏览器
- *      一根长一根短。宽度是算术题，交给 JS 乘完就两家一致了。
- *   ② `flex: 0 0 auto`（不许 shrink）：一允许收缩，宽度又被 flex 分配覆盖回去。
- *   ③ 格子 `flex: 0 0`（不许缩）：不许缩回去，每格才真的等于 --adv-seg。
- * 十几件的长条会被 `max-width: 48%` 裁掉尾巴，这是有意的。 */
+ * ⚠️ 宽度用 grid 的 `repeat(auto-fill, var(--adv-seg))` 让**格子数自己撑出宽度**，
+ *    不写死width，也不用JS 算像素。曾经踩过两个坑，都别退回去：
+ *   ① `width: max-content`：flex item挂 max-content 再叠 `max-width` 百分比，
+ *      Firefox 和 Chrome 算出的宽度不同（Chrome 按内容算完再截，Firefox 更早把百分比
+ *      当宽），同一个套装两台浏览器一根长一根短。
+ *   ② 由 JS 拼 `calc(n * var(--adv-seg) + ...)` 写进 --adv-w：这是**嵌套 var 引用**
+ *      （JS 设的属性里再引CSS 变量），部分引擎解不开，整条失效 → width 退回初始值 → 条宽度 0，
+ *      整个看不见。宽度交给 grid，就没有这类求值风险。
+ * grid 一列一格、列宽固定，条的长度天然= 件数，各浏览器一致。
+ * `min-width: 0` + `overflow: hidden`：十几件的长条会被父级max-width 约束裁掉尾巴，
+ * 这是有意的。 */
 .adv-bar {
   /* 格宽：390 档 10px；窄屏条只剩三四十 px 可放，格子太宽就只看得见两三格，所以往下收 */
   --adv-seg: 10px;
-  /* 间隙提成变量：heatBar() 算条宽时也要用它，两边必须同源，否则差几像素 */
   --adv-gap: 1px;
-  flex: 0 0 auto; width: var(--adv-w, auto); max-width: 48%; overflow: hidden;
-  display: flex; gap: var(--adv-gap); height: 5px; opacity: .9;
+  /* .adv-head 是 flex，条作为 item 不许收缩：grid 的列宽是定死的，
+     一旦允许 shrink，浏览器会压小整个 grid 容器把条挤扁 */
+  flex: 0 0 auto;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--adv-seg);
+  gap: var(--adv-gap);
+  justify-content: start;
+  min-width: 0; max-width: 48%; overflow: hidden;
+  height: 5px; opacity: .9;
 }
-.adv-seg { flex: 0 0 var(--adv-seg); border-radius: 2px; background: currentColor; }
+.adv-seg { border-radius: 2px; background: currentColor; }
 /* 内核的 mark-D 是给浅底卡片调的灰，压在深底上几乎看不见 —— 只在本面板里提亮一档 */
 .adv-bar .mark-D { color: #9aa4b6; }
 
