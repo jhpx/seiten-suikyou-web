@@ -50,7 +50,7 @@ const ICONS = {
 }
 
 function icon (name) {
-  const i = el('i', 'adv-ico')
+  const i = el('i', 'advice-ico')
   i.innerHTML = ICONS[name] || ''
   return i
 }
@@ -85,7 +85,7 @@ function slotIcon (setIcon, pos) {
    拼凑件（`missing`）同样走这里：部位图 + `---`，没有分数也没有词条角标 ——
    它表示「这套缺这个部位」，不是一件真实装备。 */
 function pieceChip (p, setIcon) {
-  const cell = el('span', 'adv-piece' + (p.missing ? ' is-missing' : ''))
+  const cell = el('span', 'advice-piece' + (p.missing ? ' is-missing' : ''))
   const src = slotIcon(setIcon, p.pos)
   if (src) {
     const pic = el('img', 'ap-icon')
@@ -113,9 +113,9 @@ function pieceChip (p, setIcon) {
    而不是「有几件画几件」那样每行各自挤成一堆、对不齐。
    不带头像：格子这么小一张脸认不出是谁（名字就在左边），只是往整齐的色块里再塞一团噪点。 */
 function charLine (g, setIcon) {
-  const line = el('button', 'adv-line')
+  const line = el('button', 'advice-line')
   line.type = 'button'
-  line.append(el('span', 'adv-char', g.name))
+  line.append(el('span', 'advice-char', g.name))
 
   const byPos = new Map()
   const extra = []
@@ -133,7 +133,7 @@ function charLine (g, setIcon) {
   for (const pos of POSITIONS) {
     const p = byPos.get(pos)
     line.append(p ? pieceChip(p, setIcon)
-      : el('span', 'adv-blank' + (framed.has(pos) ? ' is-frame' : '')))
+      : el('span', 'advice-blank' + (framed.has(pos) ? ' is-frame' : '')))
   }
   for (const p of extra) line.append(pieceChip(p, setIcon))
 
@@ -145,7 +145,7 @@ function charLine (g, setIcon) {
    不能按档凑行：同一个角色常常横跨两档（花是 SS、冠是 D），按档分会把他拆成两行，
    读起来像两个人 —— 而「谁整身最差」才是排在前面的依据。 */
 function charRows (s) {
-  const rows = el('div', 'adv-rows')
+  const rows = el('div', 'advice-rows')
   const groups = byChar(allPieces(s))
   for (const g of groups) g.worst = Math.min(...g.items.map(p => p.mark))
   groups.sort((a, b) => a.worst - b.worst || a.name.localeCompare(b.name))
@@ -159,14 +159,14 @@ function charRows (s) {
  * 件多的高一截，一眼比得出谁的池子大（件数右边也写着，条只是让「多」看得见）。
  *
  * 这里只管「有几格、每格什么颜色」，**一个像素都不算**：条宽由 CSS 的 grid
- * 按格子数自己撑出来（见 style.css .adv-bar 的注释）。曾经在这里用 calc 拼过宽度，
+ * 按格子数自己撑出来（见 style.css .advice-strip 的注释）。曾经在这里用 calc 拼过宽度，
  * 那是嵌套 var 引用，部分引擎解不开会让整条塌成 0 宽 —— 别加回来。 */
 function heatBar (s) {
-  const bar = el('span', 'adv-bar')
+  const bar = el('span', 'advice-strip')
   const list = allPieces(s).sort((a, b) =>
     (CLASS_RANK[a.markClass] ?? 9) - (CLASS_RANK[b.markClass] ?? 9) || a.mark - b.mark)
   for (const p of list) {
-    const seg = el('i', 'adv-seg mark-' + (p.markClass || 'D'))
+    const seg = el('i', 'advice-seg mark-' + (p.markClass || 'D'))
     bar.append(seg)
   }
   return bar
@@ -175,7 +175,7 @@ function heatBar (s) {
 /* 人数与件数：图标 + 数字。人数在前 —— 一行从左往右是
    「哪套 → 几个人穿 → 一共几件 → 成色怎样」，先认套装再认量 */
 function ownBox (s) {
-  const box = el('span', 'adv-own')
+  const box = el('span', 'advice-own')
   box.append(icon('owner'), el('b', '', String(s.count.owners)))
   box.append(icon('piece'), el('b', '', String(s.count.total)))
   return box
@@ -183,25 +183,25 @@ function ownBox (s) {
 
 /* 一个套装一张卡。**全部默认收起** */
 function setCard (s, rank) {
-  const card = el('details', 'adv-set')
+  const card = el('details', 'advice-set')
 
-  const head = el('summary', 'adv-head')
-  const mark = setBg(el('span', 'adv-icon'), s.icon)
+  const head = el('summary', 'advice-head')
+  const mark = setBg(el('span', 'advice-icon'), s.icon)
 
-  const main = el('span', 'adv-main')
-  const nameRow = el('span', 'adv-name')
-  nameRow.append(el('span', 'adv-name-text', s.name))
+  const main = el('span', 'advice-main')
+  const nameRow = el('span', 'advice-name')
+  nameRow.append(el('span', 'advice-name-text', s.name))
   if (!s.farmable) {
-    nameRow.append(el('span', 'adv-tag', T('adviceUnfarmable')))
+    nameRow.append(el('span', 'advice-tag', T('adviceUnfarmable')))
   }
   main.append(nameRow)
 
   /* 一行里五段，从左到右：名次 | 套装图 | 名字| 人数| 件数 | 成色条。
      先认第几，再认是哪套，再看多少人、多少件，最后一条色带扫成色。 */
-  head.append(el('span', 'adv-rank', String(rank)), mark, main, ownBox(s), heatBar(s))
+  head.append(el('span', 'advice-rank', String(rank)), mark, main, ownBox(s), heatBar(s))
   card.append(head)
 
-  const body = el('div', 'adv-body')
+  const body = el('div', 'advice-body')
   body.append(charRows(s))
   card.append(body)
   return card
@@ -226,7 +226,7 @@ function setsOf (adv) {
 /* 换口径只重画面板本身，不走 renderRoster：网格、筛选条、滚动位置都别动。
    套装卡会重建（默认全收起），所以点开关之后看到的就是新的一份排名。 */
 function repaintPanel () {
-  const old = document.querySelector('.adv-panel')
+  const old = document.querySelector('.advice-panel')
   const next = renderAdvice()
   if (old && next) old.replaceWith(next)
 }
@@ -234,7 +234,7 @@ function repaintPanel () {
 /* 口径开关。文字直接写「含 / 不含 SS 件」，不靠颜色猜状态 ——
    手机上没 hover，一点下去就该知道自己切到了哪边。 */
 function scopeToggle () {
-  const btn = el('button', 'adv-toggle' + (includeSS ? ' on' : ''),
+  const btn = el('button', 'advice-toggle' + (includeSS ? ' on' : ''),
     T(includeSS ? 'adviceSSOn' : 'adviceSSOff'))
   btn.type = 'button'
   btn.addEventListener('click', () => {
@@ -247,21 +247,21 @@ function scopeToggle () {
 /* 排序做成下拉：这里照人物筛选条那套自绘（`.rf-dd` + `.rf-menu` + `.rf-opt`）：点面板外面、按 Esc、
    选完一项都会走 core.js 的 closeMenus —— 它认的就是 `.rf-dd`，所以容器必须挂这个类。*/
 function sortSelect () {
-  const dd = el('div', 'rf-dd rf-dd-end adv-sortdd')
-  const btn = el('button', 'adv-sortfield')
+  const dd = el('div', 'rf-dd rf-dd-end advice-sortdd')
+  const btn = el('button', 'advice-sortfield')
   btn.type = 'button'
   btn.append(
-    el('span', 'adv-sortfield-key', T('sortBy')),
-    el('span', 'adv-sortfield-val', T(SORT_LABEL[sortKey])),
-    el('span', 'adv-sortfield-caret', '▼')
+    el('span', 'advice-sortfield-key', T('sortBy')),
+    el('span', 'advice-sortfield-val', T(SORT_LABEL[sortKey])),
+    el('span', 'advice-sortfield-caret', '▼')
   )
 
-  const menu = el('div', 'rf-menu adv-menu')
+  const menu = el('div', 'rf-menu advice-menu')
   for (const k of SORTS) {
     const opt = el('button', 'rf-opt' + (k === sortKey ? ' active' : ''), T(SORT_LABEL[k]))
     opt.type = 'button'
     opt.addEventListener('click', () => {
-      /* 先收面板再重画：repaintPanel 会把整块 .adv-panel 换掉，旧节点连同开着的菜单一起没了 */
+      /* 先收面板再重画：repaintPanel 会把整块 .advice-panel 换掉，旧节点连同开着的菜单一起没了 */
       closeMenus()
       if (k === sortKey) return
       sortKey = k
@@ -284,25 +284,25 @@ function renderAdvice () {
   const adv = adviceData()
   if (!adv) return null
 
-  const box = el('section', 'adv-panel')
-  const head = el('div', 'adv-panel-head')
-  const top = el('div', 'adv-panel-top')
+  const box = el('section', 'advice-panel')
+  const head = el('div', 'advice-panel-head')
+  const top = el('div', 'advice-panel-top')
   /* 右边两个控件包一层：标题靠左、这俩一起靠右。*/
-  const tools = el('div', 'adv-panel-tools')
+  const tools = el('div', 'advice-panel-tools')
   tools.append(sortSelect(), scopeToggle())
-  top.append(el('h2', 'adv-panel-title', T('adviceTitle')), tools)
+  top.append(el('h2', 'advice-panel-title', T('adviceTitle')), tools)
   /* 「及以下」那个档位字母跟着开关走：算 SS 就是 SS 及以下，不算就是 S 及以下 */
-  head.append(top, el('span', 'adv-panel-scope',
+  head.append(top, el('span', 'advice-panel-scope',
     T('adviceScope', { lv: adv.minLevel, cls: includeSS ? 'SS' : 'S' })))
   box.append(head)
 
   const sets = setsOf(adv)
   if (!sets.length) {
-    box.append(el('p', 'adv-empty', T('adviceEmpty')))
+    box.append(el('p', 'advice-empty', T('adviceEmpty')))
     return box
   }
 
-  const list = el('div', 'adv-list')
+  const list = el('div', 'advice-list')
   /* 序号 = 当前排序下的名次（接口已按该排序截断，这里只是按序画） */
   sets.forEach((s, i) => list.append(setCard(s, i + 1)))
   box.append(list)
