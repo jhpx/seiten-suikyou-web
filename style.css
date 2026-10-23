@@ -412,16 +412,24 @@ body {
   border-radius: 4px; padding: 0 4px;
 }
 
-/* 成色条：一件一格，颜色由 .mark-<档位> 的 currentColor 给 —— 条长就是件数 */
+/* 成色条：一件一格，颜色由 .mark-<档位> 的 currentColor 给 —— 条长就是件数
+ *
+ * ⚠️ 宽度**只能**用 heatBar() 写进来的 `--adv-w`（件数 × 格宽，JS 算的），三条缺一不可：
+ *   ① 不许写 `width: max-content`。这条曾让 Firefox 和 Chrome 对同一条算出不同长度 ——
+ *      flex item 挂 max-content 再叠 `max-width` 百分比，两家对内在宽度的取舍不一样
+ *      （Chrome 按内容算完再截，Firefox 直接拿百分比当宽），于是同一个套装两台浏览器
+ *      一根长一根短。宽度是算术题，交给 JS 乘完就两家一致了。
+ *   ② `flex: 0 0 auto`（不许 shrink）：一允许收缩，宽度又被 flex 分配覆盖回去。
+ *   ③ 格子 `flex: 0 0`（不许缩）：不许缩回去，每格才真的等于 --adv-seg。
+ * 十几件的长条会被 `max-width: 48%` 裁掉尾巴，这是有意的。 */
 .adv-bar {
   /* 格宽：390 档 10px；窄屏条只剩三四十 px 可放，格子太宽就只看得见两三格，所以往下收 */
   --adv-seg: 10px;
-  flex: 0 1 auto; width: max-content; max-width: 48%; overflow: hidden;
-  display: flex; gap: 1px; height: 5px; opacity: .9;
+  /* 间隙提成变量：heatBar() 算条宽时也要用它，两边必须同源，否则差几像素 */
+  --adv-gap: 1px;
+  flex: 0 0 auto; width: var(--adv-w, auto); max-width: 48%; overflow: hidden;
+  display: flex; gap: var(--adv-gap); height: 5px; opacity: .9;
 }
-/* ⚠️ 这两条缺一不可：① 条上必须 `width: max-content`，只靠 flex-basis 时浏览器按最小内容宽度
-   算（每格 1px），十五件和两件一样长；② 格子不许缩，一允许收缩又退化成最小宽度。
-   十几件的长条会被条的 `max-width: 48%` 裁掉尾巴，这是有意的 */
 .adv-seg { flex: 0 0 var(--adv-seg); border-radius: 2px; background: currentColor; }
 /* 内核的 mark-D 是给浅底卡片调的灰，压在深底上几乎看不见 —— 只在本面板里提亮一档 */
 .adv-bar .mark-D { color: #9aa4b6; }
