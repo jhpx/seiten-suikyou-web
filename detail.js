@@ -28,6 +28,15 @@ function renderDetail () {
      删掉，让「← 返回」独占这一行（2026-10-07）。 */
   bar.append(back)
 
+  /* 右端一组：模拟比对 + 分享。原来只有分享一个圆钮，space-between 直接贴右；
+     现在多一个文字钮，得用容器兜住 gap，否则两个钮会被 space-between 拉到栏的两端。 */
+  const actions = el('div', 'detail-actions')
+
+  /* 进模拟比对页：点哪个角色就把哪个角色带过去（reg 反调，避免 detail→sim 直接 import 成环） */
+  const simBtn = el('button', 'btn sim-entry', T('simEntry'))
+  simBtn.addEventListener('click', () => reg.openSim?.(av.avatarId))
+  actions.append(simBtn)
+
   /* 分享钮：与「返回」同行右端，纯图标无文字（仅 aria-label 给读屏） */
   const share = el('button', 'btn share')
   share.setAttribute('aria-label', '分享')
@@ -35,7 +44,9 @@ function renderDetail () {
     'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>'
   share.addEventListener('click', () => onShare(share))
-  bar.append(share)
+  actions.append(share)
+
+  bar.append(actions)
 
   box.append(bar)
 

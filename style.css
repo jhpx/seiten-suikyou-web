@@ -1166,3 +1166,154 @@ body.on-detail #footmeta { display: none; }
 }
 .foot > span { font-size: 12px; line-height: 1.6; }
 .foot > .dim { color: var(--ink-3); }
+
+/* ───────────────────────── 模拟比对页 ─────────────────────────
+ *
+ * 左右两栏并排需要 ~980px，而外壳 .app 只有 520px —— 跟明细页那个 600px 画布同一个处境。
+ * 所以抄它的解法：**父容器 flex 居中、子容器自己定宽并允许溢出**（html/body 已经 overflow-x:hidden，
+ * 溢出不会顶出横向滚动条）。窄屏靠 max-width:100vw 收成屏宽，下面的 grid 自动退成一列。
+ *
+ * ⚠️ 类名一律避开广告词（ad/adv/bar/slot/box/frame/column 等）—— 带这些词的容器会被
+ *    AdBlock / uBlock 的过滤规则当成广告整个隐藏，症状是「PC 看不见、手机正常」。
+ *    所以顶栏叫 .sim-head 而不是 .sim-bar，副词条「加一条」叫 .sim-submore 而不是 .sim-subadd。
+ */
+#view-sim.view.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+/* 100vw 要减掉 .app 的左右内边距（14×2），否则窄屏上卡片会贴到屏幕边缘、比别的页窄一圈 */
+#view-sim .sim-head,
+#view-sim .sim-cols { width: 980px; max-width: calc(100vw - 28px); }
+
+.sim-head {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 12px;
+}
+.sim-title { font-size: 16px; font-weight: 700; color: var(--gold-lt); letter-spacing: .06em; }
+/* 顶栏三段式：返回 | 角色名 | 复原 —— 中间这根弹簧把「复原」顶到右端 */
+.sim-gap { flex: 1; }
+
+/* auto-fit + minmax：容器够宽就两栏，不够就上下堆叠 —— 手机不用另外写 media query */
+.sim-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.sim-col {
+  min-width: 0;
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.sim-col-title {
+  margin: 0 0 10px;
+  font-size: 13px; font-weight: 700; letter-spacing: .1em;
+  color: var(--gold-lt);
+}
+.sim-pane { display: flex; flex-direction: column; gap: 10px; }
+
+/* 属性表：三列（词条名 / 最终值 / 基础+加成）。
+   **不复用 miao.css 的 .char-attr** —— 那是照 600px 画布写死的五列 + 绝对定位，塞进半屏会整体错位。 */
+.sim-attrs { display: flex; flex-direction: column; gap: 2px; }
+.sim-attr {
+  display: grid;
+  grid-template-columns: 76px 1fr auto;
+  gap: 8px; align-items: baseline;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.sim-attr:nth-child(odd) { background: rgba(255, 255, 255, .02); }
+.sim-aname { color: var(--ink-2); }
+.sim-aval { color: var(--ink); font-weight: 600; text-align: right; }
+.sim-abreak { color: var(--ink-3); font-size: 11px; }
+/* 改过的项整行提亮 + 底下写「改动前 → 改动后」 */
+.sim-attr.is-changed { background: rgba(211, 188, 142, .1); }
+.sim-attr.is-changed .sim-aval { color: var(--gold-lt); }
+.sim-diff { grid-column: 1 / -1; font-size: 11px; color: var(--gold-lt); }
+
+/* ── 武器 ── */
+.sim-weapon {
+  background: var(--bg-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+}
+.sim-whead {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin-bottom: 6px;
+}
+.sim-whead strong { color: var(--cream); font-size: 13px; }
+.sim-wmeta { color: var(--ink-3); font-size: 12px; }
+.sim-wattrs {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 2px 10px; font-size: 12px; color: var(--ink-2);
+}
+.sim-wattrs > div { display: flex; justify-content: space-between; gap: 6px; }
+.sim-wattrs b { color: var(--ink); font-weight: 600; }
+.sim-edit { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* ── 圣遗物 ── */
+.sim-artis { display: flex; flex-direction: column; gap: 8px; }
+.sim-arti {
+  display: grid; grid-template-columns: 32px 1fr auto; gap: 8px; align-items: center;
+  background: var(--bg-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+}
+.sim-aicon {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-2);
+  border: 1px solid var(--gold-line);
+  border-radius: 8px;
+  color: var(--gold-lt); font-size: 14px;
+}
+.sim-amain { min-width: 0; }
+.sim-amain > strong { display: block; color: var(--cream); font-size: 13px; }
+.sim-asub { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--ink-2); }
+
+/* 控件：下拉和数字框跟顶栏那套一个口径（深底 + 金描边），别再另起一套 */
+.sim-select, .sim-input {
+  height: 32px;
+  padding: 0 8px;
+  background: var(--ctrl-bg);
+  border: 1px solid var(--gold-line);
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 13px;
+  font-family: inherit;
+}
+.sim-select:focus-visible, .sim-input:focus-visible {
+  outline: 2px solid rgba(211, 188, 142, .55); outline-offset: 1px;
+}
+.sim-input { width: 88px; }
+.sim-field { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.sim-field > span { min-width: 60px; color: var(--ink-3); font-size: 12px; }
+.sim-subs { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.sim-subrow { display: flex; gap: 6px; align-items: center; }
+.sim-subkey { flex: 1; min-width: 0; }
+
+.sim-editbtn, .sim-subdel, .sim-submore {
+  height: 30px; padding: 0 12px;
+  background: linear-gradient(180deg, rgba(58, 64, 82, .92), rgba(34, 39, 52, .92));
+  border: 1px solid var(--gold-line);
+  border-radius: 8px;
+  color: #e7e0d0; font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+}
+.sim-editbtn:hover, .sim-subdel:hover, .sim-submore:hover {
+  border-color: var(--gold-line-hi); color: var(--gold-lt);
+}
+.sim-subdel { width: 30px; padding: 0; font-size: 16px; line-height: 1; }
+.sim-submore { align-self: flex-start; }
+
+/* 明细页右端「模拟比对 + 分享」：原来只有分享一个圆钮靠 space-between 贴右，
+   多一个文字钮就得用容器兜 gap，否则两个钮会被拉到栏的两端 */
+.detail-actions { display: flex; align-items: center; gap: 10px; }
+.btn.sim-entry { height: 40px; font-size: 14px; }

@@ -173,13 +173,16 @@ export function imgError (img) { img.style.display = 'none' }
 
 export function showView (name) {
   const onDetail = name === 'detail'
+  const onSim = name === 'sim'
   $('view-roster').classList.toggle('active', name === 'roster')
   $('view-detail').classList.toggle('active', onDetail)
+  $('view-sim').classList.toggle('active', onSim)
   /* 明细页把整条顶栏收掉（CSS 侧：body.on-detail .top { display:none }）。
      UID 框 / 刷新 / 语言在这儿一个都用不上，留着只是把 600px 画布往下顶，
      还把页面上唯一的退出入口「← 返回」压成次要信息。切回首页再放出来 ——
-     语言切换只在首页做，明细页不带这一排。 */
-  document.body.classList.toggle('on-detail', onDetail)
+     语言切换只在首页做，明细页不带这一排。
+     ⚠️ 模拟页也收顶栏：它是明细页的下一步，同样用不上那一排。 */
+  document.body.classList.toggle('on-detail', onDetail || onSim)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
