@@ -74,15 +74,12 @@ function renderSim () {
     return
   }
 
-  /* 顶栏：← 返回 + 复原。角色名交给下面的 hero（顶栏再来一遍是重复，明细页也正是这么砍掉的） */
+  /* 顶栏：只有 ← 返回。角色名交给下面的 hero（顶栏再来一遍是重复，明细页也正是这么砍掉的）；
+     「还原」不再放这儿 —— 现在挂在每一件装备卡上，只还原那一件（见 simCardBtns） */
   const bar = el('div', 'sim-head')
   const back = el('button', 'btn back', '← ' + T('back'))
   back.addEventListener('click', () => showView('detail'))
-  bar.append(back, el('span', 'sim-gap'))
-  /* 复原：把草稿清空 = 右栏回到当前实装。改花了眼时一键回到起点，省得一件件退回 */
-  const reset = el('button', 'btn', T('simReset'))
-  reset.addEventListener('click', resetDraft)
-  bar.append(reset)
+  bar.append(back)
   box.append(bar)
 
   /*
@@ -277,7 +274,9 @@ function attrPanel (av) {
  */
 function weaponCard (av, editable) {
   const w = av?.weapon || {}
-  const item = el('div', 'item weapon')
+  /* 改过的件挂 is-sim：属性数值一律青色（CSS 里染），一眼分清账号真值和模拟值 */
+  const dirty = editable && isWeaponDirty()
+  const item = el('div', 'item weapon' + (dirty ? ' is-sim' : ''))
   if (w.icon) item.append(setBg(el('div', 'img'), w.icon))
 
   const head = el('div', 'head')
@@ -302,8 +301,29 @@ function weaponCard (av, editable) {
   const dc = el('div', 'weapon-desc-cont')
   dc.append(el('div', 'weapon-desc', String(w.desc || '').replace(/<[^>]*>/g, '')))
   item.append(dc)
-  item.append(simEditBtn(editable, openWeaponDialog))
+  item.append(simCardBtns(editable, openWeaponDialog, dirty, revertWeapon))
   return item
+}
+
+/**
+ * 卡片上那组操作按钮（改 / 还原）。挂在**卡片本体**上（不是 head）—— 绝对定位相对整张卡，
+ * 桌面放卡内、手机放卡片下方，都由 CSS 坐标决定。
+ *
+ * 「还原」**只在这件被改过时才出现**：没改过的件上多一颗灰按钮纯属添乱；
+ * 而且它只还原这一件，不是整页复原（整页复原那颗已按用户要求删掉）。
+ */
+function simCardBtns (editable, onEdit, dirty, onRevert) {
+  const box = el('div', 'sim-btns')
+  box.append(simEditBtn(editable, onEdit))
+  if (dirty) box.append(simRevertBtn(onRevert))
+  return box
+}
+
+/** 「还原」按钮：跟「改」同一套外观，但用青色描边 —— 跟模拟值的颜色对上，一看就知道是一组 */
+function simRevertBtn (onRevert) {
+  const btn = el('button', 'sim-inbtn sim-revertbtn', T('simReset'))
+  btn.addEventListener('click', onRevert)
+  return btn
 }
 
 /**
@@ -381,10 +401,23 @@ function setDraftWeapon (w) {
   recompute()
 }
 
-/** 清空草稿：右栏立刻回到「当前实装」（空草稿在后端就是「什么都别改」） */
-function resetDraft () {
-  sim.draft = { weapon: null, artifacts: [] }
+/** 还原这一件武器：清掉草稿里的武器 = 右栏回到当前实装那把 */
+function revertWeapon () {
+  sim.draft.weapon = null
   recompute()
+}
+
+/**
+ * 这件武器是否被改过。
+ * ⚠️ 比的是**值**，不是「草稿里有没有」：打开弹窗又原样点确定也会写草稿，
+ *   那种不该算改动、更不该把属性标成模拟值。
+ */
+function isWeaponDirty () {
+  const d = sim.draft.weapon
+  if (!d) return false
+  const w = currentAvatar()?.weapon
+  if (!w || w.state === 'none') return true
+  return d.itemId !== (w.itemId ?? 0) || d.level !== (w.level ?? 1) || d.affix !== (w.affix ?? 1)
 }
 
 /* ───────────────────────── 圣遗物 ───────────────────────── */
@@ -423,7 +456,8 @@ function artiCard (a, editable, cw = {}) {
     return c
   }
 
-  const c = el('div', 'item arti')
+  const dirty = editable && isArtiDirty(a.pos)
+  const c = el('div', 'item arti' + (dirty ? ' is-sim' : ''))
   /* data-slot 给 CSS 的 ::before 当兜底字（图标没同步到时露一个淡部位字），跟明细页一个路子 */
   const icon = el('div', 'arti-icon')
   icon.dataset.slot = slotGlyph(a.pos)
@@ -462,7 +496,7 @@ function artiCard (a, editable, cw = {}) {
     ul.append(li)
   }
   c.append(ul)
-  c.append(simEditBtn(editable, () => openArtiDialog(a)))
+  c.append(simCardBtns(editable, () => openArtiDialog(a), dirty, () => revertArti(a.pos)))
   return c
 }
 /** 改一件圣遗物：套装 / 等级 / 主词条 / 副词条 */
@@ -624,6 +658,28 @@ function setDraftArtifact (next) {
   list.push(next)
   sim.draft.artifacts = list
   recompute()
+}
+
+/** 还原这一件圣遗物：把该部位从草稿里摘掉，右栏这一格回到当前实装 */
+function revertArti (pos) {
+  sim.draft.artifacts = (sim.draft.artifacts || []).filter(a => a.pos !== pos)
+  recompute()
+}
+
+/**
+ * 这件圣遗物是否被改过。
+ * ⚠️ 必须跟**左栏原始视图**（currentAvatar）比，不能跟右栏那个 `a` 比 ——
+ *   右栏的 a 本身就是改后的结果，拿它跟草稿比永远相等，改过的件会被判成没改。
+ */
+function isArtiDirty (pos) {
+  const d = draftOfPos(pos)
+  if (!d) return false
+  const org = (currentAvatar()?.artifacts || []).find(x => x.pos === pos)
+  if (!org || org.empty) return true          // 原本空着，现在填了东西 = 改动
+  const o = defaultDraftOf(org)
+  if (d.set !== o.set || d.level !== o.level || d.mainKey !== o.mainKey) return true
+  if ((d.subs || []).length !== o.subs.length) return true
+  return (d.subs || []).some((s, i) => s.key !== o.subs[i].key || s.value !== o.subs[i].value)
 }
 
 /* ───────────────────────── 伤害对比表 ───────────────────────── */

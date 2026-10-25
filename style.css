@@ -21,6 +21,10 @@
   --gold-line: rgba(211, 188, 142, .32);
   --gold-line-hi: rgba(211, 188, 142, .72);
   --ctrl-bg: rgba(22, 26, 36, .82);
+  /* 「模拟值」色 —— 模拟比对页里被手动改过的那些属性用它，跟金（权重高 / 已改动）
+     拉开距离，一眼就能分清哪些数字是账号真值、哪些是算出来的。
+     青蓝是特意选的：卡片上已经有金（权重）、白（普通）、灰（无用），第四个色只有冷色还空着。 */
+  --sim-tint: #7ad3ff;
   --radius: 14px;
   --radius-sm: 10px;
   /* 主要显示区 600px：628 = 600 内容区 + .app 左右内边距 28。
@@ -1196,8 +1200,6 @@ body.on-detail #footmeta { display: none; }
   display: flex; align-items: center; gap: 12px;
   margin-bottom: 12px;
 }
-/* 顶栏：返回 ← 弹簧 → 复原。角色名交给下面的 hero，这儿不再重复一遍 */
-.sim-gap { flex: 1; }
 
 /*
  * 卡片本体：**元素背景铺满整张卡**（不是只当顶部标题块）—— 和明细页 `.pd-canvas` 一个路子：
@@ -1440,12 +1442,25 @@ body.on-detail #footmeta { display: none; }
    补回 63px 后跟明细页的遮挡程度一致（只压半行，且那半是斜切透明的）。 */
 #view-sim .item.arti .head { min-height: 63px; }
 
-/* 「改」按钮：绝对定位在 head 里名称右侧、套装图标左侧那道空档 —— 不占行高。
+/* 卡片操作按钮组（改 / 还原）：绝对定位在**卡片**上，不占行高。
    圣遗物图标 right:0 宽 90、武器图标 right:-10 宽 100，都从卡片右边 100px 处开始，
-   所以按钮统一 right:104px 就能稳稳落在图标左边。 */
-#view-sim .item > .sim-inbtn {
+   所以 right:104px 就稳稳落在图标左边。
+   `row-reverse` 让「改」永远贴在 right:104 那条线上，「还原」往左长 ——
+   这样有没有还原按钮都不会把「改」推来推去。 */
+#view-sim .item > .sim-btns {
   position: absolute;
   right: 104px; top: 9px;
+  display: flex; flex-direction: row-reverse; align-items: center; gap: 6px;
+  z-index: 4;
+}
+#view-sim .item.arti > .sim-btns { top: 36px; }
+#view-sim .item.weapon > .sim-btns { top: 32px; }
+
+/* ⚠️ 按钮不能跟名称同一行：武器英文全名（Thrilling Tales of Dragon Slayers）
+   会一直排到按钮底下被盖住。所以移到名称下面那一行 ——
+   圣遗物 head 有 63px（原评分位空着），武器 head 有 90px 且第二行是「R5 Lv.90」，
+   两处都有 26px 给按钮，且都不碰名称。 */
+#view-sim .sim-inbtn {
   height: 26px; padding: 0 13px;
   font-size: 13px; font-weight: 600; line-height: 1;
   border-radius: 8px;
@@ -1455,22 +1470,29 @@ body.on-detail #footmeta { display: none; }
   border: 1px solid var(--gold-line);
   box-shadow: 0 1px 3px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .09);
   cursor: pointer;
-  z-index: 4;
 }
-
-/* ⚠️ 按钮不能跟名称同一行：武器英文全名（Thrilling Tales of Dragon Slayers）
-   会一直排到按钮底下被盖住。所以移到名称下面那一行 ——
-   圣遗物 head 有 63px（原评分位空着），武器 head 有 90px 且第二行是「R5 Lv.90」，
-   两处都有 26px 给按钮，且都不碰名称。 */
-#view-sim .item.arti > .sim-inbtn { top: 36px; }
-#view-sim .item.weapon > .sim-inbtn { top: 32px; }
-#view-sim .item > .sim-inbtn:hover {
+/* 还原按钮：描边用模拟值的青色，跟被它还原的那些数字对上 */
+#view-sim .sim-inbtn.sim-revertbtn {
+  color: var(--sim-tint);
+  border-color: rgba(122, 211, 255, .5);
+}
+#view-sim .sim-inbtn:hover {
   color: var(--gold-lt);
   border-color: var(--gold-line-hi);
 }
-#view-sim .item > .sim-inbtn:active {
+#view-sim .sim-inbtn.sim-revertbtn:hover {
+  color: #b6e7ff;
+  border-color: rgba(122, 211, 255, .85);
+}
+#view-sim .sim-inbtn:active {
   transform: translateY(1px);
 }
+
+/* 改过的件：数值一律青色 = 模拟值。
+   只染数值不染名字 —— 武器属性名（金）、词条名（权重三档色）都要保持原样，
+   否则就跟「权重高 / 无用」的配色打架了。 */
+#view-sim .item.is-sim .weapon-attr div { color: var(--sim-tint); }
+#view-sim .item.is-sim ul.detail li .val { color: var(--sim-tint); }
 
 /* 控件：下拉和数字框跟顶栏那套一个口径（深底 + 金描边），别再另起一套 */
 .sim-select, .sim-input {
@@ -1564,11 +1586,19 @@ body.on-detail #footmeta { display: none; }
   .sim-old { font-size: 10px; }
 
   /* 手机每栏只有 156px，卡内任何位置都会压到名称/「R5 Lv.90」——
-     按钮挪到**卡片下方**，卡片之间留 30px 给它。按钮挂在外层 .item 上，
-     所以 bottom 是相对整张卡（不是 head）。 */
+     按钮组挪到**卡片下方**，卡片之间留 30px 给它。按钮挂在 .item 上，
+     所以 bottom 是相对整张卡（不是 head）。
+     ⚠️ 必须把 .item.arti / .item.weapon 那两条也列上：它们带两个类、特异性比
+       `#view-sim .item > .sim-btns` 高，只写一条的话 top:32px 会赢、bottom 失效，
+       按钮就又跑回卡片里压住词条（踩过一次）。 */
   #view-sim .artis { gap: 30px; }
-  #view-sim .item > .sim-inbtn {
+  #view-sim .item > .sim-btns,
+  #view-sim .item.arti > .sim-btns,
+  #view-sim .item.weapon > .sim-btns {
     right: 6px; top: auto; bottom: -27px;
+    gap: 5px;
+  }
+  #view-sim .sim-inbtn {
     height: 24px; padding: 0 10px; font-size: 12px;
   }
 
