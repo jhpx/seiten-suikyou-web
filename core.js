@@ -45,12 +45,6 @@ export const RANK_ORDER = ['MAX', 'ACE', 'SSS', 'SS', 'S', 'A', 'B', 'C', 'D']
 export const SLOT_GLYPH = { 1: '花', 2: '羽', 3: '沙', 4: '杯', 5: '冠' }
 
 /* 武器副属性在卡片上的短名，照抄 miao 模板里的 titleMap（profile-detail.html:233） */
-export const W_ATTR_TITLE = {
-  atkBase: '攻击', atkPct: '攻击', hpPct: '生命', defPct: '防御',
-  mastery: '精通', dmg: '伤害', phy: '物伤',
-  cpct: '暴击', cdmg: '爆伤', recharge: '充能', heal: '治疗', shield: '护盾'
-}
-
 export const state = {
   locale: 'chs',
   uid: null,

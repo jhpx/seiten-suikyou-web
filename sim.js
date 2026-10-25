@@ -16,7 +16,7 @@
  *    显示出来会误导。
  */
 import {
-  $, state, T, el, slotGlyph, api, reg, showView, openDialog, W_ATTR_TITLE, setBg, imgError,
+  $, state, T, el, slotGlyph, api, reg, showView, openDialog, setBg, imgError,
   weightClass, hitMark
 } from './core.js'
 
@@ -27,6 +27,9 @@ const sim = {
   draft: { weapon: null, artifacts: [] },
   right: null,
   busy: false,
+  /* 重算请求号。连着改两件时两份请求是并行的，内核算得慢的那份可能后回来 ——
+     照旧无脑写回就会把后改的那件悄悄退回原样（看着就是「改了没反应」）。 */
+  seq: 0,
   /* 左栏伤害只跟「当前实装」有关，进页面取一次就够，别每次重绘都去打接口。
      dmgBox 是底部那张对比表的容器引用 —— 重算完右栏变了，只重画这一块，不动整页。 */
   leftDamage: null,
@@ -45,6 +48,7 @@ function currentAvatar () {
 async function recompute () {
   const uid = state.uid
   if (!uid || sim.avatarId == null) return
+  const seq = ++sim.seq
   sim.busy = true
   try {
     const res = await api(`accounts/${uid}/characters/${sim.avatarId}/simulator?locale=${encodeURIComponent(state.locale)}`, {
@@ -52,15 +56,21 @@ async function recompute () {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(sim.draft)
     })
+    /* 已经有更新的请求发出去了，这份结果作废（它比当前草稿旧） */
+    if (seq !== sim.seq) return
     sim.right = res
   } catch (e) {
-    sim.right = null
+    if (seq !== sim.seq) return
+    /* ⚠️ 失败时**不要**把 sim.right 清空：那会让整页静默退回账号原值，
+       看着就像「我改了、页面没反应」。留着上一次算成功的结果，错误只进控制台。 */
     console.error('[sim] 模拟失败:', e)
   } finally {
-    sim.busy = false
-    renderSim()
-    /* 右栏伤害变了 → 底部对比表要跟着重画。renderSim 里也会画一次，这里是重算完成的补刀 */
-    drawDamageCompare()
+    if (seq === sim.seq) {
+      sim.busy = false
+      renderSim()
+      /* 右栏伤害变了 → 底部对比表要跟着重画。renderSim 里也会画一次，这里是重算完成的补刀 */
+      drawDamageCompare()
+    }
   }
 }
 
@@ -90,19 +100,22 @@ function renderSim () {
   const card = setBg(el('div', 'sim-card' + (av ? ' elem-' + av.elem : '')), av?.elemBg || '')
   card.append(heroBanner())
 
-  const cols = el('div', 'sim-cols')
-
-  const left = el('div', 'sim-col')
-  left.append(el('h2', 'sim-col-title', T('simCurrent')))
-  left.append(currentPane())
-  cols.append(left)
-
-  const right = el('div', 'sim-col')
-  right.append(el('h2', 'sim-col-title', T('simAdjusted')))
-  right.append(adjustedPane())
-  cols.append(right)
-
-  card.append(cols)
+  /* 单栏：右边那份（重算后的视图）已经完全表达「旧 → 新」，左栏那份纯旧值只是重复。
+     6 张卡（武器 + 5 圣遗物）排成两列，纵向从 12 块收到 6 块。
+     还没算完时先用账号视图顶上（两者结构一样，只差 dirty 标记），算完 renderSim 会重画。 */
+  const view = sim.right?.avatar || av
+  if (!view) {
+    card.append(el('div', 'placeholder', T('noData')))
+  } else {
+    /* 属性表要垫一层深底：元素背景当底时白字读不出来（原来那层底在 .sim-col 上，已随两栏一起删了） */
+    const panel = el('div', 'sim-panel')
+    panel.append(attrPanel(view))
+    card.append(panel)
+    const grid = el('div', 'sim-pieces')
+    grid.append(wrapArti(weaponCard(view, true)))
+    for (const a of view.artifacts || []) grid.append(wrapArti(artiCard(a, true, view.charWeight)))
+    card.append(grid)
+  }
 
   /* 伤害对比表：跨整卡宽放在两栏下面，不在任何一栏里。
      一栏一张表时每张只有两百多 px，「Q泡影破裂蒸发」这种长标题加两列数字必然折行。
@@ -175,24 +188,6 @@ function heroBanner () {
 }
 
 /** 左栏：当前实装的面板 + 武器 + 圣遗物 + 伤害 */
-function currentPane () {
-  const wrap = el('div', 'sim-pane')
-  const av = currentAvatar()
-  if (!av) {
-    wrap.append(el('div', 'placeholder', T('noData')))
-    return wrap
-  }
-  wrap.append(attrPanel(av))
-  /* 武器卡也要包一层 .artis：miao 的规则是 `.artis .item.weapon`（带容器前缀），
-     不包的话卡片底图、圆角、投影全都命中不了 */
-  const wbox = el('div', 'artis')
-  wbox.append(weaponCard(av, false))
-  wrap.append(wbox)
-  wrap.append(artiView(av.artifacts, av.charWeight))
-  /* 伤害不在这里出 —— 挪到卡片底部做「当前 / 调整后」并排的对比表（见 drawDamageCompare） */
-  return wrap
-}
-
 /** 左栏伤害：与明细页同一个接口。只取一次，结果缓存在 sim.leftDamage */
 async function loadLeftDamage () {
   if (sim.leftDamage) return
@@ -205,21 +200,6 @@ async function loadLeftDamage () {
   }
 }
 
-/** 右栏：改后的面板 + 可编辑的武器/圣遗物（伤害同样挪到底部对比表） */
-function adjustedPane () {
-  const wrap = el('div', 'sim-pane')
-  if (!sim.right) {
-    wrap.append(el('div', 'placeholder', sim.busy ? T('simCalculating') : T('simEmpty')))
-    return wrap
-  }
-  const av = sim.right.avatar
-  wrap.append(attrPanel(av))
-  const wbox = el('div', 'artis')
-  wbox.append(weaponCard(av, true))
-  wrap.append(wbox)
-  wrap.append(artiEditor(av.artifacts, av.charWeight))
-  return wrap
-}
 
 /* ───────────────────────── 面板 ───────────────────────── */
 
@@ -238,6 +218,10 @@ function adjustedPane () {
  * 差异标注：与左栏同一项数值不同就整行提亮并写出「改动前 → 改动后」。
  * 这是这个页面存在的理由 —— 用户换一件装备就是为了看这里变没变。
  */
+/* 面板属性表固定行数：7 条基础 + 元素伤害加成（武器副属性是元素伤时才有）。
+   两栏必须一样高，靠补空行做到。 */
+const ATTR_ROWS = 8
+
 function attrPanel (av) {
   const box = el('div', 'sim-attrs')
   const base = currentAvatar()
@@ -261,48 +245,96 @@ function attrPanel (av) {
     row.append(el('span', 'sim-abreak', `${r.base} + ${r.plus}`))
     box.append(row)
   }
+  /* 补空行到固定行数：武器副属性是元素伤害加成时会多出一行「水伤加成」，
+     两栏行数一不同，下面的武器 / 圣遗物 / 伤害就整块错位（这页全部价值在逐行对读）。
+     空行用同样的三段结构（高度自然一致）+ visibility: hidden，看着就是留白。 */
+  const n = (av.attrTable || []).length
+  /* ⚠️ 空行必须 **clone 最后一个真行** 再隐藏：自己造三个空 span 的话高度对不上
+     （空 span 高度是 0，塞 &nbsp; 也不够——手机断点下每行仍差 2px，累计 17px）。
+     clone 出来的行结构、字号、内外边距全都一样，高度必然相等。 */
+  const last = box.lastElementChild
+  if (last) {
+    for (let i = n; i < ATTR_ROWS; i++) {
+      const blank = last.cloneNode(true)
+      blank.classList.add('sim-attr-empty')
+      blank.classList.remove('is-changed')
+      box.append(blank)
+    }
+  }
   return box
 }
 
 /* ───────────────────────── 武器 ───────────────────────── */
 
+/* 武器表固定行数：等级 + 精炼 + 最多 3 条属性（主属性 + 新副属性 + 已消失的旧副属性）。
+   两栏必须一样高，否则下面的圣遗物整列错位 —— 这页全部价值就在逐行对读。 */
+const WEAPON_ROWS = 5
+
 /**
- * 武器卡 —— **1:1 复刻明细页**那张（miao.css 的 .item.weapon）：100×100 图标斜压在右上、
- * 名称 + 精炼徽章 + 等级、主副属性条贴在卡底、下面一整块说明。结构照 detail.js 的
- * renderWeaponCard 抄。属性名的金色是 miao 的固定色（不是权重色），所以保留。
- * 「改」按钮放在 head 里名称右侧（见 simEditBtn），不占额外行高。
+ * 武器卡 —— 跟圣遗物卡同一套压缩版式：40px 图标在左上、名称行 34px、
+ * 下面一张词条表（等级 / 精炼 / 主副属性）。**不再画说明**（用户明确不要）。
+ * 改过的件：左上旧图 + 右上新图，词条全套写成「旧 → 新」。
  */
 function weaponCard (av, editable) {
   const w = av?.weapon || {}
   /* 改过的件挂 is-sim：属性数值一律青色（CSS 里染），一眼分清账号真值和模拟值 */
   const dirty = editable && isWeaponDirty()
+  /* 改过时左上放**原来那把**的图（新图在右上），属性也才有旧值可比 */
+  const org = dirty ? currentAvatar()?.weapon : null
   const item = el('div', 'item weapon' + (dirty ? ' is-sim' : ''))
-  if (w.icon) item.append(setBg(el('div', 'img'), w.icon))
+
+  /* 左上图标**不带角标**：等级/精炼都进下面的词条表了，角标再写一遍是重复，
+     而且 34px 的角标会盖住图的下半截（武器图竖长，比圣遗物更容易被遮）。 */
+  const icon = el('div', 'sim-wicon')
+  icon.append(setBg(el('div', 'sim-wimg'), (org?.icon || w.icon) || ''))
+  item.append(icon)
+
+  if (dirty) item.append(simNewIcon(w.icon))
 
   const head = el('div', 'head')
-  head.append(el('strong', '', w.name || w.sName || T('noWeapon')))
-
-  const info = el('span', 'info')
-  info.append(el('span', 'affix affix-' + (w.affix ?? 1), `${T('refine')}${w.affix ?? 1}`))
-  info.append(document.createTextNode(` Lv.${w.level ?? '?'}`))
-  head.append(info)
-
-  /* 主副属性：贴在卡底的一条通栏，属性名金色（miao 固定色） */
-  const wa = el('div', 'weapon-attr')
-  for (const [k, v] of Object.entries(w.attrs || {})) {
-    const d = el('div')
-    d.append(el('span', '', W_ATTR_TITLE[k] || k), document.createTextNode(' +' + v))
-    wa.append(d)
-  }
-  head.append(wa)
+  head.append(nameCell(org?.name, w.name || w.sName || T('noWeapon')))
   item.append(head)
 
-  /* 说明：miao 的描述里带 <nobr> 高亮标签，只取纯文本（顺手避免注入） */
-  const dc = el('div', 'weapon-desc-cont')
-  dc.append(el('div', 'weapon-desc', String(w.desc || '').replace(/<[^>]*>/g, '')))
-  item.append(dc)
+  /* 词条表：等级 / 精炼 / 主副属性。改过的件整套写成「旧 → 新」——
+     等级和精炼也在这儿对比，不再靠两颗图标的角标去猜。 */
+  const ul = el('ul', 'detail attr')
+  ul.append(statRow(T('simLevel'), 'Lv.' + (w.level ?? '?'),
+    org ? 'Lv.' + (org.level ?? '?') : null, dirty))
+  ul.append(statRow(T('simRefine'), `${T('refine')}${w.affix ?? 1}`,
+    org ? `${T('refine')}${org.affix ?? 1}` : null, dirty))
+
+  /* 属性：把新旧两边的 key **并起来** —— 换武器类型时（攻击% → 暴击率），只列新列表的话
+     消失和新增的那条就完全看不见。消失的写「旧值 → 0」、新增的写「0 → 新值」。
+     `attrs` 是数组 `{key,label,value}`（名字由后端按 locale 给），这里按 key 建 Map 再并集。 */
+  const nv = new Map((w.attrs || []).map(a => [a.key, a]))
+  const ov = new Map((org?.attrs || []).map(a => [a.key, a]))
+  const keys = [...nv.keys(), ...[...ov.keys()].filter(k => !nv.has(k))]
+  for (const k of keys) {
+    const n = nv.get(k)
+    const o = ov.get(k)
+    /* 名字优先取新的；只有旧值时用旧的（换掉的那条也得有名字） */
+    const label = (n || o).label
+    /* 武器主副属性**都不带 +**（游戏里是「基础攻击力 608」，只有圣遗物副词条才带） */
+    const newText = n ? n.value : '0'
+    /* 没改过时不给旧值（否则每条都「608 → 608」）；新加的那条旧值记 0 */
+    const oldText = o ? o.value : (dirty && n ? '0' : null)
+    ul.append(statRow(label, newText, oldText, dirty))
+  }
+  /* 补齐到固定行数：换武器时属性条数会变（2 条变 3 条），两栏武器卡就不同高，
+     下面的圣遗物整列跟着错位。空行不画条纹，看着就是留白。 */
+  for (let i = ul.children.length; i < WEAPON_ROWS; i++) ul.append(el('li', 'sim-row-empty'))
+  item.append(ul)
   item.append(simCardBtns(editable, openWeaponDialog, dirty, revertWeapon))
   return item
+}
+
+/** 词条表里的一行「标签 | 旧 → 新」。oldText 是已经格式化好的串，没改过时传 null */
+function statRow (label, newText, oldText, showOld) {
+  const li = el('li')
+  const t = el('span', 'title')
+  t.append(el('span', 'label', label))
+  li.append(t, valCell(newText, oldText, showOld))
+  return li
 }
 
 /**
@@ -422,20 +454,13 @@ function isWeaponDirty () {
 
 /* ───────────────────────── 圣遗物 ───────────────────────── */
 
-/** 圣遗物列表（只读） */
-function artiView (list, cw) {
+/** 每张卡都要包一层 `.artis`：miao 的规则全是 `.artis .item.xxx`（带容器前缀），
+ *  不包的话卡片底图、圆角、投影一条都命中不了。 */
+function wrapArti (card) {
   const box = el('div', 'artis')
-  for (const a of list || []) box.append(artiCard(a, false, cw))
+  box.append(card)
   return box
 }
-
-/** 圣遗物列表（可改） */
-function artiEditor (list, cw) {
-  const box = el('div', 'artis')
-  for (const a of list || []) box.append(artiCard(a, true, cw))
-  return box
-}
-
 /**
  * 一件圣遗物 —— **1:1 复刻明细页**那张（miao.css 的 .item.arti）：90×90 套装图标斜压在右上
  * （自带 45° 淡出遮罩）、名称压在图上一层、主副词条表 26px 一行。
@@ -457,16 +482,25 @@ function artiCard (a, editable, cw = {}) {
   }
 
   const dirty = editable && isArtiDirty(a.pos)
+  /* 右栏改过时，左上那颗要放**原来那件**的图标（新图在右上），词条也要有旧值可比 */
+  const org = dirty ? originalArti(a.pos) : null
   const c = el('div', 'item arti' + (dirty ? ' is-sim' : ''))
-  /* data-slot 给 CSS 的 ::before 当兜底字（图标没同步到时露一个淡部位字），跟明细页一个路子 */
+
+  /* 左上图标：半透明当底纹，名称和第一行词条压在上面（CSS 里 opacity + 缩到 40px）。
+     data-slot 给 CSS 的 ::before 当兜底部位字，跟明细页一个路子。 */
   const icon = el('div', 'arti-icon')
   icon.dataset.slot = slotGlyph(a.pos)
-  icon.append(setBg(el('div', 'img'), a.icon || ''))
-  icon.append(el('span', '', '+' + (a.level ?? 0)))
+  const iconUrl = (org?.icon || a.icon) || ''
+  const iconLv = (org?.level ?? a.level) ?? 0
+  icon.append(setBg(el('div', 'img'), iconUrl))
+  icon.append(el('span', '', '+' + iconLv))
   c.append(icon)
 
+  /* 右上「新图标」：只有改过的件才有 —— 一眼看出这件是模拟出来的、套装甚至换了 */
+  if (dirty) c.append(simNewIcon(a.icon, '+' + (a.level ?? 0)))
+
   const head = el('div', 'head')
-  head.append(el('strong', '', a.name))
+  head.append(nameCell(org?.name, a.name))
   c.append(head)
 
   const ul = el('ul', 'detail attr')
@@ -474,30 +508,98 @@ function artiCard (a, editable, cw = {}) {
     const li = el('li', 'arti-main')
     const mt = el('span', 'title')
     mt.append(el('span', 'label', a.main.label))
-    li.append(mt, el('span', 'val', '+' + a.main.value))
+    /* 旧值也要补 + 号：明细页主副词条一律 「+4,780」，只给新值加会一边有一边没有 */
+    /* 主词条不带 +（只有副词条带）。旧值只在**还是同一条主词条**时才算数 ——
+       换了属性（生命值 → 攻击力）旧值就不是「这条」的了，那条记 0。 */
+    const sameMain = org?.main?.key === a.main.key
+    li.append(mt, valCell(a.main.value, sameMain ? org.main.value : (dirty ? '0' : null), dirty))
     ul.append(li)
   }
-  for (const s of a.subs || []) {
+  /* 副词条：把新旧两边的 key **并起来** —— 用户删掉一条时，只顺着新列表画的话
+     那一行会整个消失，看不出「这条没了」；消失的写「旧值 → 0」（和武器属性同一个口径）。
+     一个新 key 在一件圣遗物里只会出现一次（内核已把多次强化合成一条），所以按 key 配对。 */
+  const subs = a.subs || []
+  const orgSubs = org?.subs || []
+  for (const key of [...subs.map(x => x.key), ...orgSubs.map(x => x.key).filter(k => !subs.some(x => x.key === k))]) {
+    const s = subs.find(x => x.key === key)
+    const oldSub = orgSubs.find(x => x.key === key)
     /* 挂权重三档类：颜色由 miao.css 的 `.artis ul.detail li.great/.nouse` 给
        （金 = 高权重、白 = 有用、灰 = 无用），跟明细页同一套规则，本文件不另写颜色 */
-    const li = el('li', weightClass(Number(cw[s.key] ?? 0)))
+    const li = el('li', weightClass(Number(cw[key] ?? 0)))
     const lab = el('span', 'title')
-    /* up-num = 强化命中圈（core.hitMark，实心圆+镂空数字）。
+    /* up-num = 强化命中圈（core.hitMark，实心圆+镂空数字）。删掉的那条没有新值，不画圈。
        ⚠️ 不渲染 i.eff（词条前面的「2.8」「5.2」那种小数）—— 那是权重/有效率，
          用户明确要求隐藏。别顺手加回来。 */
-    const hit = Math.min(5, (s.upNum || 0) - 1)
+    const hit = s ? Math.min(5, (s.upNum || 0) - 1) : 0
     if (hit > 0) {
       const um = el('i', 'up-num')
       um.append(hitMark(hit))
       lab.append(um)
     }
-    lab.append(el('span', 'label', s.label))
-    li.append(lab, el('span', 'val', '+' + s.value))
+    lab.append(el('span', 'label', (s || oldSub).label))
+    /* 旧件没这条 = 本次新加的副词条 → 旧值记 0（写「0 → +31」而不是只写「+31」，
+       否则看不出这条是这次才有的）；反之新件没这条 = 被删掉的 → 新值记 0 */
+    const newText = s ? '+' + s.value : '0'
+    const oldText = oldSub ? '+' + oldSub.value : (dirty ? '0' : null)
+    li.append(lab, valCell(newText, oldText, dirty))
     ul.append(li)
   }
   c.append(ul)
   c.append(simCardBtns(editable, () => openArtiDialog(a), dirty, () => revertArti(a.pos)))
   return c
+}
+
+/**
+ * 卡片标题。改名时写成「旧名 → 新名」—— **新名不能把旧名顶掉**，
+ * 换掉的是哪一把/哪一件，得一眼看出来（只显示新名就分不清是「本来就是这样」还是「刚换的」）。
+ * 名字是识别这件东西的主要信息，所以宁可折行也不省略。
+ */
+function nameCell (oldName, newName) {
+  const s = el('strong')
+  if (oldName && newName && oldName !== newName) {
+    /* 竖排两行（旧名一行、新名一行），不写「A → B」一整串：head 只有 92px 宽，
+       一行塞两个名字会被右侧的按钮压住。箭头放在新名前面，读起来还是「变成」。
+       用 flex column 而不是 <br>，行高和间距好控。 */
+    const nn = el('span', 'sim-newname')
+    nn.append(el('i', 'sim-arrow', '→'), document.createTextNode(newName))
+    s.append(el('span', 'sim-oldname', oldName), nn)
+  } else {
+    s.append(document.createTextNode(newName || ''))
+  }
+  return s
+}
+
+/** 右上那颗「新图标」（改过的件才有）：图 + 右下角标签，青色描边表示是模拟出来的。
+ *  标签由调用方给全（圣遗物「+20」、武器「Lv.90」）—— 两者写法本来就不一样。 */
+function simNewIcon (url, label) {
+  const box = el('div', 'sim-newicon')
+  box.append(setBg(el('div', 'img'), url || ''))
+  /* label 可省：武器卡把等级/精炼都放进词条表了，图标只留图，不再压一个角标上去 */
+  if (label) box.append(el('span', '', label))
+  return box
+}
+
+/**
+ * 数值单元格。改过的件写成「旧 → 新」（旧的灰、新的青）。
+ *
+ * ⚠️ 只有**值真的变了**才写箭头：改一件装备时，那张卡上大多数词条其实没动，
+ *   全写成「+5.8% → +5.8%」只是噪声（面板属性表也是同一个规矩，见 attrPanel）。
+ *   删掉的那条能出来，是因为新值明确记 0（`+54 → 0`），不是靠「没旧值」判断的。
+ */
+function valCell (newVal, oldVal, showOld) {
+  const cell = el('span', 'val')
+  const nv = String(newVal)
+  const hasOld = showOld && oldVal !== undefined && oldVal !== null && oldVal !== ''
+  if (!hasOld || String(oldVal) === nv) {
+    cell.append(document.createTextNode(nv))
+    return cell
+  }
+  cell.append(
+    el('span', 'sim-val-old', String(oldVal)),
+    el('i', 'sim-arrow', '→'),
+    el('span', 'sim-val-new', nv)
+  )
+  return cell
 }
 /** 改一件圣遗物：套装 / 等级 / 主词条 / 副词条 */
 function openArtiDialog (a) {
@@ -522,9 +624,13 @@ function openArtiDialog (a) {
 
   const body = dlg.body
 
-  /* 套装 */
+  /* 套装：只列**有这个部位**的套装（祭X之人那批 4★ 套只有冠）。
+     不过滤的话能选到「祭雷之人的花」，后端认不出这种组合会整件草稿静默跳过 ——
+     现象是值被染成模拟色、但一个数都没变（用户实测报过这个）。
+     `!x.positions` 是给「前端比后端新」的场合兜底（web/ 是独立仓库，可能先发）：
+     老接口没这个字段时照旧全列，不至于让下拉空掉。 */
   const setSel = el('select', 'sim-select')
-  for (const s of sim.catalog?.sets || []) {
+  for (const s of (sim.catalog?.sets || []).filter(x => !x.positions || x.positions.includes(a.pos))) {
     const o = el('option', '', s.name)
     o.value = s.key
     if (s.key === cur.set) o.selected = true
@@ -642,9 +748,23 @@ function defaultDraftOf (a) {
     star: a.star || 5,
     /* 内核口径是 0 基（levelRaw - 1），页面上一律用 1 基 —— 这里 +1 换回来 */
     level: (a.level ?? 0) + 1,
-    mainKey: a.main?.key || 'hpPlus',
+    mainKey: mainKeyOf(a.main),
     subs: (a.subs || []).map(s => ({ key: s.key, value: parseNum(s.value) }))
   }
+}
+
+/**
+ * 主词条 key：内核口径 → 目录/下拉用的口径。
+ *
+ * ⚠️ 元素伤害杯的主词条在核心里是**具体元素**（`cryo` / `pyro` …），而目录只给一项 `dmg`。
+ *   不翻回来的话下拉里一个都选不中，浏览器按规则默认选第一项（攻击力）——
+ *   于是「只改个副词条、顺手点确定」会把主词条悄悄换成攻击力，冰伤直接归零
+ *   （实测：冰伤加成 46.6% → 大攻击 0 → 46.6%）。
+ */
+function mainKeyOf (main) {
+  const key = main?.key
+  if (!key) return 'hpPlus'
+  return key === currentAvatar()?.elem ? 'dmg' : key
 }
 
 /** 显示串（"10.9%" / "478"）→ 数字 */
@@ -667,6 +787,14 @@ function revertArti (pos) {
 }
 
 /**
+ * 左栏那件原件（按部位找）。右栏画「旧 → 新」、放「旧图标」都要比着它。
+ * 找不到 / 原本就是空件时返回 null，调用方自己兜底。
+ */
+function originalArti (pos) {
+  return (currentAvatar()?.artifacts || []).find(x => x.pos === pos) || null
+}
+
+/**
  * 这件圣遗物是否被改过。
  * ⚠️ 必须跟**左栏原始视图**（currentAvatar）比，不能跟右栏那个 `a` 比 ——
  *   右栏的 a 本身就是改后的结果，拿它跟草稿比永远相等，改过的件会被判成没改。
@@ -674,7 +802,7 @@ function revertArti (pos) {
 function isArtiDirty (pos) {
   const d = draftOfPos(pos)
   if (!d) return false
-  const org = (currentAvatar()?.artifacts || []).find(x => x.pos === pos)
+  const org = originalArti(pos)
   if (!org || org.empty) return true          // 原本空着，现在填了东西 = 改动
   const o = defaultDraftOf(org)
   if (d.set !== o.set || d.level !== o.level || d.mainKey !== o.mainKey) return true

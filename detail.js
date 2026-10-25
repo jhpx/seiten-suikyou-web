@@ -5,7 +5,7 @@
 
 import {
   $, state, T, el, setBg, rankOf, slotGlyph, backToRoster, richText,
-  weaponFallback, weightClass, W_ATTR_TITLE, api, reg, hitMark
+  weaponFallback, weightClass, api, reg, hitMark
 } from './core.js'
 import { downloadDetailCard } from './share.js'
 
@@ -233,10 +233,12 @@ function renderWeaponCard (w) {
   /* 主副属性贴在 head 底部（miao 里 .weapon-attr 是 .head 的子元素、absolute bottom:0，
      挂到整张卡上会掉到卡片底部去） */
   const wa = el('div', 'weapon-attr')
-  for (const [k, v] of Object.entries(w.attrs || {})) {
+  /* w.attrs 是数组、名字由后端按 locale 给（statLabel）—— 前端不再有那张硬编码中文表 */
+  for (const a of w.attrs || []) {
     const d = el('div')
-    d.append(el('span', '', W_ATTR_TITLE[k] || k))
-    d.append(document.createTextNode(' +' + v))
+    d.append(el('span', '', a.label))
+    /* 武器主副属性**不带 +**（游戏里就是「基础攻击力 608」「攻击力 49.6%」） */
+    d.append(document.createTextNode(' ' + a.value))
     wa.append(d)
   }
   head.append(wa)
@@ -320,7 +322,8 @@ function renderArtiCard (a, cw = {}) {
     const li = el('li', 'arti-main')
     const mt = el('span', 'title')
     mt.append(el('span', 'label', a.main.label))
-    li.append(mt, el('span', 'val', '+' + a.main.value))
+    /* 主词条**不带 +**；只有副词条带（游戏里就是这么分的） */
+    li.append(mt, el('span', 'val', a.main.value))
     ul.append(li)
   }
   for (const s of a.subs) {

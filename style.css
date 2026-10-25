@@ -23,8 +23,13 @@
   --ctrl-bg: rgba(22, 26, 36, .82);
   /* 「模拟值」色 —— 模拟比对页里被手动改过的那些属性用它，跟金（权重高 / 已改动）
      拉开距离，一眼就能分清哪些数字是账号真值、哪些是算出来的。
-     青蓝是特意选的：卡片上已经有金（权重）、白（普通）、灰（无用），第四个色只有冷色还空着。 */
-  --sim-tint: #7ad3ff;
+     取游戏里「圣遗物套装效果已生效」那层黄绿：同一套界面语言，读起来不像外来的。
+     ⚠️ 跟底伤害表的涨跌绿（#4ecca3，偏青）不是一回事：那个是青绿、只在最下方表里出现，
+        这里是黄绿、只在装备/面板上出现，色相隔着 40°，小字下也分得开。
+     ⚠️ 半透明的地方用下面的 --sim-tint-rgb 拼 rgba()，别各写一份通道值 ——
+        CSS 变不出 rgba(#a5d977, .1) 这种写法，写死两处迟早改漏一处。 */
+  --sim-tint: #a5d977;
+  --sim-tint-rgb: 165, 217, 119;
   --radius: 14px;
   --radius-sm: 10px;
   /* 主要显示区 600px：628 = 600 内容区 + .app 左右内边距 28。
@@ -1181,7 +1186,7 @@ body.on-detail #footmeta { display: none; }
 /* ───────────────────────── 模拟比对页 ─────────────────────────
  *
  * 宽度一律 `width: 100%` 挂在 .app 底下，不自己算像素 —— 三页才严格同宽；
- * 窄屏由 .app 的 max-width 自动收成屏宽，.sim-cols 退成一列。
+ * 窄屏由 .app 的 max-width 自动收成屏宽，.sim-pieces 的 `minmax(0,1fr)` 自己会缩。
  *
  * ⚠️ 类名避开广告词（ad/adv/bar/slot/box/frame/column）—— 这些词会被 AdBlock/uBlock
  *   当广告容器隐藏，症状「PC 看不见、手机正常」。所以叫 .sim-head 不叫 .sim-bar。 */
@@ -1203,10 +1208,10 @@ body.on-detail #footmeta { display: none; }
 
 /*
  * 卡片本体：**元素背景铺满整张卡**（不是只当顶部标题块）—— 和明细页 `.pd-canvas` 一个路子：
- * 背景图 cover + 圆角 12 + 金色描边 + 大投影。里面的内容（hero、两栏）都浮在它上面。
+ * 背景图 cover + 圆角 12 + 金色描边 + 大投影。里面的内容（hero、属性表、装备卡）浮在它上面。
  *
- * 内容之所以能看清：两栏各自带不透明深色底（.sim-col），跟明细页 `.profile-cont` 里的
- * 内容卡一样 —— 背景只负责氛围，不负责承托文字。
+ * 内容之所以能看清：属性表有 `.sim-panel` 深底、每张装备卡自己是深色卡面，
+ * 跟明细页 `.profile-cont` 里的内容卡一样 —— 背景只负责氛围，不负责承托文字。
  */
 .sim-card {
   position: relative;
@@ -1294,7 +1299,8 @@ body.on-detail #footmeta { display: none; }
   letter-spacing: .06em;
   text-shadow: 0 0 3px #000, 2px 2px 4px rgba(0, 0, 0, .7);
 }
-.sim-hero-lv b { color: var(--gold-lt); font-size: 17px; }
+/* 等级数字只放大、不变色：金色在这张卡上代表「权重高 / 评分」，一个与评分无关的等级用金色会误读 */
+.sim-hero-lv b { color: #fff; font-size: 17px; }
 /*
  * 天赋三连：底环用的是明细页那张 `common/bg/talent-{元素}.webp`（100px 的元素圆环），
  * 这里 background-size:contain 缩到 46px，跟明细页同一个视觉来源、只是尺寸不同。
@@ -1330,35 +1336,28 @@ body.on-detail #footmeta { display: none; }
   box-shadow: 0 0 4px rgba(0, 0, 0, .8);
 }
 .sim-tal.is-plus strong { background: #2e353e; color: #ffdfa0; font-weight: 700; }
-/* 固定两列，**手机也不堆叠** —— 比对页的价值就在左右对读，堆成一列就得来回滚。
-   ⚠️ 改 --app-width 时这里不用动（1fr 自己会缩），但 .sim-attr 等内部
-     尺寸在窄屏会挤爆，靠文件末尾那两档 media query 收。 */
-.sim-cols {
+/*
+ * 单栏版式。以前是左右两栏（当前配装 / 调整后）各一套卡，共 12 块；
+ * 现在每张卡自己就写着「旧 → 新」，左栏那份纯旧值是完全重复的，砍掉后只剩 6 块。
+ *
+ * 6 张装备卡（武器 + 5 圣遗物）排同一个网格：**两列**（PC 每张 ~283、手机 ~172），
+ * 手机也不堆成一列 —— 堆了就得来回滚，反而比原来还长。
+ */
+.sim-pieces {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   align-items: start;
+  margin-top: 12px;
 }
-/* 卡片底子照明细页 .artis .item：同一张 card-bg.png（横向重复、高拉满）+ 同款「1px 亮边 + 投影」，
-   连圆角 10 都对齐 —— 两页放一起才像一套 UI。别改成纯色底，那样明细页的卡片会显得是另一个产品。 */
-.sim-col {
+/* 属性表面板的深底：内容直接铺在元素背景上读不出来，这层跟卡片一个调子 */
+.sim-panel {
   min-width: 0;
-  padding: 0 10px 10px;
+  padding: 8px 10px 10px;
   border-radius: 10px;
-  background: url("assets/common/cont/card-bg.png") top left repeat-x, rgba(0, 0, 0, .35);
-  background-size: auto 100%;
-  box-shadow: 0 0 1px 0 rgba(204, 204, 204, .55), 2px 2px 6px rgba(0, 0, 0, .55);
+  background: rgba(15, 19, 28, .6);
+  border: 1px solid rgba(255, 255, 255, .07);
 }
-/* 栏目标题照 .dmg-cont .cont-title：深黑通栏条 + 描边金字 */
-.sim-col-title {
-  margin: 0 -10px 10px;
-  padding: 9px 14px;
-  font-size: 14px; font-weight: 700; letter-spacing: .08em;
-  color: var(--gold);
-  background: rgba(0, 0, 0, .4);
-  border-radius: 10px 10px 0 0;
-}
-.sim-pane { display: flex; flex-direction: column; gap: 10px; }
 
 /*
  * 底部伤害对比表：**跨整卡宽**（不在两栏里），跟两栏拉开距离、自成一块。
@@ -1390,7 +1389,17 @@ body.on-detail #footmeta { display: none; }
 /* 属性表：两列（词条名 / 数值区），但每行**固定两行高**。
    名称跨两行居中；值和「基础+加成」各占一行、都右对齐 —— 这样右栏的值列因为
    「旧 → 新」变长时，只会往左侧借宽度，绝不会把拆分挤成两行、把整张表带歪。 */
-.sim-attrs { display: flex; flex-direction: column; gap: 2px; }
+/* 单栏 600px 宽下一行属性被左右拉得很开（名称在最左、值在最右），改成**两列排**：
+   4 行 × 2 列，高度也砍掉一半。`grid-auto-flow: column` 保证读序还是
+   生命→攻击→防御→精通 | 暴击率→暴击伤害→充能→元素伤（不是横着 1-2-3-4）。
+   斑马纹照样同步：nth-child(odd) 落成两列各自的第 1、3 行。 */
+.sim-attrs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(4, auto);
+  grid-auto-flow: column;
+  gap: 2px 20px;
+}
 .sim-attr {
   display: grid;
   grid-template-columns: 68px 1fr;
@@ -1401,8 +1410,12 @@ body.on-detail #footmeta { display: none; }
   font-size: 13px;
 }
 .sim-attr:nth-child(odd) { background: rgba(255, 255, 255, .02); }
+/* 补行数的空行：占高但对齐用，不显示（否则右栏比左栏矮一截时两栏错位） */
+.sim-attr-empty { visibility: hidden; }
 .sim-aname { grid-row: 1 / span 2; color: var(--ink-2); }
-.sim-aval { color: var(--ink); font-weight: 600; text-align: right; }
+/* nowrap：手机上「18,104 → 14,872」这种改动行会换行，那一行比其他行高 17px，
+   两栏属性表就错开了（这个页面全部价值在逐行对读） */
+.sim-aval { color: var(--ink); font-weight: 600; text-align: right; white-space: nowrap; }
 .sim-abreak {
   grid-column: 2;
   text-align: right;
@@ -1410,20 +1423,21 @@ body.on-detail #footmeta { display: none; }
   font-size: 10px;
   line-height: 1.3;
 }
-/* 改过的项整行提亮，值写成「旧 → 新」：旧值退回灰、新值描边金。
-   全部在**同一行**内完成，不额外占高度 —— 见 sim.js 里的说明。 */
-.sim-attr.is-changed { background: rgba(211, 188, 142, .1); }
+/* 改过的项整行提亮，值写成「旧 → 新」：旧值退回灰、新值用**模拟值青蓝**。
+   全部在**同一行**内完成，不额外占高度 —— 见 sim.js 里的说明。
+   ⚠️ 新值别用金色：下面武器/圣遗物卡里金色是「高权重词条」的意思，
+      同一张卡里两种含义撞色，读起来会误判；模拟值统一青蓝（--sim-tint）。 */
+.sim-attr.is-changed { background: rgba(var(--sim-tint-rgb), .1); }
 .sim-old { color: var(--ink-3); font-weight: 400; font-size: 12px; }
-.sim-new { color: var(--gold-lt); }
+.sim-new { color: var(--sim-tint); }
 
-/* ── 武器 / 圣遗物：1:1 复用 miao.css 的 .item.weapon / .item.arti ──
+/* ── 武器 / 圣遗物：复用 miao.css 的 .item.weapon / .item.arti ──
  *
- * 两张卡完全照明细页那张来（图标 100/90px 斜压右上、精炼徽章、卡底属性条、26px 词条行），
- * 这里只做三件事：
- *   ① .artis 从 miao 的 600px 三列 flex 改成纵向单列（sim 每栏只放得下一张 185px 卡）
- *   ② 包一层 .sim-item 放「改」按钮 —— 按钮在卡片**外面**，免得顶掉卡内版式
- *   ③ 左栏那颗按钮隐形占位，两栏才对得齐
- * 卡内样式一条都不重写：改了就会跟明细页漂。
+ * 卡内绝大多数样式直接吃明细页那张，这里只做**布局层面**的调整：
+ *   ① .artis 从 miao 的 600px 三列改成纵向单列（sim 每栏只放一张卡）
+ *   ② 卡片拉满栏宽（miao 定死 185px，sim 每栏 282px 会空一大截）
+ *   ③ 圣遗物卡压缩（下一段，本页和明细页最大的不同）
+ * 除了压缩那几条，别去改卡内尺寸 —— 改了就跟明细页漂。
  */
 #view-sim .artis {
   width: 100%;
@@ -1431,39 +1445,172 @@ body.on-detail #footmeta { display: none; }
   flex-direction: column;
   gap: 2px;
 }
-/* 卡片拉满栏宽：miao 那张是照 600px 画布定死 185px 的，sim 每栏 282px，
-   留着 185 右边空 97px，一栏一张卡像缺了块。卡内元素都是相对/绝对定位
-   （图标右上、属性条通栏、词条表 100%），拉宽只是把数值列推得更右，不会错位。
-   ⚠️ 别改卡内任何尺寸 —— 改了就不是 1:1 了。 */
 #view-sim .artis .item { width: 100%; }
-/* ⚠️ head 至少 63px（= 明细页带评分行时的高度）。
-   sim 去掉了评分胶囊，head 只剩名称一行、41px 高，而套装图标 90px、top:-12，
-   只压到 63px 之后 —— head 一矮，图标就把词条表第一行（主词条）整个盖住。
-   补回 63px 后跟明细页的遮挡程度一致（只压半行，且那半是斜切透明的）。 */
-#view-sim .item.arti .head { min-height: 63px; }
+
+/* ── 装备卡压缩（武器 + 圣遗物同一套） ──
+ * 明细页那张圣遗物卡约 190px 高，高度吃在三处：head 63px（预留的评分位）、图标 90px 斜压右上、
+ * 词条行 26px；武器卡同理（90px 的 head + 100px 说明区 + 卡底属性条）。压缩三招：
+ *   ① 图标 90/100 → 34，从右上挪到**左上** —— 高度正好等于名称行，所以它只占名称那一层，
+ *      不再单独占一块（试过放大到 44 去压主词条，彩色图当底会把「小生命」糊掉，反而不清）
+ *   ② head 63/90 → 34（只剩名称一行）
+ *   ③ 词条行 26 → 18
+ * 结果卡高 190 → 124，两栏 5 件从 950 收到 630 上下。
+ * 武器卡另外砍掉整块说明（用户明确不要），主副属性改走圣遗物那套词条表。
+ */
+#view-sim .item.weapon { height: auto; }
+
+/* 卡片底色换成纯深色，**不用 miao 的 card-bg.png**。
+   那张图是 10×400 的竖条渐变（顶深蓝 → 底浅灰白），是照 190px 卡高设计的；
+   卡压到 106/124px 后整条渐变被压进这么点高度，末端那段浅灰白正好盖在文字的落脚处，
+   白字就糊成一片 —— 这也是「图标看着发黑」的另一半原因（浅底衬深色图，反差没了）。
+   sim 页要的是读数字，不是复刻卡面纹理。 */
+#view-sim .item {
+  background-image: none;
+  background-color: rgba(16, 20, 30, .72);
+}
+
+/* 圣遗物图标（miao 的 90px 斜压右上 → 34px 左上） */
+#view-sim .item.arti .arti-icon {
+  left: 3px; right: auto; top: 0;
+  width: 40px; height: 40px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .1);
+  z-index: 3;
+}
+/* 图标不再淡化：它只在名称行左侧、跟文字不重叠，压暗反而看不清是什么套装。
+   （淡化那版是图标当底纹时的做法，现在不需要了） */
+#view-sim .item.arti .arti-icon .img { opacity: 1; }
+#view-sim .item.arti .arti-icon::before { font-size: 16px; }
+#view-sim .item.arti .arti-icon span {
+  top: auto; bottom: 0; right: 0;
+  height: 13px; line-height: 13px;
+  padding: 0 2px;
+  font-size: 9px;
+  border-radius: 4px;
+}
+/* 武器图标：位置尺寸跟圣遗物一样，但**不能复用 .img** —— miao 的
+   `.artis .weapon .img` 是 100px 绝对定位，会直接命中这里的图 */
+#view-sim .sim-wicon {
+  position: absolute; left: 3px; top: 0;
+  width: 40px; height: 40px;
+  border-radius: 7px;
+  overflow: hidden;
+  /* 浅底衬托：武器图是 3D 渲染，深色器械压在深色卡面上几乎看不出来 */
+  background: rgba(255, 255, 255, .1);
+  z-index: 3;
+}
+#view-sim .sim-wicon .sim-wimg {
+  position: absolute; inset: 0;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  /* 武器图是 3D 渲染，缩小后暗部占比太大；提一档亮度补一点色，才跟套装徽章那种平涂色块
+     摆在一起像同一套东西 */
+  filter: brightness(1.15) saturate(1.1);
+}
+/* 图标只压名称那一层，词条表必须抬到它上面 —— miao 只给 .head strong / span.mark 抬过层，
+   词条没有；不补这条，图标 z-index:2 会把主词条前两个字整个盖掉（实测「小生命」只剩一个「命」）。 */
+#view-sim .item ul.detail li > span { position: relative; z-index: 3; }
+
+/* 名称行 34px：正好容纳右上那颗 34px 的新图标，词条表就不被它压住了。
+   左 42 让开左上图标，右 116 让开「按钮组 + 新图标」。 */
+#view-sim .item .head {
+  display: flex; align-items: center;
+  height: auto;
+  /* ⚠️ 必须 ≥ 图标高度（40）：34 时图标会往下溢出 6px，压住主词条那一行
+     （「小生命」被套装图盖掉半个字）。 */
+  min-height: 40px;
+  padding: 0 122px 0 48px;
+  /* ⚠️ 这两条是「图标发黑」的真凶：
+     miao 的 `.artis .weapon .head` 带 `z-index: 3` + 一条从左边 0.7 黑的渐变 ——
+     那是为 90px 高、90px 大图标的头部配的。压成 34px 之后，
+     图标(z-index:2)整个被 head 盖在下面，再吃一层 0.7 黑，看着就是「被什么东西挡住了」。
+     现在标题行跟图标不重叠，抬层和渐变都不需要了。 */
+  z-index: auto;
+  background: none;
+}
+#view-sim .item .head strong { flex: 1; min-width: 0; font-size: 13px; }
+/* 改过名的件要同时显示旧名和新名 —— 一行放不下就折，**不能省略**（miao 那条规则是
+   nowrap + ellipsis，只适合单个名字）。旧名灰、新名白。 */
+#view-sim .item.is-sim .head strong {
+  display: flex; flex-direction: column; justify-content: center;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.2;
+}
+/* 旧名小一号、灰色；新名正常、米白。两行加起来 ≈ 30px，装得进 40px 的 head。 */
+#view-sim .item .sim-oldname { color: var(--ink-3); font-weight: 400; font-size: 11px; }
+/* 新名字跟改后的数值同一个色（模拟值色）：这一整张卡上「算出来的东西」都用它，
+   名字、词条、图标描边三处一致，一眼能扫出哪几件是模拟的 */
+#view-sim .item .sim-newname { color: var(--sim-tint); }
+#view-sim .item .sim-newname .sim-arrow { margin-right: 2px; font-size: 11px; }
+
+/* 词条表（圣遗物的主/副词条、武器的主副属性共用） */
+#view-sim .item ul.detail li { height: 18px; line-height: 18px; font-size: 12px; }
+#view-sim .item ul.detail li span.title { width: 38%; padding-left: 19px; font-size: 12px; }
+#view-sim .item ul.detail li span.title > span.label,
+#view-sim .item ul.detail li span.title > i.up-num + span.label { max-width: 78px; }
+#view-sim .item ul.detail li span.val {
+  /* 宽度按比例给死：table 自动布局会把余量全分给 title 列（实测 151 : 111），
+     「+4,780 → +3,154」这种带箭头的值就贴边了 */
+  width: 62%; padding-right: 6px; font-size: 12px; white-space: nowrap;
+}
+/* 命中圈：miao 那张钉在 left:91（30px 缩进 + 61px 标签带算出来的），
+   压缩后行高只剩 18，圈号收到 2px 贴左、标签缩进同步收到 19 */
+#view-sim .item ul.detail li span.title i.up-num { left: 2px; top: 2px; width: 13px; height: 13px; }
+/* 圣遗物主词条 miao 给了 16px 加粗，压缩后跟副词条拉平（不然那一行比其他行高） */
+#view-sim .item ul.detail li.arti-main { font-size: 12px; }
+/* 补行数的空行：占高但不画条纹，看着就是留白（两栏武器卡靠它对齐） */
+#view-sim .item ul.detail li.sim-row-empty { background: none; }
+
+/* 右上「新图标」：改过的件才有 —— 一眼看出这件是模拟出来的、套装甚至换了。
+   描边跟模拟值的颜色对上。 */
+#view-sim .sim-newicon {
+  position: absolute; right: 1px; top: 0;
+  width: 40px; height: 40px;
+  border: 1px solid rgba(var(--sim-tint-rgb), .6);
+  border-radius: 7px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .1);
+  z-index: 2;
+}
+#view-sim .sim-newicon .img {
+  position: absolute; inset: 0;
+  /* ⚠️ 宽高必须显式写死成 100%：miao 的 `.artis .weapon .img` 是 100×100，
+     它跟我们这条不冲突（我们只写了 inset，是**另一组属性**），所以照样生效 ——
+     图被撑成 100×100 再被容器的 overflow:hidden 裁掉，看着就是「图标显示不全」。
+     换武器时才暴露，因为只有武器卡的新图标是 `.img` 这个类名。 */
+  width: 100%; height: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  /* 跟左上那颗用同一档亮度：再亮一点，深色武器图在浅底上就泛白看不清了 */
+  filter: brightness(1.15) saturate(1.1);
+}
+#view-sim .sim-newicon span {
+  position: absolute; right: 0; bottom: 0;
+  height: 13px; line-height: 13px;
+  padding: 0 2px;
+  font-size: 9px; color: #fff;
+  background: rgba(0, 0, 0, .78);
+  border-radius: 4px 0 0 0;
+}
 
 /* 卡片操作按钮组（改 / 还原）：绝对定位在**卡片**上，不占行高。
-   圣遗物图标 right:0 宽 90、武器图标 right:-10 宽 100，都从卡片右边 100px 处开始，
-   所以 right:104px 就稳稳落在图标左边。
-   `row-reverse` 让「改」永远贴在 right:104 那条线上，「还原」往左长 ——
-   这样有没有还原按钮都不会把「改」推来推去。 */
+   `row-reverse` 让「改」永远贴右边界，「还原」往左长 ——
+   有没有还原按钮都不会把「改」推来推去。 */
 #view-sim .item > .sim-btns {
   position: absolute;
-  right: 104px; top: 9px;
+  right: 48px; top: 10px;
   display: flex; flex-direction: row-reverse; align-items: center; gap: 6px;
   z-index: 4;
 }
-#view-sim .item.arti > .sim-btns { top: 36px; }
-#view-sim .item.weapon > .sim-btns { top: 32px; }
 
-/* ⚠️ 按钮不能跟名称同一行：武器英文全名（Thrilling Tales of Dragon Slayers）
-   会一直排到按钮底下被盖住。所以移到名称下面那一行 ——
-   圣遗物 head 有 63px（原评分位空着），武器 head 有 90px 且第二行是「R5 Lv.90」，
-   两处都有 26px 给按钮，且都不碰名称。 */
 #view-sim .sim-inbtn {
-  height: 26px; padding: 0 13px;
-  font-size: 13px; font-weight: 600; line-height: 1;
-  border-radius: 8px;
+  height: 19px; padding: 0 7px;
+  font-size: 11px; font-weight: 600; line-height: 1;
+  border-radius: 6px;
   /* 金属渐变 + 内高光 + 投影：跟顶栏那颗 .btn 一个调子，看着是个能按的东西 */
   color: #e7e0d0;
   background: linear-gradient(180deg, rgba(58, 64, 82, .95), rgba(34, 39, 52, .95));
@@ -1471,18 +1618,11 @@ body.on-detail #footmeta { display: none; }
   box-shadow: 0 1px 3px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .09);
   cursor: pointer;
 }
-/* 还原按钮：描边用模拟值的青色，跟被它还原的那些数字对上 */
-#view-sim .sim-inbtn.sim-revertbtn {
-  color: var(--sim-tint);
-  border-color: rgba(122, 211, 255, .5);
-}
+/* 「还原」跟「改」长得完全一样：它俩是同一组操作，一眼看去是两颗等价的按钮。
+   别再给还原单独染模拟色 —— 那会让「还原」看着像另一种状态标记（用户明确要求普通白） */
 #view-sim .sim-inbtn:hover {
   color: var(--gold-lt);
   border-color: var(--gold-line-hi);
-}
-#view-sim .sim-inbtn.sim-revertbtn:hover {
-  color: #b6e7ff;
-  border-color: rgba(122, 211, 255, .85);
 }
 #view-sim .sim-inbtn:active {
   transform: translateY(1px);
@@ -1491,8 +1631,15 @@ body.on-detail #footmeta { display: none; }
 /* 改过的件：数值一律青色 = 模拟值。
    只染数值不染名字 —— 武器属性名（金）、词条名（权重三档色）都要保持原样，
    否则就跟「权重高 / 无用」的配色打架了。 */
-#view-sim .item.is-sim .weapon-attr div { color: var(--sim-tint); }
 #view-sim .item.is-sim ul.detail li .val { color: var(--sim-tint); }
+/* 「旧 → 新」：旧值抢回灰色（.is-sim 那条会把 .val 整体染青），新值保持青，箭头灰。
+   ⚠️ 必须显式 `display: inline`：miao 有 `.artis ul.detail li span { display: table-cell }`，
+      命中这两个 span 后它们各占一格，一行「旧 → 新」被撑成三行（实测卡高从 115 涨到 295）。 */
+#view-sim .item .sim-val-old,
+#view-sim .item .sim-val-new { display: inline; }
+#view-sim .item .sim-val-old { color: var(--ink-3); font-weight: 400; }
+#view-sim .item .sim-arrow { margin: 0 3px; color: var(--ink-3); font-style: normal; font-weight: 400; }
+#view-sim .item .sim-val-new { color: var(--sim-tint); }
 
 /* 控件：下拉和数字框跟顶栏那套一个口径（深底 + 金描边），别再另起一套 */
 .sim-select, .sim-input {
@@ -1565,8 +1712,6 @@ body.on-detail #footmeta { display: none; }
 @media (max-width: 520px) {
   /* 卡片与栏目的内边距先收，给内容腾地方 */
   .sim-card { padding: 10px 7px 12px; }
-  .sim-col { padding: 0 6px 8px; }
-  .sim-col-title { margin: 0 -6px 8px; padding: 7px 10px; font-size: 13px; }
 
   /* hero：肖像缩到 64、天赋图缩到 28，横条还是横条 */
   .sim-hero { gap: 8px; padding: 0 2px 8px; }
@@ -1580,18 +1725,19 @@ body.on-detail #footmeta { display: none; }
   .sim-tal { width: 28px; height: 28px; }
   .sim-tal strong { font-size: 9px; line-height: 12px; }
 
-  /* 属性表：名称列 68→54（「元素精通」四字 46px 刚好），字号收到 11.5 */
+  /* 属性表：手机上回到单列（两列每列只剩 150px，名称 + 旧→新挤不下） */
+  .sim-attrs { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-flow: row; }
   .sim-attr { grid-template-columns: 54px 1fr; padding: 3px 5px; font-size: 11.5px; }
   .sim-abreak { font-size: 9px; }
   .sim-old { font-size: 10px; }
 
-  /* 手机每栏只有 156px，卡内任何位置都会压到名称/「R5 Lv.90」——
-     按钮组挪到**卡片下方**，卡片之间留 30px 给它。按钮挂在 .item 上，
+  /* 手机每张卡只有 ~172px，卡内任何位置都会压到名称/等级 ——
+     按钮组挪到**卡片下方**，网格行距留 32px 给它。按钮挂在 .item 上，
      所以 bottom 是相对整张卡（不是 head）。
      ⚠️ 必须把 .item.arti / .item.weapon 那两条也列上：它们带两个类、特异性比
        `#view-sim .item > .sim-btns` 高，只写一条的话 top:32px 会赢、bottom 失效，
        按钮就又跑回卡片里压住词条（踩过一次）。 */
-  #view-sim .artis { gap: 30px; }
+  #view-sim .sim-pieces { gap: 32px; }
   #view-sim .item > .sim-btns,
   #view-sim .item.arti > .sim-btns,
   #view-sim .item.weapon > .sim-btns {
@@ -1601,11 +1747,7 @@ body.on-detail #footmeta { display: none; }
   #view-sim .sim-inbtn {
     height: 24px; padding: 0 10px; font-size: 12px;
   }
+  /* 手机上按钮在卡片下面，head 只让开右上那颗新图标（PC 那边还要让开按钮，116 → 40） */
+  #view-sim .item .head { padding-right: 40px; }
 
-  /* 手机每栏只有 156px，卡内塞不下「改」按钮（会压住套装名）。所以窄屏改回
-     「185px 定宽 + 等比缩放」：布局仍是明细页那张卡（真 1:1），zoom .845 后
-     视觉 156px 正好填满栏宽，按钮位置也跟着等比缩，不会压名称。
-     ⚠️ zoom 不改布局宽，所以 .artis 的 scrollWidth 会报约 30px 差值 —— 视觉上不溢出
-        （documentElement.scrollWidth 仍为 0），这是有意的取舍。 */
-  #view-sim .artis .item { width: 185px; zoom: .845; }
 }
