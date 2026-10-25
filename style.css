@@ -1183,86 +1183,292 @@ body.on-detail #footmeta { display: none; }
   align-items: center;
   width: 100%;
 }
-/* 100vw 要减掉 .app 的左右内边距（14×2），否则窄屏上卡片会贴到屏幕边缘、比别的页窄一圈 */
+/* 宽度跟前两页同一个口径：--app-width。别再另起一个像素值，三页内容带必须严格同宽 */
 #view-sim .sim-head,
-#view-sim .sim-cols { width: 980px; max-width: calc(100vw - 28px); }
+#view-sim .sim-card { width: var(--app-width); max-width: calc(100vw - 28px); }
 
 .sim-head {
   display: flex; align-items: center; gap: 12px;
   margin-bottom: 12px;
 }
-.sim-title { font-size: 16px; font-weight: 700; color: var(--gold-lt); letter-spacing: .06em; }
-/* 顶栏三段式：返回 | 角色名 | 复原 —— 中间这根弹簧把「复原」顶到右端 */
+/* 顶栏：返回 ← 弹簧 → 复原。角色名交给下面的 hero，这儿不再重复一遍 */
 .sim-gap { flex: 1; }
 
-/* auto-fit + minmax：容器够宽就两栏，不够就上下堆叠 —— 手机不用另外写 media query */
+/*
+ * 卡片本体：**元素背景铺满整张卡**（不是只当顶部标题块）—— 和明细页 `.pd-canvas` 一个路子：
+ * 背景图 cover + 圆角 12 + 金色描边 + 大投影。里面的内容（hero、两栏）都浮在它上面。
+ *
+ * 内容之所以能看清：两栏各自带不透明深色底（.sim-col），跟明细页 `.profile-cont` 里的
+ * 内容卡一样 —— 背景只负责氛围，不负责承托文字。
+ */
+.sim-card {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--gold-line);
+  background-color: #233;                 /* 图没出来时的占位，和 .pd-canvas 一致 */
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: top center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+}
+/*
+ * 角色头：**不画自己的背景**（背景由整张卡铺），只是浮在上面的一行三件套：
+ * 圆圈肖像 | 元素图标 + 名字 | 等级 / 命座 / 天赋。
+ *
+ * ⚠️ 用 flex 不用 grid：肖像定宽 + 中段撑满、右段定宽，三者天然一条中线对齐；
+ *   早先用 grid 固定列距，中段会随视口宽度漂。
+ */
+.sim-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 6px 14px;
+}
+/*
+ * 肖像：圆形。
+ * ⚠️ 用 face（256×256）不用 splash / side —— face 缩到 150 是「缩小」最清晰；
+ *   side 只有 128×128 放大就糊，face-q 是 Q 版、只有 83/132 有，风格跟正比混排不统一。
+ * ⚠️ 背景位置必须 `center top`：face 是头肩构图，往下压（12%）会把帽檐切更多。
+ */
+.sim-av {
+  position: relative; z-index: 2;
+  flex: none;
+  width: 150px; height: 150px;
+}
+/* 外面那圈淡金细环纯装饰 —— 别加 hover/点击，它不是按钮 */
+.sim-av-ring {
+  position: absolute; inset: -9px;
+  border-radius: 50%;
+  border: 1px solid rgba(211, 188, 142, .26);
+}
+.sim-av-pic {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center top;
+  border: 2px solid rgba(211, 188, 142, .75);
+  box-shadow: 0 0 26px rgba(211, 188, 142, .34), 0 4px 16px rgba(0, 0, 0, .65);
+}
+/* 中段：元素图标 + 名字，占满剩余宽度并居中 */
+.sim-hero-mid {
+  position: relative; z-index: 2;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+/* 名字：明细页是 50px，这里头只有 150px 高，34px 起、跟着视口收到 24px */
+.sim-hero-name {
+  display: flex; align-items: center; gap: 8px;
+  font-size: clamp(24px, 3.4vw, 34px);
+  font-weight: 700; line-height: 1.1;
+  white-space: nowrap;
+  text-shadow: 0 0 3px #000, 2px 2px 4px rgba(0, 0, 0, .7);
+}
+.sim-hero-elem { width: 28px; height: 28px; filter: drop-shadow(0 0 3px rgba(0, 0, 0, .8)); }
+/* 右段：等级 / 命座 / 天赋 */
+.sim-hero-rt {
+  position: relative; z-index: 2;
+  flex: none;
+  text-align: right;
+}
+.sim-hero-lv {
+  font-size: 15px;
+  color: #fff;
+  letter-spacing: .06em;
+  text-shadow: 0 0 3px #000, 2px 2px 4px rgba(0, 0, 0, .7);
+}
+.sim-hero-lv b { color: var(--gold-lt); font-size: 17px; }
+.sim-hero-rt .cons-badge { margin-top: 5px; }
+/*
+ * 天赋三连：底环用的是明细页那张 `common/bg/talent-{元素}.webp`（100px 的元素圆环），
+ * 这里 background-size:contain 缩到 46px，跟明细页同一个视觉来源、只是尺寸不同。
+ */
+.sim-hero-tal {
+  display: flex; gap: 9px; justify-content: flex-end;
+  margin-top: 8px;
+}
+.sim-tal {
+  position: relative;
+  width: 46px; height: 46px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.sim-tal-img {
+  position: absolute; inset: 26%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+/* 等级牌：压在圆环右下角，白底黑字；被命座提过的换成深底金字（跟明细页 .talent-plus 一个口径） */
+.sim-tal strong {
+  position: absolute; right: -2px; bottom: 0;
+  min-width: 18px;
+  padding: 0 3px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 15px;
+  text-align: center;
+  background: #fff;
+  color: #000;
+  box-shadow: 0 0 4px rgba(0, 0, 0, .8);
+}
+.sim-tal.is-plus strong { background: #2e353e; color: #ffdfa0; font-weight: 700; }
+/* 窄屏：肖像收到 108px、天赋图收到 36px，横条还是横条（折成上下两段就不叫标题了） */
+@media (max-width: 520px) {
+  .sim-hero { min-height: 132px; gap: 12px; padding: 12px 14px; }
+  .sim-av { width: 108px; height: 108px; }
+  .sim-av-ring { inset: -6px; }
+  .sim-hero-tal { gap: 6px; margin-top: 6px; }
+  .sim-tal { width: 36px; height: 36px; }
+  .sim-tal strong { font-size: 10px; line-height: 13px; }
+}
+
+/* auto-fit + minmax：容器够宽就两栏，不够就上下堆叠 —— 手机不用另外写 media query。
+   ⚠️ 这里的 230px 是跟着 --app-width 算的：520 - 卡片左右内边距 24 - 栏间距 14 = 242，
+     所以 230px 是「刚好能塞两栏」的下限；放大到 300 就永远单列，比对页会退化成上下翻。 */
 .sim-cols {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 14px;
   align-items: start;
 }
+/* 卡片底子照明细页 .artis .item：同一张 card-bg.png（横向重复、高拉满）+ 同款「1px 亮边 + 投影」，
+   连圆角 10 都对齐 —— 两页放一起才像一套 UI。别改成纯色底，那样明细页的卡片会显得是另一个产品。 */
 .sim-col {
   min-width: 0;
-  background: var(--bg-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px;
+  padding: 0 10px 10px;
+  border-radius: 10px;
+  background: url("assets/common/cont/card-bg.png") top left repeat-x, rgba(0, 0, 0, .35);
+  background-size: auto 100%;
+  box-shadow: 0 0 1px 0 rgba(204, 204, 204, .55), 2px 2px 6px rgba(0, 0, 0, .55);
 }
+/* 栏目标题照 .dmg-cont .cont-title：深黑通栏条 + 描边金字 */
 .sim-col-title {
-  margin: 0 0 10px;
-  font-size: 13px; font-weight: 700; letter-spacing: .1em;
-  color: var(--gold-lt);
+  margin: 0 -10px 10px;
+  padding: 9px 14px;
+  font-size: 14px; font-weight: 700; letter-spacing: .08em;
+  color: var(--gold);
+  background: rgba(0, 0, 0, .4);
+  border-radius: 10px 10px 0 0;
 }
 .sim-pane { display: flex; flex-direction: column; gap: 10px; }
 
-/* 属性表：三列（词条名 / 最终值 / 基础+加成）。
-   **不复用 miao.css 的 .char-attr** —— 那是照 600px 画布写死的五列 + 绝对定位，塞进半屏会整体错位。 */
+/*
+ * 底部伤害对比表：**跨整卡宽**（不在两栏里），跟两栏拉开距离、自成一块。
+ * 版式照明细页 `.dmg-cont`（card-bg 底 + 亮边 + 投影 + 标题条 + 斑马纹 + 页脚），
+ * 但每行是**四列** grid：技能名 | 当前 | 调整后 | 变化。
+ *
+ * ⚠️ 选择器必须带 `#view-sim`：index.html 里 style.css 排在 miao.css **前面**，
+ *   同特异性下后加载的赢 —— 光写 `.sim-dmgfull-cont .tr` 会被 miao 的三列
+ *   （minmax(0,42%) 1fr 1fr）盖掉，四列变三列、最后一列掉到行外。
+ */
+#view-sim .sim-dmgfull { margin-top: 14px; }
+#view-sim .sim-dmgfull-cont { margin: 0; }
+#view-sim .sim-dmgfull-cont .tr {
+  grid-template-columns: minmax(0, 34%) 1fr 1fr 1fr;
+}
+/* 变化列：涨红跌绿（A 股口径，项目里所有涨跌都这个约定） */
+#view-sim .sim-dmgfull-cont .dmg-up { color: #ff6b6b; font-weight: 700; }
+#view-sim .sim-dmgfull-cont .dmg-down { color: #4ecca3; font-weight: 700; }
+/* 没算出结果时的占位行 */
+.sim-dmg-empty {
+  padding: 14px;
+  font-size: 12px;
+  color: var(--ink-3);
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid var(--gold-line);
+  border-radius: var(--radius-sm);
+}
+
+/* 属性表：两列（词条名 / 数值区），但每行**固定两行高**。
+   名称跨两行居中；值和「基础+加成」各占一行、都右对齐 —— 这样右栏的值列因为
+   「旧 → 新」变长时，只会往左侧借宽度，绝不会把拆分挤成两行、把整张表带歪。 */
 .sim-attrs { display: flex; flex-direction: column; gap: 2px; }
 .sim-attr {
   display: grid;
-  grid-template-columns: 76px 1fr auto;
-  gap: 8px; align-items: baseline;
-  padding: 3px 8px;
+  grid-template-columns: 68px 1fr;
+  gap: 0 8px;
+  align-items: center;
+  padding: 4px 8px;
   border-radius: 6px;
   font-size: 13px;
 }
 .sim-attr:nth-child(odd) { background: rgba(255, 255, 255, .02); }
-.sim-aname { color: var(--ink-2); }
+.sim-aname { grid-row: 1 / span 2; color: var(--ink-2); }
 .sim-aval { color: var(--ink); font-weight: 600; text-align: right; }
-.sim-abreak { color: var(--ink-3); font-size: 11px; }
-/* 改过的项整行提亮 + 底下写「改动前 → 改动后」 */
+.sim-abreak {
+  grid-column: 2;
+  text-align: right;
+  color: var(--ink-3);
+  font-size: 10px;
+  line-height: 1.3;
+}
+/* 改过的项整行提亮，值写成「旧 → 新」：旧值退回灰、新值描边金。
+   全部在**同一行**内完成，不额外占高度 —— 见 sim.js 里的说明。 */
 .sim-attr.is-changed { background: rgba(211, 188, 142, .1); }
-.sim-attr.is-changed .sim-aval { color: var(--gold-lt); }
-.sim-diff { grid-column: 1 / -1; font-size: 11px; color: var(--gold-lt); }
+.sim-old { color: var(--ink-3); font-weight: 400; font-size: 12px; }
+.sim-new { color: var(--gold-lt); }
 
 /* ── 武器 ── */
 .sim-weapon {
-  background: var(--bg-4);
-  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid var(--gold-line);
   border-radius: var(--radius-sm);
   padding: 10px;
 }
-.sim-whead {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
-  margin-bottom: 6px;
+/* 第一行：图标 | 名称 + 等级精炼 | 改按钮。三列定宽 = 两边完全同构 */
+.sim-wrow {
+  display: grid; grid-template-columns: 40px 1fr auto; gap: 8px 10px; align-items: center;
 }
-.sim-whead strong { color: var(--cream); font-size: 13px; }
+.sim-wicon {
+  width: 40px; height: 40px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .5));
+}
+.sim-wname { min-width: 0; }
+.sim-wname strong { display: block; color: var(--cream); font-size: 13px; }
 .sim-wmeta { color: var(--ink-3); font-size: 12px; }
 .sim-wattrs {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 2px 10px; font-size: 12px; color: var(--ink-2);
+  gap: 2px 10px; margin-top: 8px;
+  font-size: 12px; color: var(--ink-2);
 }
 .sim-wattrs > div { display: flex; justify-content: space-between; gap: 6px; }
 .sim-wattrs b { color: var(--ink); font-weight: 600; }
-.sim-edit { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+/*
+ * 武器说明。**限三行 + 锁死三行高**：两栏武器不同、说明长短差很多，不限行武器卡就不同高，
+ * 下面的属性表会错开。所以短的留白、长的截断，两边永远一样高。
+ */
+.sim-wdesc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  margin-top: 8px;
+  min-height: 51px;              /* 11px 字号 × 1.55 行高 × 3 行 */
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
 
 /* ── 圣遗物 ── */
 .sim-artis { display: flex; flex-direction: column; gap: 8px; }
 .sim-arti {
   display: grid; grid-template-columns: 32px 1fr auto; gap: 8px; align-items: center;
-  background: var(--bg-4);
-  border: 1px solid var(--line);
+  /* 锁死最小高度：「改」按钮 30px + 上下内边距 16 = 46px，右栏每行被按钮撑到这么高，
+     左栏没按钮就只有两行字（36px）—— 不锁的话两栏会逐行越差越多，伤害表最后错开 76px */
+  min-height: 48px;
+  background: rgba(0, 0, 0, .28);
+  border: 1px solid var(--gold-line);
   border-radius: var(--radius-sm);
   padding: 8px;
 }
@@ -1293,6 +1499,13 @@ body.on-detail #footmeta { display: none; }
   outline: 2px solid rgba(211, 188, 142, .55); outline-offset: 1px;
 }
 .sim-input { width: 88px; }
+/* 左栏的只读下拉：灰掉但仍用深底（别让浏览器套上默认浅色皮肤，那样比能点时还显眼） */
+.sim-select:disabled {
+  opacity: .6;
+  cursor: default;
+  background: rgba(22, 26, 36, .45);
+  color: var(--ink-2);
+}
 .sim-field { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .sim-field > span { min-width: 60px; color: var(--ink-3); font-size: 12px; }
 .sim-subs { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
@@ -1311,6 +1524,8 @@ body.on-detail #footmeta { display: none; }
   border-color: var(--gold-line-hi); color: var(--gold-lt);
 }
 .sim-subdel { width: 30px; padding: 0; font-size: 16px; line-height: 1; }
+/* 左栏的隐形占位钮：宽度照留、内容不画，专门用来让两栏的副词条折行一致 */
+.sim-ghostbtn { visibility: hidden; }
 .sim-submore { align-self: flex-start; }
 
 /* 明细页右端「模拟比对 + 分享」：原来只有分享一个圆钮靠 space-between 贴右，

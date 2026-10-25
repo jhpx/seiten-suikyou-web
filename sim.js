@@ -16,7 +16,7 @@
  *    显示出来会误导。
  */
 import {
-  $, state, T, el, slotGlyph, api, reg, showView, openDialog, W_ATTR_TITLE
+  $, state, T, el, slotGlyph, api, reg, showView, openDialog, W_ATTR_TITLE, setBg, imgError
 } from './core.js'
 
 /* 模拟页的本地状态：草稿（用户改到哪了）+ 目录 + 右栏结果 */
@@ -25,7 +25,11 @@ const sim = {
   catalog: null,
   draft: { weapon: null, artifacts: [] },
   right: null,
-  busy: false
+  busy: false,
+  /* 左栏伤害只跟「当前实装」有关，进页面取一次就够，别每次重绘都去打接口。
+     dmgBox 是底部那张对比表的容器引用 —— 重算完右栏变了，只重画这一块，不动整页。 */
+  leftDamage: null,
+  dmgBox: null
 }
 
 /* ───────────────────────── 数据 ───────────────────────── */
@@ -54,6 +58,8 @@ async function recompute () {
   } finally {
     sim.busy = false
     renderSim()
+    /* 右栏伤害变了 → 底部对比表要跟着重画。renderSim 里也会画一次，这里是重算完成的补刀 */
+    drawDamageCompare()
   }
 }
 
@@ -67,17 +73,24 @@ function renderSim () {
     return
   }
 
-  /* 顶栏：← 返回 + 角色名 */
+  /* 顶栏：← 返回 + 复原。角色名交给下面的 hero（顶栏再来一遍是重复，明细页也正是这么砍掉的） */
   const bar = el('div', 'sim-head')
   const back = el('button', 'btn back', '← ' + T('back'))
-  back.addEventListener('click', () => { showView('detail'); renderSim() })
-  const av = currentAvatar()
-  bar.append(back, el('span', 'sim-title', av ? av.name : ''), el('span', 'sim-gap'))
+  back.addEventListener('click', () => showView('detail'))
+  bar.append(back, el('span', 'sim-gap'))
   /* 复原：把草稿清空 = 右栏回到当前实装。改花了眼时一键回到起点，省得一件件退回 */
   const reset = el('button', 'btn', T('simReset'))
   reset.addEventListener('click', resetDraft)
   bar.append(reset)
   box.append(bar)
+
+  /*
+   * 卡片本体：元素背景**铺满整张卡**，不是只当顶部标题块 —— 和明细页 `.pd-canvas` 一个路子。
+   * 宽度用 --app-width（跟首页/明细页同一条 520px 内容带），别再另起一个数。
+   */
+  const av = currentAvatar()
+  const card = setBg(el('div', 'sim-card' + (av ? ' elem-' + av.elem : '')), av?.elemBg || '')
+  card.append(heroBanner())
 
   const cols = el('div', 'sim-cols')
 
@@ -91,7 +104,85 @@ function renderSim () {
   right.append(adjustedPane())
   cols.append(right)
 
-  box.append(cols)
+  card.append(cols)
+
+  /*
+   * 伤害对比表：**跨整卡宽度**放在两栏下面，不在任何一栏里。
+   * 一栏一张表的旧摆法，520px 里每张只有 242px，「Q泡影破裂蒸发」这种长标题 + 两列数字
+   * 必然折行（用户明确说折行不好看）。合成一张表后：第一列技能名合并，后面
+   * 「当前 / 调整后 / 变化」四列并排 —— 496px 容得下，而且左右一眼能对读。
+   */
+  const dmgBox = el('div', 'sim-dmgfull')
+  dmgBox.append(el('div', 'placeholder', T('dmgLoading')))
+  card.append(dmgBox)
+  box.append(card)
+
+  sim.dmgBox = dmgBox
+  loadLeftDamage().then(drawDamageCompare)
+}
+
+/**
+ * 顶部的角色头 —— 明细页 `.pd-canvas` + `.basic` 那套视觉语言的横向版：圆圈肖像 | 元素+名字 | 等级命座天赋。
+ *
+ * ⚠️ 这里**不画自己的背景**：元素背景由外层 `.sim-card` 整张铺满（详见 renderSim），
+ *   hero 只是浮在上面的一行。以前 hero 自带背景 = 「标题块」，上下会有一条硬边。
+ *
+ * ⚠️ 为什么用 `face` 不用 `splash` / `side` / `face-q`（都实测过）：
+ *   · splash（970~1615×1024，比例 0.95~1.58）—— 横条和纵向立绘尺寸对不上，缩着放右边一大片空、
+ *     用 cover 铺满又把人裁成无头半身，且各角色比例不一，裁完每人效果都不同，没法统一。
+ *   · side **只有 128×128** —— 名字像是「侧身图」，其实 miao 里只用在列表的小圆头像；
+ *     放大到 150px 的圆圈里肉眼可见发虚。
+ *   · face-q 是 Q 版（上游仅 83/132 有），风格跟正比混排不统一。
+ *   · `card` 是卡背花纹（画面里没有角色）、`splash0`（真横版立绘）只有 8 个角色有、`gacha` 320×1024 更纵。
+ *   只有 face（256×256，127/132 覆盖）缩到 150px 是「缩小」，清晰度反而最好。
+ *
+ * ⚠️ 圆圈必须 `background-position: center top`：face 是头肩构图，往下压会把帽檐切更多。
+ */
+function heroBanner () {
+  const av = currentAvatar()
+  if (!av) return null
+  const box = el('div', 'sim-hero')
+
+  /* 左：圆圈肖像。外层 .sim-av-ring 是那圈淡金细环，纯装饰，别加交互 */
+  const avBox = el('div', 'sim-av')
+  avBox.append(el('div', 'sim-av-ring'))
+  avBox.append(setBg(el('div', 'sim-av-pic'), av.imgs?.face || av.splash || ''))
+  box.append(avBox)
+
+  /* 中：元素图标 + 名字。元素名不写文字 —— 图标已经说清楚了，再写个「水」是重复 */
+  const mid = el('div', 'sim-hero-mid')
+  const name = el('div', 'sim-hero-name')
+  if (av.elemIcon) {
+    const ic = el('img', 'sim-hero-elem')
+    ic.src = av.elemIcon
+    ic.alt = ''
+    ic.addEventListener('error', () => imgError(ic))
+    name.append(ic)
+  }
+  name.append(el('span', '', av.name || ''))
+  mid.append(name)
+  box.append(mid)
+
+  /* 右：等级 / 命座 / 天赋 a-e-q。UID 不上台面（同一账号下所有角色都一样，占地方） */
+  const rt = el('div', 'sim-hero-rt')
+  const lv = el('div', 'sim-hero-lv')
+  lv.append(el('span', '', 'Lv.'), el('b', '', String(av.level ?? '?')))
+  rt.append(lv)
+  rt.append(el('span', 'cons-badge', `${av.cons ?? 0}${T('cons')}`))
+
+  const tal = el('div', 'sim-hero-tal')
+  for (const k of ['a', 'e', 'q']) {
+    const t = av.talent?.[k] || {}
+    /* plus = 被命座提升过（深底金字）—— 判定由后端给，前端别自己算 */
+    const item = setBg(el('div', 'sim-tal' + (t.plus ? ' is-plus' : '')),
+      `assets/common/bg/talent-${av.elem || 'hydro'}.webp`)
+    item.append(setBg(el('div', 'sim-tal-img'), av.imgs?.[k]))
+    item.append(el('strong', '', String(t.level ?? 0)))
+    tal.append(item)
+  }
+  rt.append(tal)
+  box.append(rt)
+  return box
 }
 
 /** 左栏：当前实装的面板 + 武器 + 圣遗物 + 伤害 */
@@ -103,30 +194,25 @@ function currentPane () {
     return wrap
   }
   wrap.append(attrPanel(av))
-  wrap.append(weaponView(av.weapon))
+  wrap.append(weaponCard(av, false))
   wrap.append(artiView(av.artifacts))
-  const dmg = el('div', 'sim-dmg')
-  dmg.append(el('div', 'placeholder', T('dmgLoading')))
-  wrap.append(dmg)
-  loadCurrentDamage(dmg)
+  /* 伤害不在这里出 —— 挪到卡片底部做「当前 / 调整后」并排的对比表（见 drawDamageCompare） */
   return wrap
 }
 
-/** 左栏伤害：与明细页同一个接口 */
-async function loadCurrentDamage (box) {
+/** 左栏伤害：与明细页同一个接口。只取一次，结果缓存在 sim.leftDamage */
+async function loadLeftDamage () {
+  if (sim.leftDamage) return
   const uid = state.uid
   if (!uid) return
   try {
-    const d = await api(`accounts/${uid}/characters/${sim.avatarId}/damage`)
-    box.innerHTML = ''
-    box.append(damageTable(d))
+    sim.leftDamage = await api(`accounts/${uid}/characters/${sim.avatarId}/damage`)
   } catch {
-    box.innerHTML = ''
-    box.append(el('div', 'placeholder', T('dmgFail')))
+    sim.leftDamage = null
   }
 }
 
-/** 右栏：改后的面板 + 可编辑的武器/圣遗物 + 伤害 */
+/** 右栏：改后的面板 + 可编辑的武器/圣遗物（伤害同样挪到底部对比表） */
 function adjustedPane () {
   const wrap = el('div', 'sim-pane')
   if (!sim.right) {
@@ -135,9 +221,8 @@ function adjustedPane () {
   }
   const av = sim.right.avatar
   wrap.append(attrPanel(av))
-  wrap.append(weaponEditor(av))
+  wrap.append(weaponCard(av, true))
   wrap.append(artiEditor(av.artifacts))
-  wrap.append(damageTable(sim.right.damage))
   return wrap
 }
 
@@ -150,6 +235,11 @@ function adjustedPane () {
  * （图标 / 标题 / 权重 / 数值 / 拆分五列 + 绝对定位），塞进半屏的栏里会整体错位。
  * 模拟页只要三样东西 —— 词条名、最终值、基础+加成；**评价权重不显示**（用户明确要求两栏都不显示评分）。
  *
+ * ⚠️ 每行固定**两行高**（名称跨两行居中、值在第一行、拆分在第二行，都右对齐）：
+ *   右栏的值列会因为「旧 → 新」变长，如果值/拆分挤在同一行，那一行就会被顶宽、把拆分挤成两行，
+ *   整张表从那一行起全部错位（实测截图里攻击力那行就是这样）。拆成固定两行后，
+ *   值列怎么变都不影响行高，两栏严格逐行对齐。
+ *
  * 差异标注：与左栏同一项数值不同就整行提亮并写出「改动前 → 改动后」。
  * 这是这个页面存在的理由 —— 用户换一件装备就是为了看这里变没变。
  */
@@ -160,13 +250,20 @@ function attrPanel (av) {
   for (const r of av.attrTable || []) {
     const row = el('div', 'sim-attr')
     row.append(el('span', 'sim-aname', r.label))
-    row.append(el('span', 'sim-aval', r.value))
-    row.append(el('span', 'sim-abreak', `${r.base} + ${r.plus}`))
+
+    /* 值列：变了的写成「旧 → 新」（旧值灰、新值金）。
+       ⚠️ 别另起一行放 diff —— 多一行就把右栏整体撑高，下面的武器 / 圣遗物 / 伤害
+       会一块块往下错，两栏就再也对不齐了（这个页面全部价值就在逐行对读）。 */
+    const val = el('span', 'sim-aval')
     const prev = baseMap.get(r.key)
     if (prev !== undefined && prev !== r.value) {
       row.classList.add('is-changed')
-      row.append(el('span', 'sim-diff', prev + ' → ' + r.value))
+      val.append(el('span', 'sim-old', prev), document.createTextNode(' → '), el('span', 'sim-new', r.value))
+    } else {
+      val.append(document.createTextNode(r.value))
     }
+    row.append(val)
+    row.append(el('span', 'sim-abreak', `${r.base} + ${r.plus}`))
     box.append(row)
   }
   return box
@@ -174,15 +271,93 @@ function attrPanel (av) {
 
 /* ───────────────────────── 武器 ───────────────────────── */
 
-/** 武器卡（只读） */
-function weaponView (w) {
+/**
+ * 武器卡。两栏**同构**：同样的图标 / 名称 / 主副属性 / 说明，右栏多一颗可见的「改」，左栏同位置
+ * 放一颗隐形占位钮。
+ *
+ * ⚠️ 编辑走弹窗，不在卡里摆下拉。早期右栏摆三个下拉（型号/等级/精炼）、左栏跟着摆三个置灰的，
+ *   用户明确说「左边的武器不需要修改，没必要有下拉框样式」。现在两边都只显示 + 一颗改按钮，
+ *   真正的编辑跟圣遗物一个路子（openWeaponDialog）。
+ *
+ * ⚠️ 左栏那颗隐形钮不能省：右边这颗吃掉约 50px 宽，不占位的话右栏的说明会多折一行，
+ *   武器卡差一截，下面的属性表就跟着错位（实测 5 件下来能差 76px）。
+ */
+function weaponCard (av, editable) {
+  const w = av?.weapon || {}
   const box = el('div', 'sim-weapon')
-  const head = el('div', 'sim-whead')
-  head.append(el('strong', '', w?.name || T('noWeapon')))
-  head.append(el('span', 'sim-wmeta', `Lv.${w?.level ?? '?'} · ${T('refine')}${w?.affix ?? 1}`))
-  box.append(head)
+
+  /* 第一行：图标 | 名称 + 等级精炼 | 改按钮 */
+  const row = el('div', 'sim-wrow')
+  if (w.icon) row.append(setBg(el('div', 'sim-wicon'), w.icon))
+  const name = el('div', 'sim-wname')
+  name.append(el('strong', '', w.sName || w.name || T('noWeapon')))
+  name.append(el('span', 'sim-wmeta', `Lv.${w.level ?? '?'} · ${T('refine')}${w.affix ?? 1}`))
+  row.append(name)
+
+  const btn = el('button', 'sim-editbtn', T('simEdit'))
+  if (editable) {
+    btn.addEventListener('click', () => openWeaponDialog())
+  } else {
+    /* 隐形之外还要 disabled：它虽然看不见，但 Tab 键仍能走上去、读屏也会念出来 */
+    btn.classList.add('sim-ghostbtn')
+    btn.disabled = true
+  }
+  row.append(btn)
+  box.append(row)
+
   box.append(weaponAttrs(w))
+
+  /* 说明：miao 的描述里带 <nobr> 高亮标签，这里只取纯文本（顺手避免注入）。
+     ⚠️ 限三行不是怕长 —— 两边武器不同、说明长短不一，不限行两栏武器卡就不同高，属性表会错开。 */
+  box.append(el('div', 'sim-wdesc', String(w.desc || '').replace(/<[^>]*>/g, '')))
   return box
+}
+
+/** 改武器：型号 / 等级 / 精炼（草稿里存的是 1 基等级，跟 profile.weapon.level 同口径） */
+function openWeaponDialog () {
+  const cur = draftWeapon()
+  const dlg = openDialog({
+    title: T('simWeaponTitle'),
+    onOk: () => {
+      setDraftWeapon({
+        itemId: Number(wSel.value),
+        level: Number(lvSel.value),
+        affix: Number(afSel.value)
+      })
+    }
+  })
+
+  const body = dlg.body
+
+  /* 型号：目录后端已按角色武器类型滤过（迪奥娜只有弓），星级标在名字后面方便认 */
+  const wSel = el('select', 'sim-select')
+  for (const w of sim.catalog?.weapons || []) {
+    const o = el('option', '', w.star >= 5 ? `${w.name} ★` : w.name)
+    o.value = String(w.itemId)
+    if (w.itemId === cur.itemId) o.selected = true
+    wSel.append(o)
+  }
+  body.append(field(T('simWeaponType'), wSel))
+
+  /* 等级：档位取 1/20/40/60/80/90。值就是 1 基等级本身 —— 后端 new Weapon 直接吃这个数，
+     别在这儿 -1（那是**圣遗物**的口径，武器不减）。 */
+  const lvSel = el('select', 'sim-select')
+  for (const lv of [1, 20, 40, 60, 80, 90]) {
+    const o = el('option', '', `Lv.${lv}`)
+    o.value = String(lv)
+    if (lv === cur.level) o.selected = true
+    lvSel.append(o)
+  }
+  body.append(field(T('simLevel'), lvSel))
+
+  const afSel = el('select', 'sim-select')
+  for (const a of [1, 2, 3, 4, 5]) {
+    const o = el('option', '', `${T('refine')}${a}`)
+    o.value = String(a)
+    if (a === cur.affix) o.selected = true
+    afSel.append(o)
+  }
+  body.append(field(T('refine'), afSel))
 }
 
 /* 武器主副属性：key→短名的映射跟明细页共用同一张表（core.W_ATTR_TITLE），
@@ -195,66 +370,6 @@ function weaponAttrs (w) {
     attrs.append(d)
   }
   return attrs
-}
-
-/** 武器卡（可改：型号 / 等级 / 精炼） */
-function weaponEditor (av) {
-  const box = el('div', 'sim-weapon sim-editable')
-  const w = av.weapon || {}
-  const head = el('div', 'sim-whead')
-  head.append(el('strong', '', w.name || T('noWeapon')))
-  head.append(el('span', 'sim-wmeta', `Lv.${w.level ?? '?'} · ${T('refine')}${w.affix ?? 1}`))
-  box.append(head, weaponAttrs(w))
-  /* ⚠️ 不能写 el('div','sim-edit', ...sels) —— el 的第三个参数是**文本**，会把 select 转成
-     "[object HTMLSelectElement]" 当字符串塞进去（第一版就是这么翻车的）。逐个 append。 */
-  const edit = el('div', 'sim-edit')
-  for (const ctl of weaponPickers()) edit.append(ctl)
-  box.append(edit)
-  return box
-}
-
-/** 三个下拉（型号 / 等级 / 精炼） */
-function weaponPickers () {
-  const cur = draftWeapon()
-  const out = []
-
-  const wSel = el('select', 'sim-select')
-  for (const w of sim.catalog?.weapons || []) {
-    const o = el('option', '', w.star >= 5 ? `${w.name} ★` : w.name)
-    o.value = String(w.itemId)
-    if (w.itemId === cur.itemId) o.selected = true
-    wSel.append(o)
-  }
-  wSel.addEventListener('change', () => {
-    setDraftWeapon({ itemId: Number(wSel.value), level: cur.level, affix: cur.affix })
-  })
-  out.push(wSel)
-
-  const lvSel = el('select', 'sim-select')
-  for (const lv of [1, 20, 40, 60, 80, 90]) {
-    const o = el('option', '', `Lv.${lv}`)
-    o.value = String(lv)
-    if (lv === cur.level) o.selected = true
-    lvSel.append(o)
-  }
-  lvSel.addEventListener('change', () => {
-    setDraftWeapon({ itemId: cur.itemId, level: Number(lvSel.value), affix: cur.affix })
-  })
-  out.push(lvSel)
-
-  const afSel = el('select', 'sim-select')
-  for (const a of [1, 2, 3, 4, 5]) {
-    const o = el('option', '', `${T('refine')}${a}`)
-    o.value = String(a)
-    if (a === cur.affix) o.selected = true
-    afSel.append(o)
-  }
-  afSel.addEventListener('change', () => {
-    setDraftWeapon({ itemId: cur.itemId, level: cur.level, affix: Number(afSel.value) })
-  })
-  out.push(afSel)
-
-  return out
 }
 
 /** 草稿里的武器（没改过就是当前实装那把） */
@@ -303,11 +418,19 @@ function artiRow (a, editable) {
   for (const s of a.subs || []) sub.append(el('span', '', `${s.label} ${s.value}`))
   main.append(sub)
   row.append(icon, main)
+
+  /* 按钮两栏都渲染，左栏只占位不显示。为什么不干脆不渲染：右边这颗钮吃掉约 50px 宽，
+     右栏的副词条就会比左栏多折一行，5 件下来伤害表要错开 76px（实测过）。
+     留着同宽的隐形钮，两栏才逐行对齐。 */
+  const btn = el('button', 'sim-editbtn', T('simEdit'))
   if (editable) {
-    const btn = el('button', 'sim-editbtn', T('simEdit'))
     btn.addEventListener('click', () => openArtiDialog(a))
-    row.append(btn)
+  } else {
+    /* 隐形之外还要 disabled：它虽然看不见，但 Tab 键仍能走上去、读屏也会念出来 */
+    btn.classList.add('sim-ghostbtn')
+    btn.disabled = true
   }
+  row.append(btn)
   return row
 }
 
@@ -457,34 +580,80 @@ function setDraftArtifact (next) {
   recompute()
 }
 
-/* ───────────────────────── 伤害表 ───────────────────────── */
+/* ───────────────────────── 伤害对比表 ───────────────────────── */
 
-/** 伤害表（复用明细页那张表的视觉语言：标题条 + 表头 + 斑马纹行） */
-function damageTable (d) {
-  if (!d) return el('div', 'sim-dmg-empty', T('dmgNone'))
-  const cont = el('div', 'dmg-cont')
+/**
+ * 底部那张跨整卡的对比表：**第一列技能名合并**，后面「当前 / 调整后 / 变化」并排。
+ *
+ * 视觉沿用明细页 `.dmg-cont`（标题条 + 表头 + 斑马纹 + 页脚），只把每行的 grid 从三列
+ * 改成四列（明细页是 技能|暴击|期望，这里是 技能|当前|调整后|变化）。
+ *
+ * ⚠️ 左右两边的 rows **按下标配对**，不按标题配：同一个角色的技能列表恒定的，
+ *   按标题配反而会在某一侧缺行时静默错位。哪边短就显示「—」。
+ */
+function drawDamageCompare () {
+  const box = sim.dmgBox
+  if (!box) return
+  const L = sim.leftDamage
+  const R = sim.right?.damage
+  box.innerHTML = ''
+  if (!L || !R || !L.rows?.length || !R.rows?.length) {
+    box.append(el('div', 'sim-dmg-empty', T('dmgLoading')))
+    return
+  }
+
+  const cont = el('div', 'dmg-cont sim-dmgfull-cont')
   const title = el('div', 'cont-title')
-  title.append(document.createTextNode(T('dmgSection')))
+  title.append(document.createTextNode(T('dmgCompare')))
   cont.append(title)
+
   const table = el('div', 'cont-table')
   const head = el('div', 'tr thead')
-  head.append(el('div', 'title dmg-title', T('dmgType')), el('div', '', T('dmgCrit')), el('div', '', T('dmgAvg')))
+  head.append(el('div', 'title dmg-title', T('dmgType')))
+  head.append(el('div', '', T('dmgCur')))
+  head.append(el('div', '', T('dmgAdj')))
+  head.append(el('div', '', T('dmgDelta')))
   table.append(head)
-  for (const r of d.rows || []) {
+
+  const n = Math.max(L.rows.length, R.rows.length)
+  for (let i = 0; i < n; i++) {
+    const a = L.rows[i]
+    const b = R.rows[i]
     const tr = el('div', 'tr')
-    tr.append(el('div', 'title dmg-title', r.title))
-    if (r.dmg) {
-      tr.append(el('div', 'value', r.dmg + r.unit), el('div', 'value', r.avg + r.unit))
+    /* 技能名取左边的（右边可能还没有这一行）；左侧缺失才用右边的 */
+    tr.append(el('div', 'title dmg-title', (a || b)?.title || ''))
+
+    /* 数值：不吃暴击的行只有 avg，把它当唯一值显示 */
+    const va = a ? (a.dmg || a.avg) : null
+    const vb = b ? (b.dmg || b.avg) : null
+    tr.append(el('div', 'value', va == null ? '—' : va + (a.unit || '')))
+    tr.append(el('div', 'value', vb == null ? '—' : vb + (b.unit || '')))
+
+    const cell = el('div', 'value')
+    const delta = diffOf(va, vb)
+    if (delta != null && delta !== 0) {
+      cell.classList.add(delta > 0 ? 'dmg-up' : 'dmg-down')
+      cell.textContent = (delta > 0 ? '+' : '−') + Math.abs(delta).toLocaleString('en-US')
     } else {
-      tr.append(el('div', 'value value-full', r.avg + r.unit))
+      cell.textContent = '—'
     }
+    tr.append(cell)
     table.append(tr)
   }
   cont.append(table)
+
   const foot = el('div', 'cont-footer dmg-desc')
-  foot.append(el('span', '', T('dmgEnemy', { lv: d.enemyLv, name: d.enemyName })))
+  foot.append(el('span', '', T('dmgEnemy', { lv: L.enemyLv, name: L.enemyName })))
   cont.append(foot)
-  return cont
+  box.append(cont)
+}
+
+/** 两个「3,946」这样的字符串相减。任一边不是纯数字就返回 null（宁可显示「—」也别显示 NaN） */
+function diffOf (a, b) {
+  const na = typeof a === 'string' ? Number(a.replace(/,/g, '')) : a
+  const nb = typeof b === 'string' ? Number(b.replace(/,/g, '')) : b
+  if (!Number.isFinite(na) || !Number.isFinite(nb)) return null
+  return nb - na
 }
 
 /* ───────────────────────── 入口 ───────────────────────── */
@@ -494,6 +663,9 @@ export function openSim (avatarId) {
   sim.avatarId = avatarId
   sim.draft = { weapon: null, artifacts: [] }
   sim.right = null
+  /* 换角色了，左栏伤害的缓存必须扔 —— 那是上一个角色的 */
+  sim.leftDamage = null
+  sim.dmgBox = null
   showView('sim')
   renderSim()
   api(`accounts/${state.uid}/characters/${avatarId}/simulator`).then(c => {
