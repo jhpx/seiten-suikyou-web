@@ -1229,8 +1229,8 @@ body.on-detail #footmeta { display: none; }
   position: relative;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 4px 6px 14px;
+  gap: 14px;
+  padding: 0 4px 10px;
 }
 /*
  * 肖像：圆形。
@@ -1241,11 +1241,11 @@ body.on-detail #footmeta { display: none; }
 .sim-av {
   position: relative; z-index: 2;
   flex: none;
-  width: 150px; height: 150px;
+  width: 96px; height: 96px;
 }
 /* 外面那圈淡金细环纯装饰 —— 别加 hover/点击，它不是按钮 */
 .sim-av-ring {
-  position: absolute; inset: -9px;
+  position: absolute; inset: -6px;
   border-radius: 50%;
   border: 1px solid rgba(211, 188, 142, .26);
 }
@@ -1282,6 +1282,10 @@ body.on-detail #footmeta { display: none; }
   flex: none;
   text-align: right;
 }
+/* Lv. 与命之座同一行右对齐（各占自己宽度，中间空出来由 gap 补） */
+.sim-hero-lvrow {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+}
 .sim-hero-lv {
   font-size: 15px;
   color: #fff;
@@ -1289,7 +1293,6 @@ body.on-detail #footmeta { display: none; }
   text-shadow: 0 0 3px #000, 2px 2px 4px rgba(0, 0, 0, .7);
 }
 .sim-hero-lv b { color: var(--gold-lt); font-size: 17px; }
-.sim-hero-rt .cons-badge { margin-top: 5px; }
 /*
  * 天赋三连：底环用的是明细页那张 `common/bg/talent-{元素}.webp`（100px 的元素圆环），
  * 这里 background-size:contain 缩到 46px，跟明细页同一个视觉来源、只是尺寸不同。
@@ -1325,25 +1328,13 @@ body.on-detail #footmeta { display: none; }
   box-shadow: 0 0 4px rgba(0, 0, 0, .8);
 }
 .sim-tal.is-plus strong { background: #2e353e; color: #ffdfa0; font-weight: 700; }
-/* 窄屏：肖像收到 108px、天赋图收到 36px，横条还是横条（折成上下两段就不叫标题了）。
-   ⚠️ 这个 520 是「手机/平板分界」的断点，**不是** --app-width（那个现在是 720）—— 两数撞车纯属巧合，
-      改动时别顺手同步，改错会同时动到外壳宽度。 */
-@media (max-width: 520px) {
-  .sim-hero { min-height: 132px; gap: 12px; padding: 12px 14px; }
-  .sim-av { width: 108px; height: 108px; }
-  .sim-av-ring { inset: -6px; }
-  .sim-hero-tal { gap: 6px; margin-top: 6px; }
-  .sim-tal { width: 36px; height: 36px; }
-  .sim-tal strong { font-size: 10px; line-height: 13px; }
-}
-
-/* auto-fit + minmax：够宽就两栏，不够自动堆叠，手机不用另写 media query。
-   ⚠️ 260 是跟着卡片内容区算的：600 − padding 24 − gap 14 = 562，两栏各 281。
-     下限一旦 ≥ 281 就退化成单列，比对页直接废掉 —— 改 --app-width 必须同步改它。 */
+/* 固定两列，**手机也不堆叠** —— 比对页的价值就在左右对读，堆成一列就得来回滚。
+   ⚠️ 改 --app-width 时这里不用动（1fr 自己会缩），但 .sim-attr 等内部
+     尺寸在窄屏会挤爆，靠文件末尾那两档 media query 收。 */
 .sim-cols {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
   align-items: start;
 }
 /* 卡片底子照明细页 .artis .item：同一张 card-bg.png（横向重复、高拉满）+ 同款「1px 亮边 + 投影」，
@@ -1423,73 +1414,63 @@ body.on-detail #footmeta { display: none; }
 .sim-old { color: var(--ink-3); font-weight: 400; font-size: 12px; }
 .sim-new { color: var(--gold-lt); }
 
-/* ── 武器 ── */
-.sim-weapon {
-  background: rgba(0, 0, 0, .28);
-  border: 1px solid var(--gold-line);
-  border-radius: var(--radius-sm);
-  padding: 10px;
-}
-/* 第一行：图标 | 名称 + 等级精炼 | 改按钮。三列定宽 = 两边完全同构 */
-.sim-wrow {
-  display: grid; grid-template-columns: 40px 1fr auto; gap: 8px 10px; align-items: center;
-}
-.sim-wicon {
-  width: 40px; height: 40px;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .5));
-}
-.sim-wname { min-width: 0; }
-.sim-wname strong { display: block; color: var(--cream); font-size: 13px; }
-.sim-wmeta { color: var(--ink-3); font-size: 12px; }
-.sim-wattrs {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 2px 10px; margin-top: 8px;
-  font-size: 12px; color: var(--ink-2);
-}
-.sim-wattrs > div { display: flex; justify-content: space-between; gap: 6px; }
-.sim-wattrs b { color: var(--ink); font-weight: 600; }
-/*
- * 武器说明。**限三行 + 锁死三行高**：两栏武器不同、说明长短差很多，不限行武器卡就不同高，
- * 下面的属性表会错开。所以短的留白、长的截断，两边永远一样高。
+/* ── 武器 / 圣遗物：1:1 复用 miao.css 的 .item.weapon / .item.arti ──
+ *
+ * 两张卡完全照明细页那张来（图标 100/90px 斜压右上、精炼徽章、卡底属性条、26px 词条行），
+ * 这里只做三件事：
+ *   ① .artis 从 miao 的 600px 三列 flex 改成纵向单列（sim 每栏只放得下一张 185px 卡）
+ *   ② 包一层 .sim-item 放「改」按钮 —— 按钮在卡片**外面**，免得顶掉卡内版式
+ *   ③ 左栏那颗按钮隐形占位，两栏才对得齐
+ * 卡内样式一条都不重写：改了就会跟明细页漂。
  */
-.sim-wdesc {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
-  margin-top: 8px;
-  min-height: 51px;              /* 11px 字号 × 1.55 行高 × 3 行 */
-  font-size: 11px;
-  line-height: 1.55;
-  color: var(--ink-3);
+#view-sim .artis {
+  width: 100%;
+  margin: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+/* 卡片拉满栏宽：miao 那张是照 600px 画布定死 185px 的，sim 每栏 282px，
+   留着 185 右边空 97px，一栏一张卡像缺了块。卡内元素都是相对/绝对定位
+   （图标右上、属性条通栏、词条表 100%），拉宽只是把数值列推得更右，不会错位。
+   ⚠️ 别改卡内任何尺寸 —— 改了就不是 1:1 了。 */
+#view-sim .artis .item { width: 100%; }
+/* ⚠️ head 至少 63px（= 明细页带评分行时的高度）。
+   sim 去掉了评分胶囊，head 只剩名称一行、41px 高，而套装图标 90px、top:-12，
+   只压到 63px 之后 —— head 一矮，图标就把词条表第一行（主词条）整个盖住。
+   补回 63px 后跟明细页的遮挡程度一致（只压半行，且那半是斜切透明的）。 */
+#view-sim .item.arti .head { min-height: 63px; }
+
+/* 「改」按钮：绝对定位在 head 里名称右侧、套装图标左侧那道空档 —— 不占行高。
+   圣遗物图标 right:0 宽 90、武器图标 right:-10 宽 100，都从卡片右边 100px 处开始，
+   所以按钮统一 right:104px 就能稳稳落在图标左边。 */
+#view-sim .item > .sim-inbtn {
+  position: absolute;
+  right: 104px; top: 9px;
+  height: 26px; padding: 0 13px;
+  font-size: 13px; font-weight: 600; line-height: 1;
+  border-radius: 8px;
+  /* 金属渐变 + 内高光 + 投影：跟顶栏那颗 .btn 一个调子，看着是个能按的东西 */
+  color: #e7e0d0;
+  background: linear-gradient(180deg, rgba(58, 64, 82, .95), rgba(34, 39, 52, .95));
+  border: 1px solid var(--gold-line);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .09);
+  cursor: pointer;
+  z-index: 4;
 }
 
-/* ── 圣遗物 ── */
-.sim-artis { display: flex; flex-direction: column; gap: 8px; }
-.sim-arti {
-  display: grid; grid-template-columns: 32px 1fr auto; gap: 8px; align-items: center;
-  /* 锁死最小高度：「改」按钮 30px + 上下内边距 16 = 46px，右栏每行被按钮撑到这么高，
-     左栏没按钮就只有两行字（36px）—— 不锁的话两栏会逐行越差越多，伤害表最后错开 76px */
-  min-height: 48px;
-  background: rgba(0, 0, 0, .28);
-  border: 1px solid var(--gold-line);
-  border-radius: var(--radius-sm);
-  padding: 8px;
+/* ⚠️ 按钮不能跟名称同一行：武器英文全名（Thrilling Tales of Dragon Slayers）
+   会一直排到按钮底下被盖住。所以移到名称下面那一行 ——
+   圣遗物 head 有 63px（原评分位空着），武器 head 有 90px 且第二行是「R5 Lv.90」，
+   两处都有 26px 给按钮，且都不碰名称。 */
+#view-sim .item.arti > .sim-inbtn { top: 36px; }
+#view-sim .item.weapon > .sim-inbtn { top: 32px; }
+#view-sim .item > .sim-inbtn:hover {
+  color: var(--gold-lt);
+  border-color: var(--gold-line-hi);
 }
-.sim-aicon {
-  width: 32px; height: 32px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--bg-2);
-  border: 1px solid var(--gold-line);
-  border-radius: 8px;
-  color: var(--gold-lt); font-size: 14px;
+#view-sim .item > .sim-inbtn:active {
+  transform: translateY(1px);
 }
-.sim-amain { min-width: 0; }
-.sim-amain > strong { display: block; color: var(--cream); font-size: 13px; }
-.sim-asub { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--ink-2); }
 
 /* 控件：下拉和数字框跟顶栏那套一个口径（深底 + 金描边），别再另起一套 */
 .sim-select, .sim-input {
@@ -1515,6 +1496,21 @@ body.on-detail #footmeta { display: none; }
 }
 .sim-field { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .sim-field > span { min-width: 60px; color: var(--ink-3); font-size: 12px; }
+/* 只读字段（花/羽的主词条是固定的，没有下拉）—— 长得像禁用的输入框，一眼看出不可改 */
+/* ⚠️ 选择器要带 .sim-field > 前缀：`.sim-field > span { min-width: 60px }` 的特异性
+   比单个 `.sim-rofn` 高，不加前缀这条 min-width 会被它压掉（实测框宽只有 60px）。 */
+.sim-field > .sim-rofn {
+  /* 不撑满：原来 flex:1 会把只读框拉成整行宽，比旁边的下拉框长一大截。
+     92px 是照主词条下拉的量级定的（最长「元素充能」4 字 + 内边距） */
+  flex: 0 0 auto;
+  min-width: 92px;
+  height: 32px; line-height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: var(--ink-2);
+  background: rgba(22, 26, 36, .45);
+  border: 1px solid var(--line);
+}
 .sim-subs { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
 .sim-subrow { display: flex; gap: 6px; align-items: center; }
 .sim-subkey { flex: 1; min-width: 0; }
@@ -1539,3 +1535,47 @@ body.on-detail #footmeta { display: none; }
    多一个文字钮就得用容器兜 gap，否则两个钮会被拉到栏的两端 */
 .detail-actions { display: flex; align-items: center; gap: 10px; }
 .btn.sim-entry { height: 40px; font-size: 14px; }
+
+/* 窄屏（手机）适配：**两列不变**（比对页不能堆成一列），只把内部尺寸全部收紧。
+   两栏各只剩 ~160px，属性表名称列、卡片内边距、字号都得收，否则词条会折得一行放不下两个词。
+   ⚠️ 这个 520 是「手机/平板分界」断点，**不是** --app-width（那是 628）—— 两数撞车纯属巧合，
+      改动时别顺手同步，改错会同时动到外壳宽度。 */
+@media (max-width: 520px) {
+  /* 卡片与栏目的内边距先收，给内容腾地方 */
+  .sim-card { padding: 10px 7px 12px; }
+  .sim-col { padding: 0 6px 8px; }
+  .sim-col-title { margin: 0 -6px 8px; padding: 7px 10px; font-size: 13px; }
+
+  /* hero：肖像缩到 64、天赋图缩到 28，横条还是横条 */
+  .sim-hero { gap: 8px; padding: 0 2px 8px; }
+  .sim-av { width: 64px; height: 64px; }
+  .sim-av-ring { inset: -4px; }
+  .sim-hero-name { font-size: 22px; }
+  .sim-hero-elem { width: 20px; height: 20px; }
+  .sim-hero-lv { font-size: 13px; }
+  .sim-hero-lv b { font-size: 14px; }
+  .sim-hero-tal { gap: 5px; margin-top: 4px; }
+  .sim-tal { width: 28px; height: 28px; }
+  .sim-tal strong { font-size: 9px; line-height: 12px; }
+
+  /* 属性表：名称列 68→54（「元素精通」四字 46px 刚好），字号收到 11.5 */
+  .sim-attr { grid-template-columns: 54px 1fr; padding: 3px 5px; font-size: 11.5px; }
+  .sim-abreak { font-size: 9px; }
+  .sim-old { font-size: 10px; }
+
+  /* 手机每栏只有 156px，卡内任何位置都会压到名称/「R5 Lv.90」——
+     按钮挪到**卡片下方**，卡片之间留 30px 给它。按钮挂在外层 .item 上，
+     所以 bottom 是相对整张卡（不是 head）。 */
+  #view-sim .artis { gap: 30px; }
+  #view-sim .item > .sim-inbtn {
+    right: 6px; top: auto; bottom: -27px;
+    height: 24px; padding: 0 10px; font-size: 12px;
+  }
+
+  /* 手机每栏只有 156px，卡内塞不下「改」按钮（会压住套装名）。所以窄屏改回
+     「185px 定宽 + 等比缩放」：布局仍是明细页那张卡（真 1:1），zoom .845 后
+     视觉 156px 正好填满栏宽，按钮位置也跟着等比缩，不会压名称。
+     ⚠️ zoom 不改布局宽，所以 .artis 的 scrollWidth 会报约 30px 差值 —— 视觉上不溢出
+        （documentElement.scrollWidth 仍为 0），这是有意的取舍。 */
+  #view-sim .artis .item { width: 185px; zoom: .845; }
+}

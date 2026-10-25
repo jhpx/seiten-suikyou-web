@@ -166,6 +166,37 @@ export function weightClass (w) {
 
 export const slotGlyph = (pos) => SLOT_GLYPH[pos] || '?'
 
+/*
+ * 强化命中圈号：实心圆 + 镂空数字，1~5。
+ * 为什么只能用 SVG mask 抠：CSS 的 mask 只能拿渐变/图片/路径当蒙版，**没法拿字形当蒙版**；
+ * 而想硬做镂空只剩「拿不透明色填数字」一条路，可词条行的底是半透明黑，
+ * 填任何固定色都能看出一块色斑。SVG 的 mask 抠出来的是真 alpha，行底下是什么就露什么。
+ * 圆用 currentColor：跟着词条的三档配色（great/useful/nouse）走，CSS 不用再为它配一遍色。
+ * url(#id) 是全文档查的，同页几十个圈号不能重名 —— 所以用自增序号。
+ */
+let hitMaskSeq = 0
+export function hitMark (n) {
+  const NS = 'http://www.w3.org/2000/svg'
+  const mk = (tag) => document.createElementNS(NS, tag)
+  const attr = (node, kv) => { for (const [k, v] of Object.entries(kv)) node.setAttribute(k, v); return node }
+
+  const mask = mk('mask')
+  mask.id = 'up-hit-' + (++hitMaskSeq)
+  /* 蒙版按亮度取：白整块留着（＝圆），黑的地方抠掉（＝数字） */
+  mask.append(attr(mk('rect'), { width: 14, height: 14, fill: '#fff' }))
+  /* x=7 / y=10.6 是截图像素量出来的，不是估的；换字体要重量 */
+  const digit = attr(mk('text'), { x: 7, y: 10.6, 'text-anchor': 'middle', fill: '#000' })
+  digit.textContent = String(n)
+  mask.append(digit)
+
+  const defs = mk('defs')
+  defs.append(mask)
+  const disc = attr(mk('circle'), { cx: 7, cy: 7, r: 7, fill: 'currentColor', mask: `url(#${mask.id})` })
+  const svg = attr(mk('svg'), { viewBox: '0 0 14 14' })
+  svg.append(defs, disc)
+  return svg
+}
+
 /* 图片加载失败时隐藏自己，让 CSS 占位露出来 */
 export function imgError (img) { img.style.display = 'none' }
 

@@ -16,7 +16,8 @@
  *    显示出来会误导。
  */
 import {
-  $, state, T, el, slotGlyph, api, reg, showView, openDialog, W_ATTR_TITLE, setBg, imgError
+  $, state, T, el, slotGlyph, api, reg, showView, openDialog, W_ATTR_TITLE, setBg, imgError,
+  weightClass, hitMark
 } from './core.js'
 
 /* 模拟页的本地状态：草稿（用户改到哪了）+ 目录 + 右栏结果 */
@@ -46,7 +47,7 @@ async function recompute () {
   if (!uid || sim.avatarId == null) return
   sim.busy = true
   try {
-    const res = await api(`accounts/${uid}/characters/${sim.avatarId}/simulator`, {
+    const res = await api(`accounts/${uid}/characters/${sim.avatarId}/simulator?locale=${encodeURIComponent(state.locale)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(sim.draft)
@@ -153,12 +154,13 @@ function heroBanner () {
   mid.append(name)
   box.append(mid)
 
-  /* 右：等级 / 命座 / 天赋 a-e-q。UID 不上台面（同一账号下所有角色都一样，占地方） */
+  /* 右：等级 + 命座同一行，下面天赋 a-e-q。UID 不上台面（同账号下所有角色都一样，占地方） */
   const rt = el('div', 'sim-hero-rt')
+  const lvRow = el('div', 'sim-hero-lvrow')
   const lv = el('div', 'sim-hero-lv')
   lv.append(el('span', '', 'Lv.'), el('b', '', String(av.level ?? '?')))
-  rt.append(lv)
-  rt.append(el('span', 'cons-badge', `${av.cons ?? 0}${T('cons')}`))
+  lvRow.append(lv, el('span', 'cons-badge', `${av.cons ?? 0}${T('cons')}`))
+  rt.append(lvRow)
 
   const tal = el('div', 'sim-hero-tal')
   for (const k of ['a', 'e', 'q']) {
@@ -184,8 +186,12 @@ function currentPane () {
     return wrap
   }
   wrap.append(attrPanel(av))
-  wrap.append(weaponCard(av, false))
-  wrap.append(artiView(av.artifacts))
+  /* 武器卡也要包一层 .artis：miao 的规则是 `.artis .item.weapon`（带容器前缀），
+     不包的话卡片底图、圆角、投影全都命中不了 */
+  const wbox = el('div', 'artis')
+  wbox.append(weaponCard(av, false))
+  wrap.append(wbox)
+  wrap.append(artiView(av.artifacts, av.charWeight))
   /* 伤害不在这里出 —— 挪到卡片底部做「当前 / 调整后」并排的对比表（见 drawDamageCompare） */
   return wrap
 }
@@ -211,8 +217,10 @@ function adjustedPane () {
   }
   const av = sim.right.avatar
   wrap.append(attrPanel(av))
-  wrap.append(weaponCard(av, true))
-  wrap.append(artiEditor(av.artifacts))
+  const wbox = el('div', 'artis')
+  wbox.append(weaponCard(av, true))
+  wrap.append(wbox)
+  wrap.append(artiEditor(av.artifacts, av.charWeight))
   return wrap
 }
 
@@ -262,43 +270,58 @@ function attrPanel (av) {
 /* ───────────────────────── 武器 ───────────────────────── */
 
 /**
- * 武器卡。两栏同构：图标 / 名称 / 主副属性 / 说明，右栏多一颗可见「改」，左栏同位置放隐形占位钮。
- * 编辑走弹窗（openWeaponDialog），不在卡里摆下拉 —— 左边不需要改，没必要摆下拉样式。
- * ⚠️ 左栏那颗隐形钮不能省：右边这颗吃掉约 50px 宽，不占位右栏说明会多折一行，
- *   武器卡差一截，下面属性表就跟着错位。
+ * 武器卡 —— **1:1 复刻明细页**那张（miao.css 的 .item.weapon）：100×100 图标斜压在右上、
+ * 名称 + 精炼徽章 + 等级、主副属性条贴在卡底、下面一整块说明。结构照 detail.js 的
+ * renderWeaponCard 抄。属性名的金色是 miao 的固定色（不是权重色），所以保留。
+ * 「改」按钮放在 head 里名称右侧（见 simEditBtn），不占额外行高。
  */
 function weaponCard (av, editable) {
   const w = av?.weapon || {}
-  const box = el('div', 'sim-weapon')
+  const item = el('div', 'item weapon')
+  if (w.icon) item.append(setBg(el('div', 'img'), w.icon))
 
-  /* 第一行：图标 | 名称 + 等级精炼 | 改按钮 */
-  const row = el('div', 'sim-wrow')
-  if (w.icon) row.append(setBg(el('div', 'sim-wicon'), w.icon))
-  const name = el('div', 'sim-wname')
-  name.append(el('strong', '', w.sName || w.name || T('noWeapon')))
-  name.append(el('span', 'sim-wmeta', `Lv.${w.level ?? '?'} · ${T('refine')}${w.affix ?? 1}`))
-  row.append(name)
+  const head = el('div', 'head')
+  head.append(el('strong', '', w.name || w.sName || T('noWeapon')))
 
-  const btn = el('button', 'sim-editbtn', T('simEdit'))
+  const info = el('span', 'info')
+  info.append(el('span', 'affix affix-' + (w.affix ?? 1), `${T('refine')}${w.affix ?? 1}`))
+  info.append(document.createTextNode(` Lv.${w.level ?? '?'}`))
+  head.append(info)
+
+  /* 主副属性：贴在卡底的一条通栏，属性名金色（miao 固定色） */
+  const wa = el('div', 'weapon-attr')
+  for (const [k, v] of Object.entries(w.attrs || {})) {
+    const d = el('div')
+    d.append(el('span', '', W_ATTR_TITLE[k] || k), document.createTextNode(' +' + v))
+    wa.append(d)
+  }
+  head.append(wa)
+  item.append(head)
+
+  /* 说明：miao 的描述里带 <nobr> 高亮标签，只取纯文本（顺手避免注入） */
+  const dc = el('div', 'weapon-desc-cont')
+  dc.append(el('div', 'weapon-desc', String(w.desc || '').replace(/<[^>]*>/g, '')))
+  item.append(dc)
+  item.append(simEditBtn(editable, openWeaponDialog))
+  return item
+}
+
+/**
+ * 「改」按钮。挂在**卡片本体**上（不是 head）—— 这样绝对定位能相对整张卡，
+ * 桌面放卡内、手机放到卡片下方都由坐标决定。
+ * 左栏同样渲染，只是隐形占位，两栏才严格等高。
+ */
+function simEditBtn (editable, onEdit) {
+  const btn = el('button', 'sim-inbtn', T('simEdit'))
   if (editable) {
-    btn.addEventListener('click', () => openWeaponDialog())
+    btn.addEventListener('click', onEdit)
   } else {
-    /* 隐形之外还要 disabled：它虽然看不见，但 Tab 键仍能走上去、读屏也会念出来 */
+    /* 隐形之外还要 disabled：Tab 键仍能走上去、读屏也会念出来 */
     btn.classList.add('sim-ghostbtn')
     btn.disabled = true
   }
-  row.append(btn)
-  box.append(row)
-
-  box.append(weaponAttrs(w))
-
-  /* 说明：miao 的描述里带 <nobr> 高亮标签，这里只取纯文本（顺手避免注入）。
-     ⚠️ 限三行不是怕长 —— 两边武器不同、说明长短不一，不限行两栏武器卡就不同高，属性表会错开。 */
-  box.append(el('div', 'sim-wdesc', String(w.desc || '').replace(/<[^>]*>/g, '')))
-  return box
-}
-
-/** 改武器：型号 / 等级 / 精炼（草稿里存的是 1 基等级，跟 profile.weapon.level 同口径） */
+  return btn
+}/** 改武器：型号 / 等级 / 精炼（草稿里存的是 1 基等级，跟 profile.weapon.level 同口径） */
 function openWeaponDialog () {
   const cur = draftWeapon()
   const dlg = openDialog({
@@ -345,18 +368,6 @@ function openWeaponDialog () {
   body.append(field(T('refine'), afSel))
 }
 
-/* 武器主副属性：key→短名的映射跟明细页共用同一张表（core.W_ATTR_TITLE），
-   别再这里另抄一份 —— 两边会漂 */
-function weaponAttrs (w) {
-  const attrs = el('div', 'sim-wattrs')
-  for (const [k, v] of Object.entries(w?.attrs || {})) {
-    const d = el('div')
-    d.append(el('span', '', W_ATTR_TITLE[k] || k), el('b', '', '+' + v))
-    attrs.append(d)
-  }
-  return attrs
-}
-
 /** 草稿里的武器（没改过就是当前实装那把） */
 function draftWeapon () {
   if (sim.draft.weapon) return sim.draft.weapon
@@ -379,46 +390,81 @@ function resetDraft () {
 /* ───────────────────────── 圣遗物 ───────────────────────── */
 
 /** 圣遗物列表（只读） */
-function artiView (list) {
-  const box = el('div', 'sim-artis')
-  for (const a of list || []) box.append(artiRow(a, false))
+function artiView (list, cw) {
+  const box = el('div', 'artis')
+  for (const a of list || []) box.append(artiCard(a, false, cw))
   return box
 }
 
 /** 圣遗物列表（可改） */
-function artiEditor (list) {
-  const box = el('div', 'sim-artis')
-  for (const a of list || []) box.append(artiRow(a, true))
+function artiEditor (list, cw) {
+  const box = el('div', 'artis')
+  for (const a of list || []) box.append(artiCard(a, true, cw))
   return box
 }
 
-function artiRow (a, editable) {
-  const row = el('div', 'sim-arti')
-  const icon = el('div', 'sim-aicon')
-  icon.append(el('span', '', slotGlyph(a.pos)))
-  const main = el('div', 'sim-amain')
-  main.append(el('strong', '', a.empty ? T('notEquipped') : (a.name || '')))
-  const sub = el('div', 'sim-asub')
-  if (a.main) sub.append(el('span', '', `${a.main.label} ${a.main.value}`))
-  for (const s of a.subs || []) sub.append(el('span', '', `${s.label} ${s.value}`))
-  main.append(sub)
-  row.append(icon, main)
-
-  /* 按钮两栏都渲染，左栏只占位不显示。为什么不干脆不渲染：右边这颗钮吃掉约 50px 宽，
-     右栏的副词条就会比左栏多折一行，5 件下来伤害表要错开 76px（实测过）。
-     留着同宽的隐形钮，两栏才逐行对齐。 */
-  const btn = el('button', 'sim-editbtn', T('simEdit'))
-  if (editable) {
-    btn.addEventListener('click', () => openArtiDialog(a))
-  } else {
-    /* 隐形之外还要 disabled：它虽然看不见，但 Tab 键仍能走上去、读屏也会念出来 */
-    btn.classList.add('sim-ghostbtn')
-    btn.disabled = true
+/**
+ * 一件圣遗物 —— **1:1 复刻明细页**那张（miao.css 的 .item.arti）：90×90 套装图标斜压在右上
+ * （自带 45° 淡出遮罩）、名称压在图上一层、主副词条表 26px 一行。
+ * 结构对应 detail.js 的 renderArtiCard，只少两样（用户明确要求）：
+ *   · 评分胶囊 `.mark mark-<档位>`
+ *   · 档位边框色 `arti-class-<rank>` 与词条的权重三档配色
+ * 保留：图标、+等级、名称、主词条、副词条、权重三档色、强化命中圈 i.up-num。
+ */
+function artiCard (a, editable, cw = {}) {
+  /* 空件：明细页那条分支照抄（部位字兜底 + 「未装备」） */
+  if (a.empty) {
+    const c = el('div', 'item arti empty')
+    const icon = el('div', 'arti-icon')
+    icon.append(el('span', 'arti-fallback', slotGlyph(a.pos)))
+    const head = el('div', 'head')
+    head.append(el('strong', '', a.posName))
+    c.append(icon, head, el('div', 'arti-empty', T('notEquipped')))
+    return c
   }
-  row.append(btn)
-  return row
-}
 
+  const c = el('div', 'item arti')
+  /* data-slot 给 CSS 的 ::before 当兜底字（图标没同步到时露一个淡部位字），跟明细页一个路子 */
+  const icon = el('div', 'arti-icon')
+  icon.dataset.slot = slotGlyph(a.pos)
+  icon.append(setBg(el('div', 'img'), a.icon || ''))
+  icon.append(el('span', '', '+' + (a.level ?? 0)))
+  c.append(icon)
+
+  const head = el('div', 'head')
+  head.append(el('strong', '', a.name))
+  c.append(head)
+
+  const ul = el('ul', 'detail attr')
+  if (a.main) {
+    const li = el('li', 'arti-main')
+    const mt = el('span', 'title')
+    mt.append(el('span', 'label', a.main.label))
+    li.append(mt, el('span', 'val', '+' + a.main.value))
+    ul.append(li)
+  }
+  for (const s of a.subs || []) {
+    /* 挂权重三档类：颜色由 miao.css 的 `.artis ul.detail li.great/.nouse` 给
+       （金 = 高权重、白 = 有用、灰 = 无用），跟明细页同一套规则，本文件不另写颜色 */
+    const li = el('li', weightClass(Number(cw[s.key] ?? 0)))
+    const lab = el('span', 'title')
+    /* up-num = 强化命中圈（core.hitMark，实心圆+镂空数字）。
+       ⚠️ 不渲染 i.eff（词条前面的「2.8」「5.2」那种小数）—— 那是权重/有效率，
+         用户明确要求隐藏。别顺手加回来。 */
+    const hit = Math.min(5, (s.upNum || 0) - 1)
+    if (hit > 0) {
+      const um = el('i', 'up-num')
+      um.append(hitMark(hit))
+      lab.append(um)
+    }
+    lab.append(el('span', 'label', s.label))
+    li.append(lab, el('span', 'val', '+' + s.value))
+    ul.append(li)
+  }
+  c.append(ul)
+  c.append(simEditBtn(editable, () => openArtiDialog(a)))
+  return c
+}
 /** 改一件圣遗物：套装 / 等级 / 主词条 / 副词条 */
 function openArtiDialog (a) {
   const cur = draftOfPos(a.pos) || defaultDraftOf(a)
@@ -430,7 +476,7 @@ function openArtiDialog (a) {
         pos: a.pos,
         star: cur.star || 5,
         level: Number(lvSel.value),
-        mainKey: mainSel.value,
+        mainKey: mainSel ? mainSel.value : fixedMainKey,
         subs: subs.map((s, i) => ({
           key: s.keySel.value,
           value: Number(s.valInput.value)
@@ -464,16 +510,27 @@ function openArtiDialog (a) {
   }
   body.append(field(T('simLevel'), lvSel))
 
-  /* 主词条（按部位给候选） */
-  const mainSel = el('select', 'sim-select')
+  /* 主词条：花/羽在游戏里是**固定**的（后端只给一个候选 hpPlus / atkPlus），
+     给个只有一项的下拉框纯属摆设 —— 直接写成只读文字。
+     沙/杯/冠才有多个候选（沙 5、杯 6、冠 7），那几个仍给下拉，模拟换装要能换。 */
   const mainOpts = (sim.catalog?.mains || []).find(m => m.pos === a.pos)?.options || []
-  for (const m of mainOpts) {
-    const o = el('option', '', m.name)
-    o.value = m.key
-    if (m.key === cur.mainKey) o.selected = true
-    mainSel.append(o)
+  const fixedMainKey = mainOpts[0]?.key || cur.mainKey
+  let mainSel = null
+  if (mainOpts.length > 1) {
+    mainSel = el('select', 'sim-select')
+    for (const m of mainOpts) {
+      const o = el('option', '', m.name)
+      o.value = m.key
+      if (m.key === cur.mainKey) o.selected = true
+      mainSel.append(o)
+    }
+    body.append(field(T('simMainStat'), mainSel))
+  } else {
+    /* 单项时用**当前装备的主词条 label**（后端 shapeCharacter 给的中文名）。
+       ⚠️ 别用 mainOpts[0].name —— 花/羽这两个候选的 name 就是 key 本身（"hpPlus"/"atkPlus"），
+          只有沙/杯/冠的候选才带中文名。 */
+    body.append(field(T('simMainStat'), el('span', 'sim-rofn', a.main?.label || fixedMainKey)))
   }
-  body.append(field(T('simMainStat'), mainSel))
 
   /* 副词条：类型下拉 + 数值输入，类型候选里标出大小（同名会分不清） */
   const subsBox = el('div', 'sim-subs')
@@ -494,14 +551,18 @@ function openArtiDialog (a) {
       row.append(s.keySel, s.valInput, del)
       subsBox.append(row)
     }
-    const add = el('button', 'sim-submore', '+ ' + T('simAddStat'))
-    add.addEventListener('click', () => {
-      const first = (sim.catalog?.subs || [])[0]
-      if (!first) return
-      subs.push({ keySel: keySelect(first.key), valInput: numberInput(0) })
-      drawSubs()
-    })
-    subsBox.append(add)
+    /* 一件圣遗物最多 4 条副词条（游戏规则）—— 满了就不画「加一条」，
+       比给一个点了没反应的灰按钮清楚。 */
+    if (subs.length < 4) {
+      const add = el('button', 'sim-submore', '+ ' + T('simAddStat'))
+      add.addEventListener('click', () => {
+        const first = (sim.catalog?.subs || [])[0]
+        if (!first || subs.length >= 4) return
+        subs.push({ keySel: keySelect(first.key), valInput: numberInput(0) })
+        drawSubs()
+      })
+      subsBox.append(add)
+    }
   }
   drawSubs()
   body.append(field(T('simSubStats'), subsBox))
@@ -653,7 +714,7 @@ export function openSim (avatarId) {
   sim.dmgBox = null
   showView('sim')
   renderSim()
-  api(`accounts/${state.uid}/characters/${avatarId}/simulator`).then(c => {
+  api(`accounts/${state.uid}/characters/${avatarId}/simulator?locale=${encodeURIComponent(state.locale)}`).then(c => {
     sim.catalog = c
     recompute()
   })

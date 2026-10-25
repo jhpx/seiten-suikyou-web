@@ -645,6 +645,9 @@
 }
 .artis .item.arti .arti-icon span {
   position: absolute;
+  /* 上游就是 50（卡片内 38~56px）。它以前会压住词条表，是因为 sim 去掉评分后
+     head 只剩 41px —— 那边已补 min-height: 63px，词条表从 63px 才开始，
+     所以这里保持上游原值即可，别再往上挪（挪了角标会飘到名称行中间，反而怪）。 */
   top: 50px; right: 8px;
   height: 18px; line-height: 18px;
   padding: 0 3px;
@@ -666,6 +669,8 @@
   font-size: 15px;
   white-space: nowrap;
   overflow: hidden;
+  /* 英文武器全名（Tulaytullah's Remembrance）比中文缩写长，硬切会断在词中间 */
+  text-overflow: ellipsis;
 }
 /* 分项得分与评级（「35.3分 - SS」）。上游是 14px，这里放到 16px。
    为什么停在 16 不多要一点 —— 拿真实页面扫过 14/15/16/17/18/20 六个值：

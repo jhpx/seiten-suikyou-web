@@ -5,7 +5,7 @@
 
 import {
   $, state, T, el, setBg, rankOf, slotGlyph, backToRoster, richText,
-  weaponFallback, weightClass, W_ATTR_TITLE, api, reg
+  weaponFallback, weightClass, W_ATTR_TITLE, api, reg, hitMark
 } from './core.js'
 import { downloadDetailCard } from './share.js'
 
@@ -222,7 +222,9 @@ function renderWeaponCard (w) {
   item.append(setBg(el('div', 'img'), w.icon))
 
   const head = el('div', 'head')
-  head.append(el('strong', '', w.sName || w.name || weaponFallback(w)))
+  /* 优先用**后端本地化的全名**（w.name，跟首页同一口径）；sName 是 miao 的中文缩写名，
+     只在 name 拿不到时兜底 —— name 是「多语言优先」的唯一来源，别反过来用。 */
+  head.append(el('strong', '', w.name || w.sName || weaponFallback(w)))
   const wInfo = el('span', 'info')
   wInfo.append(el('span', 'affix affix-' + (w.affix ?? 1), `${T('refine')}${w.affix ?? 1}`))
   wInfo.append(document.createTextNode(` Lv.${w.level ?? '?'}`))
@@ -276,34 +278,6 @@ window.addEventListener('resize', fitDetailZoom)
  *   两者会画在同一层，文本节点会顺着镂空的口子露出来（等于没镂空）；
  *   放进 mask 就只当蒙版用。它仍算 <i> 的后代，textContent 照样读得到那个数字。
  */
-let hitMaskSeq = 0
-function hitMark (n) {
-  const NS = 'http://www.w3.org/2000/svg'
-  const mk = (tag) => document.createElementNS(NS, tag)
-  const attr = (node, kv) => { for (const [k, v] of Object.entries(kv)) node.setAttribute(k, v); return node }
-
-  const mask = mk('mask')
-  /* url(#id) 是全文档查的，同页几十个圈号不能重名 —— 用自增序号，一次页面加载内不会撞 */
-  mask.id = 'up-hit-' + (++hitMaskSeq)
-  /* 蒙版按亮度取：白整块留着（＝圆），黑的地方抠掉（＝数字） */
-  mask.append(attr(mk('rect'), { width: 14, height: 14, fill: '#fff' }))
-  /* x 用 7（圆心）当起点、再按实测校：
-     text-anchor 居中的是「字的宽度（advance）」而不是「墨迹」，这套字体（微软雅黑 Bold）
-     的数字墨迹偏左，实测 x=6 时墨迹中心落在 6.0、圆心在 7.0 —— 所以取 7。
-     y=10.6 是让数字墨迹的竖直中心压着圆心的基线位置（实测偏移 +0.0）。
-     两个数都是截图像素量出来的，不是估的；换字体要重量。 */
-  const digit = attr(mk('text'), { x: 7, y: 10.6, 'text-anchor': 'middle', fill: '#000' })
-  digit.textContent = String(n)
-  mask.append(digit)
-
-  const defs = mk('defs')
-  defs.append(mask)
-  /* 圆用 currentColor：跟着 span.title 的三档配色走，CSS 里不用再为它配一遍颜色 */
-  const disc = attr(mk('circle'), { cx: 7, cy: 7, r: 7, fill: 'currentColor', mask: `url(#${mask.id})` })
-  const svg = attr(mk('svg'), { viewBox: '0 0 14 14' })
-  svg.append(defs, disc)
-  return svg
-}
 
 /* 一件圣遗物：条目结构照抄 miao 的 .item.arti（右上图标 / 头 / 词条表）
  *
