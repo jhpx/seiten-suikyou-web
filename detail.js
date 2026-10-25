@@ -248,14 +248,17 @@ function renderWeaponCard (w) {
 }
 
 /*
- * 把 600px 画布等比缩到屏幕宽度。PC 上可用宽度 > 600，scale 恒为 1 —— 就是 miao 出图的原尺寸。
- * 直接写 zoom 内联样式（不用 CSS 变量转一手，实测 var() 在这里不生效）。
- */
+ * 把 600px 画布等比缩到可用宽度 = `.app` 内容区（min(视口, --app-width) − 28）。
+ * --app-width 628 时内容区正好 600，PC 上 zoom 恒 1；只有窄屏才真缩。
+ * 直接写 zoom 内联（实测 CSS 变量转一手在这儿不生效）。 */
 function fitDetailZoom () {
   const frame = document.querySelector('.pd-frame')
   if (!frame) return
   const vw = document.documentElement.clientWidth || window.innerWidth
-  frame.style.zoom = String(Math.min(1, (Math.min(vw, 760) - 16) / 600))
+  /* --app-width 从 CSS 读，别在 JS 里再抄一份数字（两处会漂） */
+  const appW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-width')) || 628
+  const avail = Math.min(vw, appW) - 28
+  frame.style.zoom = String(Math.min(1, avail / 600))
 }
 window.addEventListener('resize', fitDetailZoom)
 

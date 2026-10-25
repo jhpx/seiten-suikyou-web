@@ -6,24 +6,27 @@
  *   resources/common/common.css   （.container/.cont/.elem-bg）
  *   resources/common/layout/elem.html （元素背景的挂法）
  *
- * 设计前提：miao 的这张结果图是**一张固定 600px 宽的画布**。要长得像，
- * 就不能把它拆成流式响应式布局 —— 我们照搬 600px 画布，再由 detail.js 用 zoom
- * 把整张画布等比缩到屏幕宽度。这样万像素缩小版，构图和 miao 出图完全一致。
+ * 内部尺寸全部维持 miao 原版的 600px 基准（面板行 300、三列 90/85/70、评分卡 185+390）——
+ * 那些数是照 600 画布量出来的，改一个就得连带重算一串。只有两处改成自适应：
+ *   ① .pd-frame / .pd-canvas 用 width:100%（否则外壳一窄就横向溢出）
+ *   ② .arti-info 用 flex:1 吃掉评分卡右侧剩余宽度
  *
+ * 缩放由 detail.js 用 zoom 把整张画布等比缩到屏幕宽度（窄屏才缩，PC 上恒 1）。
  * 立绘是「左溢出、信息浮右侧」：.main-pic 宽 1400px、margin-left -545px，
  * 所以角色图占左三分之二，数值列绝对定位在右上角，不会挡脸。
  * ========================================================================== */
 
-/* 缩放外壳：zoom 由 detail.js 按视口宽度直接写内联样式，PC 上恒为 1（原尺寸） */
+/* 缩放外壳：zoom 由 detail.js 按视口宽度写内联，PC 上恒 1（原尺寸）。
+   ⚠️ 必须 100% 不能写 600px：窄屏时 zoom 把布局宽缩成屏宽，写死就溢出。 */
 .pd-frame {
-  width: 600px;
+  width: 100%;
   margin: 0 auto;
 }
 
 /* 画布本体：元素背景图由 JS 内联上去（对应 miao 的 <div class="container elem-bg">） */
 .pd-canvas {
   position: relative;
-  width: 600px;
+  width: 100%;
   overflow: hidden;
   border-radius: 12px;
   background-color: #233;
@@ -64,7 +67,8 @@
   z-index: 1;
 }
 
-/* 立绘：1400×500 的图居中放，靠负 margin 让角色落在画布左侧 */
+/* 立绘：1400×500 居中放，靠负 margin 把角色挪到画布左侧。
+   负 margin 是照 600px 画布算的，别改 —— 各角色 splash 比例 0.95~1.58 差一大截，算不出通用值。 */
 .main-pic {
   width: 1400px;
   height: 500px;
@@ -396,8 +400,8 @@
   background: rgba(0, 0, 0, .5);
 }
 
-/* 右侧：有效词条汇总（每列 3 条 × 26px，三列排满） */
-.arti-info { width: 390px; }
+/* 右侧：有效词条汇总。上游写死 390px，这里用 flex:1 吃掉 185px 评分卡之外的剩余宽度。 */
+.arti-info { flex: 1; min-width: 0; }
 .arti-info .arti-all-attr { height: 78px; overflow: hidden; }
 .arti-info .arti-all-attr .arti-attr {
   position: relative;

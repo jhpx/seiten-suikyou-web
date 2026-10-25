@@ -23,7 +23,10 @@
   --ctrl-bg: rgba(22, 26, 36, .82);
   --radius: 14px;
   --radius-sm: 10px;
-  --app-width: 520px;
+  /* 主要显示区 600px：628 = 600 内容区 + .app 左右内边距 28。
+     600 是 miao 画布的原设计宽度，外壳刚好等于它，明细页 PC 上 zoom 恒 1 原尺寸显示。
+     ⚠️ 这是**外壳**宽度，内容区 = 它 − 28。想改主要显示区就改这里，别去改内容区那几个数。 */
+  --app-width: 628px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -54,15 +57,15 @@ body {
   background: rgba(10, 12, 16, .92);
   backdrop-filter: blur(12px);
   /* 左右内边距从 .top 挪到里面的 .brand / .query 上：顶栏**背景和底边金线仍然通栏**
-     （sticky 背景条只有 520px 宽的话，两侧会露出一条缝，比内容宽更丑），
+     （sticky 背景条只有 --app-width 宽的话，两侧会露出一条缝，比内容宽更丑），
      限宽的只是内容 —— 内容和下面 .app / .foot 一样收在 --app-width 里居中，
-     桌面和手机看到的才是同一条 520px 的内容带。 */
+     桌面和手机看到的才是同一条内容带。 */
   padding: 10px 0;
   /* 底边那条线由原来的实心灰蓝 border 换成下面的金线；
      sticky + z-index 已经建了包含块，::after 才定得住 */
 }
 /* 顶栏内容限宽居中：宽度取 --app-width（和 .app 同一个数），左右 padding 也是同一个 14px，
-   于是顶栏内容的左右边缘和下面账号头、网格、页脚严格对齐（实测四条都是 l=354 / 宽 492）。 */
+   于是顶栏内容的左右边缘和下面账号头、网格、页脚严格对齐。 */
 .brand, .query {
   width: 100%;
   max-width: var(--app-width);
@@ -312,7 +315,7 @@ body {
   flex-wrap: wrap; gap: 8px;
 }
 .advice-panel-title {
-  margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .06em;
+  margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .06em;
   color: var(--gold-lt);
 }
 /* 面板头右边这组控件：排序 + 口径开关，包一层才不会被 space-between 拆散 */
@@ -324,8 +327,8 @@ body {
 .advice-toggle, .advice-sortfield {
   flex: 0 0 auto;
   display: inline-flex; align-items: center;
-  height: 26px; padding: 0 10px;
-  font: inherit; font-size: 11px; line-height: 1;   /* button 不继承字体族 */
+  height: 28px; padding: 0 11px;
+  font: inherit; font-size: 12px; line-height: 1;   /* button 不继承字体族 */
   border-radius: 8px;
   color: var(--ink-2);
   background: var(--ctrl-bg);
@@ -337,7 +340,7 @@ body {
   border-color: var(--gold-line-hi);
   background: rgba(211, 188, 142, .16);
 }
-.advice-panel-scope { font-size: 10px; color: var(--ink-3); }
+.advice-panel-scope { font-size: 11px; color: var(--ink-3); }
 
 /* 排序：一颗 button + 自绘菜单。不用原生 select —— 它展开的列表由浏览器画，改不动 */
 .advice-sortdd { flex: 0 0 auto; }
@@ -361,7 +364,7 @@ body {
 /* 当前项：底色加深到 .16，末尾补 ✓ —— 默认 .10 在深底上几乎看不见 */
 .advice-menu .rf-opt.active { background: rgba(211, 188, 142, .16); }
 .advice-menu .rf-opt.active::after { content: '✓'; margin-left: auto; font-size: 11px; color: var(--gold); }
-.advice-empty { margin: 0; font-size: 12px; color: var(--ink-3); }
+.advice-empty { margin: 0; font-size: 13px; color: var(--ink-3); }
 
 .advice-list { display: flex; flex-direction: column; gap: 9px; }
 .advice-set {
@@ -382,14 +385,14 @@ body {
 
 /* 名次：定宽右对齐。今天 topN=8 只有个位，留 12px 是为了将来放宽也不用改版式 */
 .advice-rank {
-  flex: 0 0 auto; width: 12px;
-  font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums;
+  flex: 0 0 auto; width: 14px;
+  font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
   color: var(--ink-3); text-align: right;
 }
 
 .advice-icon {
-  flex: 0 0 auto; width: 34px; height: 34px;
-  border-radius: 9px;
+  flex: 0 0 auto; width: 40px; height: 40px;
+  border-radius: 10px;
   background-color: var(--bg-4);
   background-size: 78%; background-position: center; background-repeat: no-repeat;
   box-shadow: inset 0 0 0 1px var(--line);
@@ -400,14 +403,14 @@ body {
 .advice-name {
   display: flex; align-items: center; gap: 6px;
   min-width: 0;
-  font-size: 13px; font-weight: 600; line-height: 1.2;
+  font-size: 15px; font-weight: 600; line-height: 1.2;
 }
 .advice-name-text {
   flex: 1 1 auto; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .advice-tag {
-  flex: 0 0 auto; font-size: 9px; font-weight: 400;
+  flex: 0 0 auto; font-size: 10px; font-weight: 400;
   color: var(--ink-3); border: 1px solid var(--line);
   border-radius: 4px; padding: 0 4px;
 }
@@ -420,7 +423,7 @@ body {
  * 这是有意的。 */
 .advice-strip {
   /* 格宽：390 档 10px；窄屏条只剩三四十 px 可放，格子太宽就只看得见两三格，所以往下收 */
-  --advice-seg: 10px;
+  --advice-seg: 13px;
   --advice-gap: 1px;
   /* .advice-head 是 flex，条作为 item 不许收缩：grid 的列宽是定死的，
      一旦允许 shrink，浏览器会压小整个 grid 容器把条挤扁 */
@@ -430,17 +433,18 @@ body {
   grid-auto-columns: var(--advice-seg);
   gap: var(--advice-gap);
   justify-content: start;
-  min-width: 0; max-width: 48%; overflow: hidden;
-  height: 5px; opacity: .9;
+  min-width: 0; max-width: 58%; overflow: hidden;
+  height: 7px; opacity: .9;
 }
 .advice-seg { border-radius: 2px; background: currentColor; }
+.advice-head { gap: 9px; }
 /* 内核的 mark-D 是给浅底卡片调的灰，压在深底上几乎看不见 —— 只在本面板里提亮一档 */
 .advice-strip .mark-D { color: #9aa4b6; }
 
 /* 人数 / 件数：定最小宽度，条起点就只受套名长短影响，不受「5」和「15」的宽度差影响 */
 .advice-own {
-  flex: 0 0 auto; min-width: 60px; display: flex; align-items: center;
-  font-size: 11px; color: var(--ink-3);
+  flex: 0 0 auto; min-width: 68px; display: flex; align-items: center;
+  font-size: 12px; color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 .advice-own b { font-weight: 600; color: var(--ink-2); margin-left: 3px; }
@@ -462,22 +466,24 @@ body {
 
 /* 一行 = 一个角色：人名 + 五个**定宽槽位**（花羽沙杯冠），整行可点。
  * ⚠️ 必须用网格不能用 flex 排队：缺件也占着自己的列，各行的花才落在同一列；
- *    flex 里缺一件后面四件整体左移，竖着就没法比了。
- * 槽位宽写死，窄屏靠文件末尾那两档改几个变量（列数不动）。 */
+ *   flex 里缺一件后面四件整体左移，竖着就没法比了。
+ * 槽位宽写死，窄屏靠文件末尾那两档改几个变量（列数不动）。
+ * 尺寸全在这几个变量里，改一处全行跟着变 —— 2026-10-25 整体放大过一档
+ * （字 10.5→13、图 16→22、槽 54→66），原因是 600 内容区下这些格子原本偏挤。 */
 .advice-line {
-  --advice-name: 54px;    /* 人名一列 */
-  --advice-cav: 54px;    /* 一个部位的槽位 */
-  --advice-ic: 16px;      /* 部位图 */
-  --advice-fs: 10.5px;    /* 分数 */
-  --advice-pl: 3px;       /* 块内左右留白：图不必贴着块边 */
-  --advice-pr: 3px;
-  --advice-pt: 2px;       /* 块内上下留白：块比图标高一点 */
-  --advice-gap: 2px;      /* 标签内「图 ↔ 分」的间距 */
-  --advice-col: 13px;     /* 块与块之间的间隔（窄屏按档收，见文件末尾那两档） */
+  --advice-name: 68px;    /* 人名一列 */
+  --advice-cav: 66px;    /* 一个部位的槽位 */
+  --advice-ic: 22px;      /* 部位图 */
+  --advice-fs: 13px;      /* 分数 */
+  --advice-pl: 4px;       /* 块内左右留白：图不必贴着块边 */
+  --advice-pr: 4px;
+  --advice-pt: 3px;       /* 块内上下留白：块比图标高一点 */
+  --advice-gap: 3px;      /* 标签内「图 ↔ 分」的间距 */
+  --advice-col: 14px;     /* 块与块之间的间隔（窄屏按档收，见文件末尾那两档） */
   --advice-fill: rgba(255, 255, 255, .07);    /* 真件与空框共用这块淡底 */
   display: grid; align-items: center; gap: 2px var(--advice-col);
   grid-template-columns: var(--advice-name) repeat(5, minmax(0, var(--advice-cav)));
-  margin: 0 -4px; padding: 2px 4px;
+  margin: 0 -4px; padding: 3px 4px;
   background: none; border: 0; border-radius: 6px;
   font: inherit; color: var(--ink-2); text-align: left;
   cursor: pointer;
@@ -486,7 +492,7 @@ body {
 /* 名字占一列（宽度由网格给，各行起点天然对齐）；54px 装得下 5 个汉字，更长的省略 */
 .advice-char {
   min-width: 0;
-  font-size: 10.5px; color: var(--ink-2);
+  font-size: 13px; color: var(--ink-2);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .advice-line:hover .advice-char { color: var(--ink); }
@@ -518,7 +524,7 @@ body {
 .advice-piece .ap-init {
   position: absolute; left: calc(var(--advice-pl) + var(--advice-ic)); bottom: 0;
   transform: translateX(-100%);
-  font-size: 8px; font-style: normal; line-height: 1;
+  font-size: 9px; font-style: normal; line-height: 1;
   font-weight: 700; color: var(--ink-2);
   background: var(--bg-3);
   border-radius: 2px; padding: 0 1px;
@@ -533,29 +539,26 @@ body {
   width: var(--advice-ic); height: var(--advice-ic); object-fit: contain;
   filter: brightness(1.25) saturate(1.05);
 }
-.advice-piece .ap-glyph { font-size: 9px; color: var(--ink-3); }
+.advice-piece .ap-glyph { font-size: 10px; color: var(--ink-3); }
 /* 行高压到 1：块的高度只由图标决定，空框才能照着算（否则窄档文字行高比图标高 1px） */
 .advice-piece .ap-mark { font-size: var(--advice-fs); line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
 /* 内核的 mark-D 是给浅底调的灰，压在深底上看不见 —— 只在本面板提亮一档 */
 .advice-piece .ap-mark.mark-D { color: #9aa4b6; }
 
-/* 窄屏两档：只改「一块多宽 / 间隔多宽」相关的几个变量，**列数不动**。
- * 块宽和间隔是此消彼长的 —— 一行就那么宽，间隔宽了块就窄，块窄到内容以下分数就要被裁：
- *   380 以上：内容 3+16+2+19+3 = 43，块 44×20，间隔 13
- *   353~379：内边收到 2，内容 41，块 41×20，间隔 10
- *   ≤352（含 320）：人名 44、图标 14、字号 10，内容 37，块 38×18，间隔 7 */
+/* 窄屏两档：只收「块多宽 / 间隔多宽 / 字多大」这几个变量，**列数不动**。
+ * 槽位列写的是 minmax(0, var(--advice-cav))，放不下时列自己会压缩，不会撑破整行。 */
 @media (max-width: 379px) {
-  .advice-line { --advice-pl: 2px; --advice-pr: 2px; --advice-col: 10px; }
-  .advice-strip { --advice-seg: 7px; }
+  .advice-line { --advice-col: 12px; --advice-pl: 3px; --advice-pr: 3px; }
+  .advice-strip { --advice-seg: 10px; }
 }
 @media (max-width: 352px) {
   .advice-line {
-    --advice-name: 44px; --advice-cav: 44px;
-    --advice-ic: 14px; --advice-fs: 10px;
-    --advice-pl: 1px; --advice-pr: 2px; --advice-gap: 2px;
-    --advice-col: 7px;
+    --advice-name: 52px; --advice-cav: 52px;
+    --advice-ic: 18px; --advice-fs: 12px;
+    --advice-pl: 3px; --advice-pr: 3px; --advice-gap: 2px;
+    --advice-col: 9px;
   }
-  .advice-strip { --advice-seg: 6px; }
+  .advice-strip { --advice-seg: 8px; }
 }
 
 /* ───────────────────────── 首页：筛选条 ─────────────────────────
@@ -801,6 +804,14 @@ body {
  * cqw 认最近的容器祖先，所以 .char-card 自己声明 container-type。
  */
 
+/*
+ * 首页：角色卡片网格 —— 一排**五个**。
+ *
+ * ⚠️ 卡片尺寸全是 cqw（= 卡片宽的 1%），所以「列数」直接决定整套版式放大还是缩小。
+ *   设计稿基准 156px/卡（.cc-top 的 aspect-ratio 156/162 照它量的）。
+ *   内容区 600 下：5 列 = 112px（−28%）、4 列 = 142px（−9%）。用户要五个一横排，
+ *   那就 5 列 —— 卡片小一号，但一行看的人多，刷取建议那块也更整齐。
+ */
 .char-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -1111,12 +1122,8 @@ body.on-detail #footmeta { display: none; }
   margin-bottom: 12px;
 }
 
-/*
- * 明细页：miao 600px 评分画布比外壳(520px)宽，用 flex 居中（允许向两侧溢出）。
- * 返回栏必须与卡片同框：宽锁 600px + margin:0 auto。
- * 不能用 align-self:center —— flex 子比容器宽时 margin:0 auto 退化成 flex-start（右溢出），
- * 而 align-self:center 会对称居中，两者错位会让整条栏相对卡片左偏。
- */
+/* 明细页：返回栏用 min(600px,100%) 跟画布严格同框（画布实际宽 = min(600, 内容区)，同源）。
+   别用 align-self:center —— flex 子比容器宽时 margin:0 auto 会退化成 flex-start，整条栏左偏。 */
 #view-detail.view.active {
   display: flex;
   flex-direction: column;
@@ -1124,7 +1131,7 @@ body.on-detail #footmeta { display: none; }
   width: 100%;
 }
 #view-detail .detail-bar {
-  width: 600px;
+  width: min(600px, 100%);
   margin: 0 auto 12px;
 }
 #view-detail .placeholder { align-self: stretch; }
@@ -1169,23 +1176,21 @@ body.on-detail #footmeta { display: none; }
 
 /* ───────────────────────── 模拟比对页 ─────────────────────────
  *
- * 左右两栏并排需要 ~980px，而外壳 .app 只有 520px —— 跟明细页那个 600px 画布同一个处境。
- * 所以抄它的解法：**父容器 flex 居中、子容器自己定宽并允许溢出**（html/body 已经 overflow-x:hidden，
- * 溢出不会顶出横向滚动条）。窄屏靠 max-width:100vw 收成屏宽，下面的 grid 自动退成一列。
+ * 宽度一律 `width: 100%` 挂在 .app 底下，不自己算像素 —— 三页才严格同宽；
+ * 窄屏由 .app 的 max-width 自动收成屏宽，.sim-cols 退成一列。
  *
- * ⚠️ 类名一律避开广告词（ad/adv/bar/slot/box/frame/column 等）—— 带这些词的容器会被
- *    AdBlock / uBlock 的过滤规则当成广告整个隐藏，症状是「PC 看不见、手机正常」。
- *    所以顶栏叫 .sim-head 而不是 .sim-bar，副词条「加一条」叫 .sim-submore 而不是 .sim-subadd。
- */
+ * ⚠️ 类名避开广告词（ad/adv/bar/slot/box/frame/column）—— 这些词会被 AdBlock/uBlock
+ *   当广告容器隐藏，症状「PC 看不见、手机正常」。所以叫 .sim-head 不叫 .sim-bar。 */
 #view-sim.view.active {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
 }
-/* 宽度跟前两页同一个口径：--app-width。别再另起一个像素值，三页内容带必须严格同宽 */
+/* width:100% = 填满 .app 内容区，三页同宽。别改回 var(--app-width)（那是外壳宽，会多 28px），
+   也别写死 600（自己不会收缩）。 */
 #view-sim .sim-head,
-#view-sim .sim-card { width: var(--app-width); max-width: calc(100vw - 28px); }
+#view-sim .sim-card { width: 100%; }
 
 .sim-head {
   display: flex; align-items: center; gap: 12px;
@@ -1320,7 +1325,9 @@ body.on-detail #footmeta { display: none; }
   box-shadow: 0 0 4px rgba(0, 0, 0, .8);
 }
 .sim-tal.is-plus strong { background: #2e353e; color: #ffdfa0; font-weight: 700; }
-/* 窄屏：肖像收到 108px、天赋图收到 36px，横条还是横条（折成上下两段就不叫标题了） */
+/* 窄屏：肖像收到 108px、天赋图收到 36px，横条还是横条（折成上下两段就不叫标题了）。
+   ⚠️ 这个 520 是「手机/平板分界」的断点，**不是** --app-width（那个现在是 720）—— 两数撞车纯属巧合，
+      改动时别顺手同步，改错会同时动到外壳宽度。 */
 @media (max-width: 520px) {
   .sim-hero { min-height: 132px; gap: 12px; padding: 12px 14px; }
   .sim-av { width: 108px; height: 108px; }
@@ -1330,12 +1337,12 @@ body.on-detail #footmeta { display: none; }
   .sim-tal strong { font-size: 10px; line-height: 13px; }
 }
 
-/* auto-fit + minmax：容器够宽就两栏，不够就上下堆叠 —— 手机不用另外写 media query。
-   ⚠️ 这里的 230px 是跟着 --app-width 算的：520 - 卡片左右内边距 24 - 栏间距 14 = 242，
-     所以 230px 是「刚好能塞两栏」的下限；放大到 300 就永远单列，比对页会退化成上下翻。 */
+/* auto-fit + minmax：够宽就两栏，不够自动堆叠，手机不用另写 media query。
+   ⚠️ 260 是跟着卡片内容区算的：600 − padding 24 − gap 14 = 562，两栏各 281。
+     下限一旦 ≥ 281 就退化成单列，比对页直接废掉 —— 改 --app-width 必须同步改它。 */
 .sim-cols {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 14px;
   align-items: start;
 }
