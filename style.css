@@ -30,6 +30,10 @@
         CSS 变不出 rgba(#a5d977, .1) 这种写法，写死两处迟早改漏一处。 */
   --sim-tint: #a5d977;
   --sim-tint-rgb: 165, 217, 119;
+  /* 武器精炼描述里**随精炼变化的数值**的高亮色。游戏里那几个数字本身就是淡金描出来的，
+     照搬同一套观感。⚠️ 跟卡片里「高权重词条」的金是两个意思，但分处不同区块、且这里加粗，
+     不会读混 —— 想换色只改这一行。 */
+  --sim-affix: #ffe699;
   --radius: 14px;
   --radius-sm: 10px;
   /* 主要显示区 600px：628 = 600 内容区 + .app 左右内边距 28。
@@ -1684,6 +1688,43 @@ body.on-detail #footmeta { display: none; }
 .sim-subrow { display: flex; gap: 6px; align-items: center; }
 .sim-subkey { flex: 1; min-width: 0; }
 
+/* ── 改武器弹窗：左边表单 + 右边简介 ──
+ * 它比筛选那类弹窗多一栏内容，默认 520 宽塞两栏太挤，单独放宽到 600；
+ * 窄屏（弹窗本来就占满）仍然上下排 —— 见文末 520 断点。 */
+.rf-modal.sim-wwide { width: min(600px, 100%); }
+.sim-wbody {
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+/* 左栏只有 176，标签改到控件上方：横排的话「型号」60px 标签 + 下拉会挤成两条 */
+.sim-wform { display: grid; gap: 8px; }
+.sim-wform .sim-field { display: grid; gap: 4px; margin: 0; }
+.sim-wform .sim-field > span { min-width: 0; font-size: 11px; }
+.sim-wform .sim-select { width: 100%; }
+
+/* 右栏：上面是这把武器的主/副属性，下面是精炼效果（名字在左边下拉里，不重复写） */
+.sim-winfo {
+  display: grid; gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(22, 26, 36, .5);
+}
+.sim-wstats { display: grid; gap: 4px; }
+.sim-wstat { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 13px; }
+.sim-wstat-k { color: var(--ink-3); }
+/* 数值用米白而不是金：金在下半页是「高权重词条」的意思，这里只是普通属性 */
+.sim-wstat-v { color: var(--cream); font-weight: 600; }
+
+/* 简介正文比正常字小一号：它是辅助信息，不该跟表单里的数值抢注意力。
+   上面有属性块时拉一条细线分开（没属性块时它就是第一块，别再顶一根线） */
+.sim-wdesc-body { font-size: 12px; line-height: 1.65; color: var(--ink-2); }
+.sim-winfo > .sim-wdesc-body:not(:first-child) { padding-top: 8px; border-top: 1px solid var(--line); }
+/* 精炼数值：跟着精炼档变的几个数，游戏里就是描出来高亮的（精炼弹窗里还能点），照搬同一套观感 */
+.sim-whl { color: var(--sim-affix); font-weight: 700; }
+
 .sim-editbtn, .sim-subdel, .sim-submore {
   height: 30px; padding: 0 12px;
   background: linear-gradient(180deg, rgba(58, 64, 82, .92), rgba(34, 39, 52, .92));
@@ -1749,5 +1790,8 @@ body.on-detail #footmeta { display: none; }
   }
   /* 手机上按钮在卡片下面，head 只让开右上那颗新图标（PC 那边还要让开按钮，116 → 40） */
   #view-sim .item .head { padding-right: 40px; }
+
+  /* 改武器弹窗：两栏变上下（每栏只剩一百多 px，简介会被挤成一列字） */
+  .sim-wbody { grid-template-columns: 1fr; }
 
 }

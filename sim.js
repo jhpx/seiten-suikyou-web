@@ -338,6 +338,17 @@ function statRow (label, newText, oldText, showOld) {
 }
 
 /**
+ * 改武器弹窗右侧的一行属性（主属性 / 副属性）。
+ * 跟上面 statRow 不是一回事：那行是「旧 → 新」的对比，这里显示的是**这把武器自己的属性**，
+ * 没有旧值可比 —— 别顺手复用成对比行。
+ */
+function wstat (label, value) {
+  const row = el('div', 'sim-wstat')
+  row.append(el('span', 'sim-wstat-k', label), el('span', 'sim-wstat-v', value))
+  return row
+}
+
+/**
  * 卡片上那组操作按钮（改 / 还原）。挂在**卡片本体**上（不是 head）—— 绝对定位相对整张卡，
  * 桌面放卡内、手机放卡片下方，都由 CSS 坐标决定。
  *
@@ -388,27 +399,65 @@ function openWeaponDialog () {
   })
 
   const body = dlg.body
+  /* 这个弹窗多一栏简介，默认那档 520 宽塞两栏就太挤 —— 单独放宽（窄屏仍是整屏宽） */
+  body.parentElement?.classList.add('sim-wwide')
 
-  /* 型号：目录后端已按角色武器类型滤过（迪奥娜只有弓），星级标在名字后面方便认 */
+  const wrap = el('div', 'sim-wbody')
+  const form = el('div', 'sim-wform')
+
+  /* 型号：目录后端已按角色武器类型滤过（迪奥娜只有弓）。三星到五星**一律标星级** ——
+     只给五星标 ★，四星三星看着就像「没有星级」，反正一行放得下。 */
+  const list = [...(sim.catalog?.weapons || [])]
+  /* 当前那把不在目录里（miao 不认识这把新武器）时补一项：不补的话下拉会落到第一项，
+     看着就是「打开对话框没选中我现在的武器」。 */
+  const curW = currentAvatar()?.weapon
+  if (cur.itemId && !list.some(w => w.itemId === cur.itemId)) {
+    /* 补的这项没属性也没简介（miao 认不出），右侧那栏会显示「无数据」—— 比编数字强 */
+    list.unshift({ itemId: cur.itemId, name: curW?.name || T('noWeapon'), star: curW?.star || 0, affixText: '', affixVals: [], main: null, sub: null })
+  }
   const wSel = el('select', 'sim-select')
-  for (const w of sim.catalog?.weapons || []) {
-    const o = el('option', '', w.star >= 5 ? `${w.name} ★` : w.name)
+  for (const w of list) {
+    const o = el('option', '', w.star ? `${w.name} ${w.star}★` : w.name)
     o.value = String(w.itemId)
     if (w.itemId === cur.itemId) o.selected = true
     wSel.append(o)
   }
-  body.append(field(T('simWeaponType'), wSel))
+  form.append(field(T('simWeaponType'), wSel))
 
-  /* 等级：档位取 1/20/40/60/80/90。值就是 1 基等级本身 —— 后端 new Weapon 直接吃这个数，
-     别在这儿 -1（那是**圣遗物**的口径，武器不减）。 */
+  /* 等级：档位**由选中的那把武器给**（目录里 main.values 的键就是档位）—— 
+     写死 [1,20,40,60,80,90] 的话 1★/2★ 那批能选到它们根本升不到的 Lv.90，
+     跟「4★ 圣遗物能选 +20」是同一个坑。值就是 1 基等级本身，别 -1（那是圣遗物的口径）。 */
   const lvSel = el('select', 'sim-select')
-  for (const lv of [1, 20, 40, 60, 80, 90]) {
-    const o = el('option', '', `Lv.${lv}`)
-    o.value = String(lv)
-    if (lv === cur.level) o.selected = true
-    lvSel.append(o)
+  const drawLevels = (initial) => {
+    const w = list.find(x => String(x.itemId) === wSel.value)
+    const lvs = Object.keys(w?.main?.values || {}).map(Number).sort((a, b) => a - b)
+    /* 当前那把没档位数据（miao 不认识的新武器）时退回常规档位，别让下拉空掉 */
+    if (!lvs.length) lvs.push(1, 20, 40, 60, 70, 80, 90)
+    const max = lvs[lvs.length - 1]
+    let keep = initial ? (cur.level || 1) : (Number(lvSel.value) || cur.level || 1)
+    /* 真实等级常常不是档位上的数（50 级、55 级），**初次打开**要按真值显示 ——
+       不补的话下拉落到第一项，看着像「等级被重置成 1 级」 */
+    if (initial && keep <= max && !lvs.includes(keep)) {
+      lvs.push(keep)
+      lvs.sort((a, b) => a - b)
+    }
+    /* 换武器后档位表会变（1★/2★ 只有 1/20/40/60/70，5★ 是 1/20/40/60/80/90）。
+       keep 不在新表里就收敛到**不超过它的最大档** —— 不收敛的话 select.value 赋一个
+       不存在的值会变成空串（浏览器直接把 selectedIndex 置 -1），右栏属性全部取不到值。 */
+    if (!lvs.includes(keep)) {
+      const under = lvs.filter(lv => lv <= keep)
+      keep = under.length ? under[under.length - 1] : lvs[0]
+    }
+    lvSel.innerHTML = ''
+    for (const lv of lvs) {
+      const o = el('option', '', `Lv.${lv}`)
+      o.value = String(lv)
+      lvSel.append(o)
+    }
+    lvSel.value = String(keep)
   }
-  body.append(field(T('simLevel'), lvSel))
+  drawLevels(true)
+  form.append(field(T('simLevel'), lvSel))
 
   const afSel = el('select', 'sim-select')
   for (const a of [1, 2, 3, 4, 5]) {
@@ -417,7 +466,46 @@ function openWeaponDialog () {
     if (a === cur.affix) o.selected = true
     afSel.append(o)
   }
-  body.append(field(T('refine'), afSel))
+  form.append(field(T('refine'), afSel))
+
+  /* 右边：主/副属性 + 简介。三项都跟着上面两个下拉走 —— 等级改属性、精炼改简介里的数值。 */
+  const info = el('div', 'sim-winfo')
+  const stats = el('div', 'sim-wstats')
+  const desc = el('div', 'sim-wdesc-body')
+  const drawInfo = () => {
+    const w = list.find(x => String(x.itemId) === wSel.value)
+    const lv = lvSel.value
+    stats.innerHTML = ''
+    /* 值按**选中的等级档**取（后端每个档位都给了一份），没有就空着 —— 不编数 */
+    if (w?.main) stats.append(wstat(w.main.label, w.main.values?.[lv] || ''))
+    if (w?.sub) stats.append(wstat(w.sub.label, w.sub.values?.[lv] || ''))
+
+    /* 简介：模板里的 $[0] $[1] 换成当前精炼那档的数值并**高亮**。
+       游戏里就这几个数字跟着精炼变，标出来才看得出「改精炼改的是哪几个数」。
+       1★/2★ 那批（无锋剑之类）没有精炼效果，整段是空的 → 给占位。 */
+    desc.innerHTML = ''
+    if (!w?.affixText) {
+      desc.append(document.createTextNode(T('noData')))
+      return
+    }
+    for (const [i, part] of w.affixText.split(/\$\[(\d+)\]/).entries()) {
+      if (i % 2 === 0) {
+        if (part) desc.append(document.createTextNode(part))
+      } else {
+        const v = (w.affixVals?.[Number(part)] || [])[Number(afSel.value) - 1]
+        if (v) desc.append(el('span', 'sim-whl', v))
+      }
+    }
+  }
+  /* 换武器 → 档位可能变（1★/2★ 最高只到 70），先重画档位再重画右栏 */
+  wSel.addEventListener('change', () => { drawLevels(false); drawInfo() })
+  lvSel.addEventListener('change', drawInfo)
+  afSel.addEventListener('change', drawInfo)
+
+  info.append(stats, desc)
+  wrap.append(form, info)
+  body.append(wrap)
+  drawInfo()
 }
 
 /** 草稿里的武器（没改过就是当前实装那把） */
@@ -601,7 +689,7 @@ function valCell (newVal, oldVal, showOld) {
   )
   return cell
 }
-/** 改一件圣遗物：套装 / 等级 / 主词条 / 副词条 */
+/** 改一件圣遗物：套装（带星级）/ 等级（按星级封顶）/ 主词条 / 副词条 */
 function openArtiDialog (a) {
   const cur = draftOfPos(a.pos) || defaultDraftOf(a)
   const dlg = openDialog({
@@ -610,7 +698,7 @@ function openArtiDialog (a) {
       const next = {
         set: setSel.value,
         pos: a.pos,
-        star: cur.star || 5,
+        star: starOf(),
         level: Number(lvSel.value),
         mainKey: mainSel ? mainSel.value : fixedMainKey,
         subs: subs.map((s, i) => ({
@@ -624,30 +712,48 @@ function openArtiDialog (a) {
 
   const body = dlg.body
 
-  /* 套装：只列**有这个部位**的套装（祭X之人那批 4★ 套只有冠）。
-     不过滤的话能选到「祭雷之人的花」，后端认不出这种组合会整件草稿静默跳过 ——
+  /* 套装：只列**有这个部位**的套装（祭X之人那批只有冠），名字后面标这套**最高几星**。
+     不过滤部位的话能选到「祭雷之人的花」，后端认不出这种组合会整件草稿静默跳过 ——
      现象是值被染成模拟色、但一个数都没变（用户实测报过这个）。
      `!x.positions` 是给「前端比后端新」的场合兜底（web/ 是独立仓库，可能先发）：
      老接口没这个字段时照旧全列，不至于让下拉空掉。 */
+  const setOpts = (sim.catalog?.sets || []).filter(x => !x.positions || x.positions.includes(a.pos))
   const setSel = el('select', 'sim-select')
-  for (const s of (sim.catalog?.sets || []).filter(x => !x.positions || x.positions.includes(a.pos))) {
-    const o = el('option', '', s.name)
+  for (const s of setOpts) {
+    const o = el('option', '', s.star ? `${s.name} ${s.star}★` : s.name)
     o.value = s.key
     if (s.key === cur.set) o.selected = true
     setSel.append(o)
   }
   body.append(field(T('simSet'), setSel))
 
-  /* 等级：**草稿里存的是 enka 原始等级（1 基，1..21）**，而玩家读的是「+N」（0..20）。
-     所以选项值取 1/5/9/13/17/21（每 4 级一档），标签显示 lv-1。
-     别把 0 塞进来 —— 后端会按 levelRaw 处理，0 会变成负等级。 */
+  /*
+   * 星级由**套装**决定，不单独选：4★ 那批（教官/战狂/祭X之人…）满级 +16，5★ 套装能到 +20。
+   * ⚠️ 取 `min(这件原本的星级, 套装最高)`：5★ 套装里也可能穿着一件 4★ 的（掉落就有 4★），
+   *   直接按套装最高算会把它悄悄升星、主词条跟着变一截。
+   */
+  const starOf = () => Math.min(cur.star || 5, setOpts.find(s => s.key === setSel.value)?.star || 5)
+
+  /*
+   * 等级：**草稿里存的是 enka 原始等级（1 基，1..21）**，而玩家读的是「+N」（0..20）。
+   * 每 4 级一档，标签显示 lv-1；别把 0 塞进来 —— 后端按 levelRaw 处理，0 会变负等级。
+   * 上限跟着星级走（4★ 只到 +16），档位表从目录拿（`starLevels`），前端不另存一份游戏规则。
+   */
   const lvSel = el('select', 'sim-select')
-  for (const lv of [1, 5, 9, 13, 17, 21]) {
-    const o = el('option', '', `+${lv - 1}`)
-    o.value = String(lv)
-    if (lv === cur.level) o.selected = true
-    lvSel.append(o)
+  const drawLevels = () => {
+    const keep = Number(lvSel.value) || cur.level || 1
+    const max = (sim.catalog?.starLevels || []).find(x => x.star === starOf())?.maxLevel ?? 21
+    lvSel.innerHTML = ''
+    for (let lv = 1; lv <= max; lv += 4) {
+      const o = el('option', '', `+${lv - 1}`)
+      o.value = String(lv)
+      lvSel.append(o)
+    }
+    /* 换到更低星的套装时把超出上限的档位收敛掉（+20 → +16），别停在一个不存在的档 */
+    lvSel.value = String(Math.min(keep, max))
   }
+  setSel.addEventListener('change', drawLevels)
+  drawLevels()
   body.append(field(T('simLevel'), lvSel))
 
   /* 主词条：花/羽在游戏里是**固定**的（后端只给一个候选 hpPlus / atkPlus），
@@ -805,7 +911,8 @@ function isArtiDirty (pos) {
   const org = originalArti(pos)
   if (!org || org.empty) return true          // 原本空着，现在填了东西 = 改动
   const o = defaultDraftOf(org)
-  if (d.set !== o.set || d.level !== o.level || d.mainKey !== o.mainKey) return true
+  /* 星级也算改动：它会改主词条的数值档位和满级上限（4★ 最高 +16） */
+  if (d.set !== o.set || d.star !== o.star || d.level !== o.level || d.mainKey !== o.mainKey) return true
   if ((d.subs || []).length !== o.subs.length) return true
   return (d.subs || []).some((s, i) => s.key !== o.subs[i].key || s.value !== o.subs[i].value)
 }
