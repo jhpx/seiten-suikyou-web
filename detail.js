@@ -4,7 +4,7 @@
  */
 
 import {
-  $, state, T, el, setBg, rankOf, slotGlyph, backToRoster, richText,
+  $, state, T, el, setBg, rankOf, backToRoster, richText,
   weaponFallback, weightClass, api, reg, hitMark
 } from './core.js'
 import { downloadDetailCard } from './share.js'
@@ -37,9 +37,8 @@ function renderDetail () {
   simBtn.addEventListener('click', () => reg.openSim?.(av.avatarId))
   actions.append(simBtn)
 
-  /* 分享钮：与「返回」同行右端，纯图标无文字（仅 aria-label 给读屏） */
+  /* 分享钮：与「返回」同行右端。纯图标，不配任何文字说明。 */
   const share = el('button', 'btn share')
-  share.setAttribute('aria-label', '分享')
   share.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
     'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     '<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>'
@@ -292,7 +291,6 @@ function renderArtiCard (a, cw = {}) {
   if (a.empty) {
     const c = el('div', 'item arti empty')
     const icon = el('div', 'arti-icon')
-    icon.append(el('span', 'arti-fallback', slotGlyph(a.pos)))
     const head = el('div', 'head')
     head.append(el('strong', '', a.posName))
     c.append(icon, head, el('div', 'arti-empty', T('notEquipped')))
@@ -302,9 +300,8 @@ function renderArtiCard (a, cw = {}) {
   const rank = rankOf(a.markClass)
   const c = el('div', 'item arti arti-class-' + rank)
 
-  /* 图标：miao 的套装图标（斜切淡出），缺图时露出部位单字兜底 */
+  /* 图标：miao 的套装图标（斜切淡出） */
   const icon = el('div', 'arti-icon')
-  icon.dataset.slot = slotGlyph(a.pos)
   icon.append(setBg(el('div', 'img'), a.icon))
   icon.append(el('span', '', '+' + (a.level ?? 0)))
   c.append(icon)

@@ -16,7 +16,7 @@
  *    显示出来会误导。
  */
 import {
-  $, state, T, el, slotGlyph, api, reg, showView, openDialog, setBg, imgError,
+  $, state, T, el, api, reg, showView, openDialog, setBg, imgError,
   weightClass, hitMark
 } from './core.js'
 
@@ -558,11 +558,10 @@ function wrapArti (card) {
  * 保留：图标、+等级、名称、主词条、副词条、权重三档色、强化命中圈 i.up-num。
  */
 function artiCard (a, editable, cw = {}) {
-  /* 空件：明细页那条分支照抄（部位字兜底 + 「未装备」） */
+  /* 空件：明细页那条分支照抄（空图标位 + 「未装备」） */
   if (a.empty) {
     const c = el('div', 'item arti empty')
     const icon = el('div', 'arti-icon')
-    icon.append(el('span', 'arti-fallback', slotGlyph(a.pos)))
     const head = el('div', 'head')
     head.append(el('strong', '', a.posName))
     c.append(icon, head, el('div', 'arti-empty', T('notEquipped')))
@@ -574,10 +573,8 @@ function artiCard (a, editable, cw = {}) {
   const org = dirty ? originalArti(a.pos) : null
   const c = el('div', 'item arti' + (dirty ? ' is-sim' : ''))
 
-  /* 左上图标：半透明当底纹，名称和第一行词条压在上面（CSS 里 opacity + 缩到 40px）。
-     data-slot 给 CSS 的 ::before 当兜底部位字，跟明细页一个路子。 */
+  /* 左上图标：半透明当底纹，名称和第一行词条压在上面（CSS 里 opacity + 缩到 40px）。 */
   const icon = el('div', 'arti-icon')
-  icon.dataset.slot = slotGlyph(a.pos)
   const iconUrl = (org?.icon || a.icon) || ''
   const iconLv = (org?.level ?? a.level) ?? 0
   icon.append(setBg(el('div', 'img'), iconUrl))
@@ -693,7 +690,7 @@ function valCell (newVal, oldVal, showOld) {
 function openArtiDialog (a) {
   const cur = draftOfPos(a.pos) || defaultDraftOf(a)
   const dlg = openDialog({
-    title: `${T('simEdit')} · ${slotGlyph(a.pos)}`,
+    title: `${T('simEdit')} · ${a.posName}`,
     onOk: () => {
       const next = {
         set: setSel.value,

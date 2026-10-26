@@ -544,15 +544,13 @@ body {
   pointer-events: none;
 }
 /* 拼凑件：这块是「缺的部位」，不是真装备 —— 图淡一点、分数位是 `---` */
-.advice-piece.is-missing .ap-icon,
-.advice-piece.is-missing .ap-glyph { opacity: .5; }
+.advice-piece.is-missing .ap-icon { opacity: .5; }
 .advice-piece.is-missing .ap-mark { color: var(--ink-3); letter-spacing: .06em; }
 /* 部位图是 18px 的彩色小图（窄档 16 / 14），原样贴着发闷 —— 提一点亮度才认得出花和冠 */
 .advice-piece .ap-icon {
   width: var(--advice-ic); height: var(--advice-ic); object-fit: contain;
   filter: brightness(1.25) saturate(1.05);
 }
-.advice-piece .ap-glyph { font-size: 10px; color: var(--ink-3); }
 /* 行高压到 1：块的高度只由图标决定，空框才能照着算（否则窄档文字行高比图标高 1px） */
 .advice-piece .ap-mark { font-size: var(--advice-fs); line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
 /* 内核的 mark-D 是给浅底调的灰，压在深底上看不见 —— 只在本面板提亮一档 */

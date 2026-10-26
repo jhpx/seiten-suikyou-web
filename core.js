@@ -42,7 +42,6 @@ export const isValidUid = (v) => UID_RE.test(String(v ?? '').trim())
 export const PAGE_BASE = new URL('.', document.baseURI).href
 
 export const RANK_ORDER = ['MAX', 'ACE', 'SSS', 'SS', 'S', 'A', 'B', 'C', 'D']
-export const SLOT_GLYPH = { 1: '花', 2: '羽', 3: '沙', 4: '杯', 5: '冠' }
 
 /* 武器副属性在卡片上的短名，照抄 miao 模板里的 titleMap（profile-detail.html:233） */
 export const state = {
@@ -157,8 +156,6 @@ export function weaponFallback (w) {
 export function weightClass (w) {
   return w > 79.9 ? 'great' : (w > 0 ? 'useful' : 'nouse')
 }
-
-export const slotGlyph = (pos) => SLOT_GLYPH[pos] || '?'
 
 /*
  * 强化命中圈号：实心圆 + 镂空数字，1~5。

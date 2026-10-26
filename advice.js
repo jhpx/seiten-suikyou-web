@@ -16,7 +16,7 @@
  * 件数/人数用两个内联小图，于是每行只剩「人名 + 一串部位图带分数」。
  */
 
-import { state, T, el, setBg, slotGlyph, openDetail, closeMenus, reg } from './core.js'
+import { state, T, el, setBg, openDetail, closeMenus, reg } from './core.js'
 
 /* 口径开关：SS 件算不算。默认**不算** —— SS 已经接近毕业，算进去只会把「还差多少」摊薄。
    接口一次给了两份（advice / advice.withSS），所以切换只是换一份数据重画，不走网络。 */
@@ -91,13 +91,8 @@ function pieceChip (p, setIcon) {
     const pic = el('img', 'ap-icon')
     pic.src = src
     pic.alt = p.posName
-    pic.onerror = () => {
-      pic.remove()
-      cell.prepend(el('span', 'ap-glyph', slotGlyph(p.pos)))
-    }
+    pic.onerror = () => pic.remove()
     cell.append(pic)
-  } else {
-    cell.append(el('span', 'ap-glyph', slotGlyph(p.pos)))
   }
   /* 初始 3 / 4 词条：角标压在部位图角上（不占宽度 —— 一行五件再加五个数字会换行）。
      认不出词条数（null）就不画，别拿 0 或问号凑一个。 */
