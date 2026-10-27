@@ -669,6 +669,13 @@ body {
 /* chips 排网格（不是随便折行）：每格 96px 起 —— 元素 7 个两行满、等级 9 档、
    权重 4 项都各自对齐，行与行的列边界是直的，扫视不用跟着折行位置找 */
 .rf-fchips { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+/* 紧凑列：内容短（单字符档位、18px 图标），96px 一列太稀 —— 收窄到 40px、间距也收一点，
+   让套装/等级这组一行就能排下，不空荡 */
+.rf-fchips-tight { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 5px; }
+/* 元素专用：图标+短名要宽一点，且 auto-fit 把末尾空列收掉、整排铺满 ——
+   几个元素就均分整行宽度。min 取 56px：比紧凑列 40 宽、又不会像 72 那样把第 7 个元素挤到第二行；
+   英文元素名 Pyro/Hydro 也放得下（图标18+间距5+文字~30+内边距18 ≈ 71，56 时文字区略紧但单行不折） */
+.rf-fchips-elem { grid-template-columns: repeat(auto-fit, minmax(56px, 1fr)); gap: 5px; }
 /* 弹窗里的 chip 比小面板那颗高 8px（34 vs 26）：框大了、指针行程也长，
    26px 在这个尺寸下看着像误触区 */
 .rf-chip {
@@ -1550,17 +1557,59 @@ body.on-detail #footmeta { display: none; }
 
 /* 词条表（圣遗物的主/副词条、武器的主副属性共用） */
 #view-sim .item ul.detail li { height: 18px; line-height: 18px; font-size: 12px; }
-#view-sim .item ul.detail li span.title { width: 38%; padding-left: 19px; font-size: 12px; }
-#view-sim .item ul.detail li span.title > span.label,
-#view-sim .item ul.detail li span.title > i.up-num + span.label { max-width: 78px; }
+/* 名称列左边距 12px —— 离卡片边框留出间距（用户 2026-10-27 要求「词条和边框
+   留一点距离，不要贴太近」，并明确「至少应该和右侧一样」）。
+   ⚠️ 之前是 19px：那个空间是给**钉在行首**的强化次数圈号让的（圈号在 left:2，
+      自己贴着卡片边框）。圈号挪到词条名右边之后这里就空出来了，但不能收到 0 ——
+      词条名贴着边框看着就像溢出去没排版。
+   ⚠️ 12px 不是随手取的：名称列占 38%（桌面 282px 卡 → 107px），
+      词条名最长 78px + 圈号 13px + 间距 3px = 94px，加左边距 12px 正好 106px 放得下；
+      再大就顶到数值列了（手机端更窄，媒体查询里另有收窄）。 */
+#view-sim .item ul.detail li span.title {
+  /* 宽度用 calc 把左右留白**从列宽里扣出来**，而不是额外加在 border-box 上：
+     表格单元格是 border-box（style.css 顶部 `* { box-sizing: border-box }`），
+     padding 加在 62% 的数值列上会**再吃掉 12px 内容宽**，
+     窄屏就装不下「旧 → 新」这种长值（实测 320px 下文字被裁 29px）。
+     这样写：列宽 38% 里本来就含着这 12px 留白，文字可用宽度一分不少。 */
+  width: calc(38% - 12px);
+  padding-left: 12px;
+  font-size: 12px;
+}
+/* 词条名改成 inline-block：强化次数圈号要**跟在词条名后面**（同一行流内排版），
+   之前圈号是绝对定位钉在行首，读起来是「圈号 → 词条」。
+   ⚠️ 必须写 vertical-align: top —— 带 overflow:hidden 的 inline-block，基线按 CSS 规定
+      取「底边」而不是文字基线（miao.css 那段注释讲的就是这个坑），不钉 top 的话
+      整行会被顶高，行高就不再是 18px，两栏逐行对读就散了。
+   ⚠️ max-width 是留给圈号的：词条名最长 78px + 圈号 13px + 间距 3px = 94px，
+      名称列占 38%（桌面 282px 卡 → 107px）放得下；手机列窄，在媒体查询里另收。 */
+#view-sim .item ul.detail li span.title > span.label {
+  display: inline-block;
+  vertical-align: top;
+  max-width: 78px;
+}
 #view-sim .item ul.detail li span.val {
   /* 宽度按比例给死：table 自动布局会把余量全分给 title 列（实测 151 : 111），
-     「+4,780 → +3,154」这种带箭头的值就贴边了 */
-  width: 62%; padding-right: 6px; font-size: 12px; white-space: nowrap;
+     「+4,780 → +3,154」这种带箭头的值就贴边了。
+     ⚠️ 同样用 calc 把右边距从列宽里扣出来 —— 跟上面的 title 列同一个道理：
+       padding 直接加在 62% 上会吃掉 12px 内容宽，窄屏长值就被裁。
+       62% + 38% = 100%，扣掉两边各 12px 后总和仍是 100%，表格不溢出。 */
+  width: calc(62% - 12px);
+  font-size: 12px; white-space: nowrap;
+  /* 右边距 12px —— 与名称列的 padding-left 对称（用户 2026-10-27：两侧要一样）。 */
+  padding-right: 12px;
 }
-/* 命中圈：miao 那张钉在 left:91（30px 缩进 + 61px 标签带算出来的），
-   压缩后行高只剩 18，圈号收到 2px 贴左、标签缩进同步收到 19 */
-#view-sim .item ul.detail li span.title i.up-num { left: 2px; top: 2px; width: 13px; height: 13px; }
+/* 强化次数圈号：改成**跟在词条名后面**（同一行流内，不再绝对定位）。
+   位置不再写死 —— 词条名多长它都在其后 3px，词条名短（2 个字）时圈号不会飘到行中间。
+   ⚠️ position 要显式改回 static：miao 那条是 absolute（钉在 left:91），不覆盖的话
+      它会脱离行流、还留在原来的位置。 */
+#view-sim .item ul.detail li span.title i.up-num {
+  position: static;
+  left: auto; top: auto;
+  display: inline-block;
+  vertical-align: top;
+  width: 13px; height: 13px;
+  margin: 2px 0 0 3px;
+}
 /* 圣遗物主词条 miao 给了 16px 加粗，压缩后跟副词条拉平（不然那一行比其他行高） */
 #view-sim .item ul.detail li.arti-main { font-size: 12px; }
 /* 补行数的空行：占高但不画条纹，看着就是留白（两栏武器卡靠它对齐） */

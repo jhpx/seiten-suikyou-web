@@ -57,7 +57,7 @@ export const state = {
      （维度内 OR、维度间 AND：选了火+水又选 SSS，出的是「火或水里的 SSS」）。
      空数组 = 不限。
      空数组 = 不限。不持久化 —— 筛选是「在这份名单里找人」的临时动作。 */
-  filter: { elem: [], rank: [], weight: [] },
+  filter: { elem: [], rank: [], weight: [], set: [], star: [] },
   /* 首页卡片显示模式：weapon = 武器块（默认）/ artis = 圣遗物套装块 */
   rosterMode: 'weapon',
   /* 首页排序：key = level(角色等级) / mark(评价等级) / time(数据时间)；dir = asc|desc。
@@ -321,6 +321,30 @@ export function rosterElems (view) {
 /* 等级只列名单里真有人拿到过的档位 —— 摆一排点了也是空的档位没有意义 */
 export function rosterRanks (view) {
   return RANK_ORDER.filter(r => view.avatars.some(a => a.score.markClass === r))
+}
+
+/* 圣遗物套装：名单里实际出现过的套装。
+ * 按 nameZh（miao 的中文全名、稳定键）去重；name 是本地化显示名、icon 是花部位图，
+ * 都随某只带这套的角色借来（URL/文案一律后端给，前端不拼路径、不写死套装名）。
+ * 顺序按 nameZh 排，弹窗里渲染稳定。 */
+export function rosterSets (view) {
+  const map = new Map()
+  for (const a of view.avatars) {
+    for (const s of a.sets || []) {
+      if (!map.has(s.nameZh)) map.set(s.nameZh, { name: s.name, icon: s.icon })
+    }
+  }
+  return [...map.entries()]
+    .sort((x, y) => (x[0] < y[0] ? -1 : 1))
+    .map(([nameZh, v]) => ({ nameZh, name: v.name, icon: v.icon }))
+}
+
+/* 稀有度（角色星级）：只列名单里真有人是这档的（4★ / 5★）。
+ * 值用字符串，和 elem/rank 同口径 —— chip 的 dataset.val 是字符串，
+ * 数组里若放数字会和它比不相等（Array.includes 是严格相等），点不亮也筛不准。
+ * 排降序：5★ 在前、4★ 在后。 */
+export function rosterStars (view) {
+  return [...new Set(view.avatars.map(a => String(a.star || 5)))].sort((a, b) => b - a)
 }
 
 /* 换了 UID 之后，旧条件可能在这份名单里根本不存在 —— 那时 chips 全不激活、

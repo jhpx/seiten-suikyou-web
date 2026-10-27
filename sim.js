@@ -612,16 +612,20 @@ function artiCard (a, editable, cw = {}) {
        （金 = 高权重、白 = 有用、灰 = 无用），跟明细页同一套规则，本文件不另写颜色 */
     const li = el('li', weightClass(Number(cw[key] ?? 0)))
     const lab = el('span', 'title')
-    /* up-num = 强化命中圈（core.hitMark，实心圆+镂空数字）。删掉的那条没有新值，不画圈。
-       ⚠️ 不渲染 i.eff（词条前面的「2.8」「5.2」那种小数）—— 那是权重/有效率，
-         用户明确要求隐藏。别顺手加回来。 */
+    /* ⚠️ 不渲染 i.eff（词条前面的「2.8」「5.2」那种小数）—— 那是权重/有效率，
+       用户明确要求隐藏。别顺手加回来。 */
     const hit = s ? Math.min(5, (s.upNum || 0) - 1) : 0
+    /* 顺序：**词条名在前、强化次数圈号在后**。
+       圈号原来排在前面、靠绝对定位钉到行首 —— 那样它自己贴着卡片左边框（只差 2px），
+       词条名反而被挤到后面，读起来是「圈号 → 词条」。
+       现在改成跟明细页一个读法：「词条名 → 圈号」，圈号紧跟文字末尾（见 style.css 的
+       #view-sim 段落，label 与 up-num 都改成 inline 排版，圈号跟着文字宽度走）。 */
+    lab.append(el('span', 'label', (s || oldSub).label))
     if (hit > 0) {
       const um = el('i', 'up-num')
       um.append(hitMark(hit))
       lab.append(um)
     }
-    lab.append(el('span', 'label', (s || oldSub).label))
     /* 旧件没这条 = 本次新加的副词条 → 旧值记 0（写「0 → +31」而不是只写「+31」，
        否则看不出这条是这次才有的）；反之新件没这条 = 被删掉的 → 新值记 0 */
     const newText = s ? '+' + s.value : '0'

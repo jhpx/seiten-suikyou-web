@@ -23,7 +23,7 @@
  * 排序面板由 sort.js 提供（renderFilterBar 直接拼进来）。
  */
 
-import { $, state, T, el, imgError, closeMenus, closeModal, openDialog, refreshRosterGrid, rosterElems, rosterRanks, dropStaleFilter, reg } from './core.js'
+import { $, state, T, el, imgError, closeMenus, closeModal, openDialog, refreshRosterGrid, rosterElems, rosterRanks, rosterSets, rosterStars, dropStaleFilter, reg } from './core.js'
 import { sortPanel } from './sort.js'
 
 /* 元素选项：图标 + 名字，都从名单里已有角色身上借（URL 一律由接口返回） */
@@ -37,6 +37,18 @@ function elemOption (view, e) {
   const node = el('span', 'rf-opt-elem')
   node.append(img, el('span', '', label))
   return { value: e, label, node }
+}
+
+/* 套装选项：只放图标（名字太长挤），图标从带这套的角色身上借（URL 一律后端给），
+ * 由 .rf-chip img 统一缩到 18px。alt 留作读屏文本，不是可见 tooltip（手机无 hover）。 */
+function setOption (set) {
+  const img = el('img')
+  img.src = set.icon || ''
+  img.alt = set.name
+  img.onerror = () => imgError(img)
+  const node = el('span', 'rf-opt-set')
+  node.append(img)
+  return { value: set.nameZh, label: set.name, node }
 }
 
 /* 漏斗图标：上口宽、下管细的滤斗形。描边继承文字色（currentColor），
@@ -87,12 +99,18 @@ function filterModal (view, paintBadge) {
      带着它进草稿会「面板里没一个亮着、结果却是空的」 */
   const elems = rosterElems(view)
   const ranks = rosterRanks(view)
+  const sets = rosterSets(view)
+  const stars = rosterStars(view)
   dropStaleFilter('elem', elems)
   dropStaleFilter('rank', ranks)
+  dropStaleFilter('set', sets.map(s => s.nameZh))
+  dropStaleFilter('star', stars)
   const draft = {
     elem: [...state.filter.elem],
     rank: [...state.filter.rank],
-    weight: [...state.filter.weight]
+    weight: [...state.filter.weight],
+    set: [...state.filter.set],
+    star: [...state.filter.star]
   }
 
   /* groups 与 .rf-fchips 容器按 DOM 顺序一一对应，paint() 靠这个配对点亮 */
@@ -112,19 +130,26 @@ function filterModal (view, paintBadge) {
   })
   const body = dlg.body
 
-  /* groups 与 .rf-fchips 容器按 DOM 顺序一一对应，paint() 靠这个配对点亮 */
-  const addGroup = (key, titleKey, items) => {
+  /* groups 与 .rf-fchips 容器按 DOM 顺序一一对应，paint() 靠这个配对点亮。
+   * variant 决定列宽：'tight' 窄列（图标/单字符，96px 太稀）；'elem' 元素专用（图标+短名要宽一点、
+   * 且 auto-fit 把整排填满，不留空当）；不传则用默认 96px（权重长文字） */
+  const addGroup = (key, titleKey, items, variant) => {
     const g = el('div', 'rf-fgroup')
     g.append(el('div', 'rf-fgroup-title', T(titleKey)))
-    const box = el('div', 'rf-fchips')
+    const box = el('div', variant ? `rf-fchips rf-fchips-${variant}` : 'rf-fchips')
     for (const it of items) box.append(chip(key, it, draft, () => paint()))
     g.append(box)
     body.append(g)
     groups.push({ key })
   }
 
-  addGroup('elem', 'filterElem', elems.map(e => elemOption(view, e)))
-  addGroup('rank', 'filterRank', ranks.map(r => ({ value: r, label: r })))
+  /* 顺序：稀有度 → 元素 → 圣遗物套装 → 评价等级 → 评价权重（用户 2026-10-27 指定）。
+     稀有度 / 套装 / 等级内容都短（4★/图标/单字符），紧凑列一行排得下；元素图标+短名要宽一点，
+     用 'elem' 变体 auto-fit 铺满整排。 */
+  addGroup('star', 'filterRarity', stars.map(s => ({ value: s, label: s + '★' })), 'tight')
+  addGroup('elem', 'filterElem', elems.map(e => elemOption(view, e)), 'elem')
+  addGroup('set', 'filterSet', sets.map(s => setOption(s)), 'tight')
+  addGroup('rank', 'filterRank', ranks.map(r => ({ value: r, label: r })), 'tight')
   /* 权重那四个选项是固定的 taxonomy，不按名单裁剪 —— 点出空结果也是有效信息
      （「我这号里没人吃防御」），裁剪掉反而看不出来 */
   addGroup('weight', 'filterWeight', state.weightOptions.map(o => ({ value: o.key, label: o.label })))
@@ -158,7 +183,7 @@ function filterPanel (view) {
   btn.append(funnelIcon(), badge)
 
   const paintBadge = () => {
-    const n = state.filter.elem.length + state.filter.rank.length + state.filter.weight.length
+    const n = state.filter.elem.length + state.filter.rank.length + state.filter.weight.length + state.filter.set.length + state.filter.star.length
     badge.textContent = n ? String(n) : ''
     badge.classList.toggle('on', n > 0)
     btn.classList.toggle('active', n > 0)
