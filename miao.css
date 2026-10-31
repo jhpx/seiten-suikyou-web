@@ -251,6 +251,11 @@
 /* 属性名太长：小一号字 + 两行。字号 13px / 行高 15px × 2 = 30px，塞进 32px 的行里还余 2px。
    用 grid 而不是 flex：grid 的匿名 item 默认撑满列宽，文字才会在 90px 处折行；
    flex 的 item 是 max-content 宽度，可能先撑出去再被裁掉。 */
+/* 整块统一降档：组里只要有一行装不下，九行的字号一起降（detail.js 打 .compact）。
+   只降装不下的那几行会出现「两行小字 + 一行大字」混排，看着像排版出错。 */
+.char-attr.compact li .title {
+  font-size: 13px;
+}
 .char-attr li .title.two-line {
   display: grid;
   align-content: center;
@@ -748,6 +753,11 @@
    → 专有名词不该被省略号切断：小一号字排两行。类名由 detail.js 的 fitLongText() 量出来再打。
    行高 15px：两行 30px，比原来一行多 9px，卡片会高一点点（同排的卡是 flex 拉伸，一起变高，不会参差）。
    ⚠️ 选择器要和上面基础款齐平（(0,3,1) > (0,2,1)），不然 nowrap 压回来。 */
+/* 整组统一降档：六张卡的名字一起降（detail.js 给 .artis 打 .compact），
+   短名字也跟着 13px —— 不然一排卡里 15px / 13px 混着，像两种来源。 */
+.artis.compact .head strong {
+  font-size: 13px;
+}
 .artis .head strong.two-line {
   white-space: normal;
   text-overflow: clip;
@@ -876,6 +886,11 @@
    ⚠️ 别再靠把标签改短来避让（Elemental Mastery → EM 那种）：那会牵连其它语言和筛选口径。
    ⚠️ 选择器要写得和上面那条「基础款」一样长（`span.title > span.label`）：
       少一级就变成 (0,4,3) < (0,4,4)，被基础款的 nowrap 压掉 —— 第一版就是这么白写的。 */
+/* 整张表统一降档：一张卡里只要有一条装不下，这张卡的词条名全降到 10.5px
+   （detail.js 给 ul.detail 打 .compact），装不下的那几条再 .tight 折两行。 */
+.artis ul.detail.compact li span.title > span.label {
+  font-size: 10.5px;
+}
 .artis ul.detail li.tight span.title > span.label {
   white-space: normal;
   text-overflow: clip;

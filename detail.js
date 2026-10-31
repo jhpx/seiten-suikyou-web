@@ -206,17 +206,25 @@ function renderDetail () {
 }
 
 /*
- * 长文案防重叠（明细页统一入口）。原则：**不做文案裁剪**，交给版式自己消化 ——
- * 改短一种语言，另一种语言又对不上（2026-10-31 在这上面反复踩过），
- * 所以这里一律量真实渲染尺寸，再按「行有多高」决定怎么让：
- *   ① 属性面板 32px 的行 → 小一号字排两行（CSS .char-attr li .title.two-line）
- *   ② 评分表顶三词条 26px 的行 → 小一号字排两行（.arti-attr li span.title.two-line）
- *   ③ 武器主副属性 26px 的行 → 「名字一行 / 数值一行」（.weapon-attr div.stacked）
- *   ④ 圣遗物词条名 26px 的行 → 小一号字排两行（.artis ul.detail li.tight）
+ * 长文案防重叠（明细页统一入口）。原则两条：
+ *   ① **不做文案裁剪** —— 改短一种语言，另一种又对不上（2026-10-31 在这上面反复踩过）；
+ *   ② **同一组同类文字字号必须一致** —— 只缩装不下的那一条，会出现「两行小字 + 一行大字」
+ *      混排，看着像排版出错（用户 2026-10-31 提的）。所以判据都是「组里有一个装不下 →
+ *      整组降一档」，降完再单独判谁还要折行。
+ *
+ * 四个组（各自独立降档，互不牵连）：
+ *   ① 属性面板        .char-attr            容器加 .compact → 13px；装不下的那条再 .two-line
+ *   ② 评分表顶三词条   .arti-attr li         逐格加 .compact（整张表一起缩）
+ *   ③ 武器主副属性     .weapon-attr div      两条一起 .stacked（名字一行 / 数值一行）
+ *   ④ 圣遗物词条名     .artis ul.detail      每张卡的表加 .compact → 10.5px；装不下的行再 .tight
+ *   ⑤ 卡片名          .artis                容器加 .compact → 13px；装不下的那条再 .two-line
  *      （模拟页不用管：那边卡片是整格宽，CSS 里已经不再裁了）
  *
  * 为什么不用「字符数」判断：一个英文单词可能比六个汉字还宽，
  * 按字符数中英两边都会判错；量宽度/高度才是真的。
+ *
+ * ⚠️ 顺序很要紧：先打 .compact（改字号）→ 再量是否还要折行。
+ *    字号变了判据也得跟着变，否则会按旧字号的结论去折行。
  *
  * ⚠️ 为什么推到下一帧：openDetail 是「先 renderDetail、再 showView」，
  * 渲染那一刻 .view-detail 还没 active（display:none），量出来全是 0，判据永远不成立。
@@ -225,50 +233,65 @@ function renderDetail () {
  */
 function fitLongText () {
   requestAnimationFrame(() => {
-    /* ① 属性面板：一行装不下 → 两行小字（行高不变，仍是 32px） */
-    for (const t of document.querySelectorAll('.char-attr li .title')) {
-      if (!t.clientWidth) continue
-      /* 默认 nowrap：scrollWidth 就是整串字的真实宽度，比 clientWidth 大 = 一行装不下 */
-      t.classList.toggle('two-line', t.scrollWidth > t.clientWidth + 1)
+    /* 单条是否装不下一行（默认 nowrap：scrollWidth 就是整串字的真实宽度） */
+    const cut = n => !!n.clientWidth && n.scrollWidth > n.clientWidth + 1
+
+    /* ① 属性面板：整块统一降档，再标谁要折行 */
+    const panel = document.querySelector('.char-attr')
+    const titles = [...document.querySelectorAll('.char-attr li .title')]
+    if (panel && titles.length) {
+      panel.classList.remove('compact')
+      if (titles.some(cut)) panel.classList.add('compact')
+      for (const t of titles) t.classList.toggle('two-line', cut(t))
     }
-    /* ② 评分表顶三词条：只要有一格装不下，整张表统一小一号（名字该折行的折行）。
-       只缩装不下的那几格的话，同一张表里字号一大一小，看着像排版出错。
-       类名打在 li 上，角标和数值才好一起缩（只缩名字的话单词仍排不下）。 */
+
+    /* ② 评分表顶三词条：整张表统一降档（类名打在 li 上，角标和数值才好跟着缩） */
     const cells = [...document.querySelectorAll('.arti-attr li')]
     for (const li of cells) li.classList.remove('compact')
-    const over = cells.some(li => {
+    const scoreOver = cells.some(li => {
       const t = li.querySelector('.title')
-      return t && t.clientWidth && t.scrollWidth > t.clientWidth + 1
+      return t && cut(t)
     })
-    if (over) for (const li of cells) li.classList.add('compact')
+    if (scoreOver) for (const li of cells) li.classList.add('compact')
+
     /* ③ 武器主副属性：这行写死 26px，文字折行会把行撑破 → 改成上下两行小字。
-       判据看高度（宽度永远等于 50%，折行不会撑宽，只会撑高）。 */
-    for (const d of document.querySelectorAll('.weapon-attr div')) {
-      if (!d.clientHeight) continue
-      d.classList.remove('stacked')
-      if (d.scrollHeight > d.clientHeight + 1) d.classList.add('stacked')
+       判据看高度（宽度永远等于 50%，折行不会撑宽，只会撑高）。
+       ⚠️ 两条一起改：只改一条的话同一行里左边 10px 右边 14px。 */
+    const wcells = [...document.querySelectorAll('.weapon-attr div')]
+    if (wcells.length) {
+      for (const d of wcells) d.classList.remove('stacked')
+      const stackOver = wcells.some(d => d.clientHeight && d.scrollHeight > d.clientHeight + 1)
+      if (stackOver) for (const d of wcells) d.classList.add('stacked')
     }
-    /* ④ 圣遗物词条名：整卡 185px，词条名列只有 61/80px（跟了命中圈号的行只剩 61），
-       English «Elemental Mastery»(124px) 这类被省略号切断 → 小一号字排两行（行高 26px 不动）。
-       模拟页不用管：那边卡片是整格宽，CSS 已经不再裁了。 */
-    for (const lab of document.querySelectorAll('.artis ul.detail li span.title > span.label')) {
-      const li = lab.closest('li')
-      if (!li) continue
-      li.classList.remove('tight')
-      /* 现在是 nowrap + 定宽：scrollWidth 超过 clientWidth 就是被裁了 */
-      if (lab.clientWidth && lab.scrollWidth > lab.clientWidth + 1) li.classList.add('tight')
+
+    /* ④ 圣遗物词条名：整卡 185px，词条名列只有 61/80px（跟了命中圈号的行只剩 61）。
+       每张卡的表各自降档（一张卡内部必须一致），装不下的行再 .tight 折行。 */
+    for (const ul of document.querySelectorAll('.artis ul.detail')) {
+      const rows = [...ul.querySelectorAll('li')].filter(li => li.querySelector('.label'))
+      if (!rows.length) continue
+      ul.classList.remove('compact')
+      const labOf = li => li.querySelector('.label')
+      if (rows.some(li => cut(labOf(li)))) ul.classList.add('compact')
+      for (const li of rows) li.classList.toggle('tight', cut(labOf(li)))
     }
-    /* ⑤ 卡片名（武器 / 圣遗物）：名字列 160px（武器 170px），英文全名一行要 180~220px，
-       一行的写法只能靠省略号切在词中间。专有名词切了就认不出，统一改成小一号字排两行。
-       两种卡都能长高：圣遗物头是 auto，武器头改成了 min-height（属性条绝对定位贴底，不受影响）。 */
-    for (const s of document.querySelectorAll('.artis .head strong')) {
-      s.classList.remove('two-line')
-      const card = s.closest('.item.weapon')
-      if (card) card.classList.remove('name-2l')
-      if (!s.clientWidth || s.scrollWidth <= s.clientWidth + 1) continue
-      s.classList.add('two-line')
-      /* 武器卡多一行名字要多吃一条属性条（26px）的高度，CSS 里按这个类加底部留白 */
-      if (card) card.classList.add('name-2l')
+
+    /* ⑤ 卡片名（武器 / 圣遗物）：名字列 160px（武器 170px），英文全名一行要 180~220px。
+       整组（一屏卡片）统一降档，短名字也跟着变 13px，才不会六张卡里三种字号。 */
+    const artis = document.querySelector('.artis')
+    const names = [...document.querySelectorAll('.artis .head strong')]
+    if (artis && names.length) {
+      artis.classList.remove('compact')
+      for (const s of names) {
+        s.classList.remove('two-line')
+        s.closest('.item.weapon')?.classList.remove('name-2l')
+      }
+      if (names.some(cut)) artis.classList.add('compact')
+      for (const s of names) {
+        if (!cut(s)) continue
+        s.classList.add('two-line')
+        /* 武器卡多一行名字要多吃一条属性条（26px）的高度，CSS 里按这个类加底部留白 */
+        s.closest('.item.weapon')?.classList.add('name-2l')
+      }
     }
   })
 }
