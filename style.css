@@ -1539,6 +1539,17 @@ body.on-detail #footmeta { display: none; }
   background: none;
 }
 #view-sim .item .head strong { flex: 1; min-width: 0; font-size: 13px; }
+/* 卡片名一行放不下就折两行（「改过的件」那套旧名/新名另算，见下面 .is-sim 那条）。
+   head 左右被图标 48 和按钮组 122 让开，名字只剩约 112px；
+   English «Deep Gallery's Echoing Song» 13px 要 187px，现在被省略号切掉大半。
+   最多两行（第三行起裁掉）：head 高 40px，13px×1.25×2 = 32px 装得下。 */
+#view-sim .item:not(.is-sim) .head strong {
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: clip;
+  line-height: 1.25;
+  max-height: 2.5em;
+}
 /* 改过名的件要同时显示旧名和新名 —— 一行放不下就折，**不能省略**（miao 那条规则是
    nowrap + ellipsis，只适合单个名字）。旧名灰、新名白。 */
 #view-sim .item.is-sim .head strong {
@@ -1549,8 +1560,7 @@ body.on-detail #footmeta { display: none; }
   line-height: 1.2;
 }
 /* 旧名小一号、灰色；新名正常、米白。两行加起来 ≈ 30px，装得进 40px 的 head。 */
-#view-sim .item .sim-oldname { color: var(--ink-3); font-weight: 400; font-size: 11px; }
-/* 新名字跟改后的数值同一个色（模拟值色）：这一整张卡上「算出来的东西」都用它，
+#view-sim .item .sim-oldname { color: var(--ink-3); font-weight: 400; font-size: 11px; }/* 新名字跟改后的数值同一个色（模拟值色）：这一整张卡上「算出来的东西」都用它，
    名字、词条、图标描边三处一致，一眼能扫出哪几件是模拟的 */
 #view-sim .item .sim-newname { color: var(--sim-tint); }
 #view-sim .item .sim-newname .sim-arrow { margin-right: 2px; font-size: 11px; }
@@ -1562,16 +1572,17 @@ body.on-detail #footmeta { display: none; }
    ⚠️ 之前是 19px：那个空间是给**钉在行首**的强化次数圈号让的（圈号在 left:2，
       自己贴着卡片边框）。圈号挪到词条名右边之后这里就空出来了，但不能收到 0 ——
       词条名贴着边框看着就像溢出去没排版。
-   ⚠️ 12px 不是随手取的：名称列占 38%（桌面 282px 卡 → 107px），
-      词条名最长 78px + 圈号 13px + 间距 3px = 94px，加左边距 12px 正好 106px 放得下；
-      再大就顶到数值列了（手机端更窄，媒体查询里另有收窄）。 */
+   ⚠️ 12px 不是随手取的：名称列占 **50%**（桌面 282px 卡 → 141px，扣掉左右留白 129px），
+      词条名最长 «Elemental Mastery» 108px + 圈号 13px + 间距 3px = 124px，放得下。
+      原先是 38%（107px）：那是按中文 4 字（56px）量的，英文全名（108~132px）一律被切成省略号。
+      数值列从 62% 收到 50% —— 值最长是改过的「+4,780 → +3,154」(≈95px)，桌面 141px 富余。 */
 #view-sim .item ul.detail li span.title {
   /* 宽度用 calc 把左右留白**从列宽里扣出来**，而不是额外加在 border-box 上：
      表格单元格是 border-box（style.css 顶部 `* { box-sizing: border-box }`），
      padding 加在 62% 的数值列上会**再吃掉 12px 内容宽**，
      窄屏就装不下「旧 → 新」这种长值（实测 320px 下文字被裁 29px）。
-     这样写：列宽 38% 里本来就含着这 12px 留白，文字可用宽度一分不少。 */
-  width: calc(38% - 12px);
+     这样写：列宽 50% 里本来就含着这 12px 留白，文字可用宽度一分不少。 */
+  width: calc(50% - 12px);
   padding-left: 12px;
   font-size: 12px;
 }
@@ -1585,7 +1596,8 @@ body.on-detail #footmeta { display: none; }
 #view-sim .item ul.detail li span.title > span.label {
   display: inline-block;
   vertical-align: top;
-  max-width: 78px;
+  /* 扣掉圈号（13px）+ 间距（3px）后把整列用满：英文全名要靠这个宽度才不被切 */
+  max-width: calc(100% - 16px);
 }
 #view-sim .item ul.detail li span.val {
   /* 宽度按比例给死：table 自动布局会把余量全分给 title 列（实测 151 : 111），
@@ -1593,7 +1605,7 @@ body.on-detail #footmeta { display: none; }
      ⚠️ 同样用 calc 把右边距从列宽里扣出来 —— 跟上面的 title 列同一个道理：
        padding 直接加在 62% 上会吃掉 12px 内容宽，窄屏长值就被裁。
        62% + 38% = 100%，扣掉两边各 12px 后总和仍是 100%，表格不溢出。 */
-  width: calc(62% - 12px);
+  width: 50%;
   font-size: 12px; white-space: nowrap;
   /* 右边距 12px —— 与名称列的 padding-left 对称（用户 2026-10-27：两侧要一样）。 */
   padding-right: 12px;
@@ -1612,6 +1624,9 @@ body.on-detail #footmeta { display: none; }
 }
 /* 圣遗物主词条 miao 给了 16px 加粗，压缩后跟副词条拉平（不然那一行比其他行高） */
 #view-sim .item ul.detail li.arti-main { font-size: 12px; }
+/* 主词条行没有强化圈号，不用给它留那 16px：整列都能用。
+   （«Hydro DMG Bonus» 加粗 12px 要 113px，扣掉圈号宽度只剩 113 —— 差一点点就被省略号切。） */
+#view-sim .item ul.detail li.arti-main span.title > span.label { max-width: 100%; }
 /* 补行数的空行：占高但不画条纹，看着就是留白（两栏武器卡靠它对齐） */
 #view-sim .item ul.detail li.sim-row-empty { background: none; }
 

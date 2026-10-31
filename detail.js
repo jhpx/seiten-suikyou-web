@@ -212,6 +212,8 @@ function renderDetail () {
  *   ① 属性面板 32px 的行 → 小一号字排两行（CSS .char-attr li .title.two-line）
  *   ② 评分表顶三词条 26px 的行 → 小一号字排两行（.arti-attr li span.title.two-line）
  *   ③ 武器主副属性 26px 的行 → 「名字一行 / 数值一行」（.weapon-attr div.stacked）
+ *   ④ 圣遗物词条名 26px 的行 → 小一号字排两行（.artis ul.detail li.tight）
+ *      （模拟页不用管：那边卡片是整格宽，CSS 里已经不再裁了）
  *
  * 为什么不用「字符数」判断：一个英文单词可能比六个汉字还宽，
  * 按字符数中英两边都会判错；量宽度/高度才是真的。
@@ -245,6 +247,28 @@ function fitLongText () {
       if (!d.clientHeight) continue
       d.classList.remove('stacked')
       if (d.scrollHeight > d.clientHeight + 1) d.classList.add('stacked')
+    }
+    /* ④ 圣遗物词条名：整卡 185px，词条名列只有 61/80px（跟了命中圈号的行只剩 61），
+       English «Elemental Mastery»(124px) 这类被省略号切断 → 小一号字排两行（行高 26px 不动）。
+       模拟页不用管：那边卡片是整格宽，CSS 已经不再裁了。 */
+    for (const lab of document.querySelectorAll('.artis ul.detail li span.title > span.label')) {
+      const li = lab.closest('li')
+      if (!li) continue
+      li.classList.remove('tight')
+      /* 现在是 nowrap + 定宽：scrollWidth 超过 clientWidth 就是被裁了 */
+      if (lab.clientWidth && lab.scrollWidth > lab.clientWidth + 1) li.classList.add('tight')
+    }
+    /* ⑤ 卡片名（武器 / 圣遗物）：名字列 160px（武器 170px），英文全名一行要 180~220px，
+       一行的写法只能靠省略号切在词中间。专有名词切了就认不出，统一改成小一号字排两行。
+       两种卡都能长高：圣遗物头是 auto，武器头改成了 min-height（属性条绝对定位贴底，不受影响）。 */
+    for (const s of document.querySelectorAll('.artis .head strong')) {
+      s.classList.remove('two-line')
+      const card = s.closest('.item.weapon')
+      if (card) card.classList.remove('name-2l')
+      if (!s.clientWidth || s.scrollWidth <= s.clientWidth + 1) continue
+      s.classList.add('two-line')
+      /* 武器卡多一行名字要多吃一条属性条（26px）的高度，CSS 里按这个类加底部留白 */
+      if (card) card.classList.add('name-2l')
     }
   })
 }

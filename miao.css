@@ -566,7 +566,10 @@
 }
 /* 每张卡 185px，600px 画布下正好放 3 列 */
 .artis .item.arti { width: 185px; margin: 5px; overflow: visible; }
-.artis .item.weapon { width: 185px; height: 190px; margin: 5px; overflow: visible; }
+/* 武器卡高度从「写死 190」改成「至少 190」：英文武器名（«Thrilling Tales of Dragon Slayers»）
+   在 170px 的宽度里一行放不下，要折两行；头高固定 90 的话第二行会压到「精N Lv.N」和属性条上。
+   放成 auto 后卡片跟着长 15px，同排的圣遗物卡被 flex 拉伸到同高，底部对齐不受影响。 */
+.artis .item.weapon { width: 185px; min-height: 190px; margin: 5px; overflow: visible; }
 
 /* ── 武器卡 ── */
 .artis .weapon .img {
@@ -580,13 +583,18 @@
 }
 .artis .weapon .head {
   position: relative;
-  height: 90px;
+  /* 90px 是「名字一行 + 精N Lv.N」的高度；名字折两行时让头自己长高（属性条是 absolute bottom:0，
+     会跟着贴到新的底边），不这么改第二行就会被「精N Lv.N」盖住。 */
+  min-height: 90px;
   padding: 15px 0 10px 15px;
   z-index: 3;
   border-radius: 10px 10px 0 0;
   background: linear-gradient(to right, rgba(0, 0, 0, .7), rgba(0, 0, 0, .7), rgba(25, 25, 25, .5), rgba(25, 25, 25, 0), rgba(25, 25, 25, 0));
 }
 .artis .weapon .head strong { display: block; font-size: 15px; margin-bottom: 3px; }
+/* 名字折两行时（detail.js 打 .name-2l）：头部底部要给属性条（absolute bottom:0，高 26px）让路，
+   否则「精N Lv.N」那行会被属性条压住。36 = 属性条 26 + 原来的 10。 */
+.artis .item.weapon.name-2l .head { padding-bottom: 36px; }
 .artis .weapon .head > span { display: block; }
 .artis .weapon span.info { font-size: 14px; margin-bottom: 8px; }
 .artis .weapon .weapon-attr {
@@ -736,6 +744,20 @@
   /* 英文武器全名（Tulaytullah's Remembrance）比中文缩写长，硬切会断在词中间 */
   text-overflow: ellipsis;
 }
+/* 名字一行装不下（整卡 185px，名字列只有 160px；«Deep Gallery's Echoing Song» 15px 要 216px）
+   → 专有名词不该被省略号切断：小一号字排两行。类名由 detail.js 的 fitLongText() 量出来再打。
+   行高 15px：两行 30px，比原来一行多 9px，卡片会高一点点（同排的卡是 flex 拉伸，一起变高，不会参差）。
+   ⚠️ 选择器要和上面基础款齐平（(0,3,1) > (0,2,1)），不然 nowrap 压回来。 */
+.artis .head strong.two-line {
+  white-space: normal;
+  text-overflow: clip;
+  font-size: 13px;
+  line-height: 15px;
+  overflow-wrap: anywhere;
+  /* 收到图标淡出区以内：套装图是从左下往右上 45° 淡出的，x > 130 那段是实心图，字压上去就糊。
+     130px 下 «Deep Gallery's / Echoing Song» 仍是两行，不会多出一行。 */
+  max-width: 130px;
+}
 /* 分项得分与评级（「35.3分 - SS」）。上游是 14px，这里放到 16px。
    为什么停在 16 不多要一点 —— 拿真实页面扫过 14/15/16/17/18/20 六个值：
    14~16 的 head 高（63.4）、卡片高（193.4）、mark 底 → 词条表顶的空档（6.4）**三个数一模一样**，
@@ -844,6 +866,28 @@
    这条规则自己就能表达「跟在圈号后面」，JS 不用承担版式知识。 */
 .artis ul.detail li span.title > i.up-num + span.label {
   max-width: 61px;
+}
+/* 一行实在放不下（明细页整卡只有 185px，English «Elemental Mastery» 124px、«Hydro DMG Bonus» 132px）
+   → 不砍词、也不让卡片变宽：小一号字排两行。行高 26px 不动。
+   10.5px / 11.5px 是量出来的：11px 字 + 12px 行高时，两行**字盒**叠起来 27px，
+   超出的 1px 会被下一行的斑马纹底色盖掉（实测 overflowY=true，字看着缺一条）。
+   10.5px 下最长的词是 «DMG Bonus»(53px)/«Recharge»(49px)，61px 那一档也放得开。
+   类名 .tight 由 detail.js 的 fitLongText() 量出来再打 —— 中文 4 字（56px）本来一行就够，不会走到这儿。
+   ⚠️ 别再靠把标签改短来避让（Elemental Mastery → EM 那种）：那会牵连其它语言和筛选口径。
+   ⚠️ 选择器要写得和上面那条「基础款」一样长（`span.title > span.label`）：
+      少一级就变成 (0,4,3) < (0,4,4)，被基础款的 nowrap 压掉 —— 第一版就是这么白写的。 */
+.artis ul.detail li.tight span.title > span.label {
+  white-space: normal;
+  text-overflow: clip;
+  font-size: 10.5px;
+  line-height: 11.5px;
+  overflow-wrap: anywhere;
+}
+/* 单元格默认 vertical-align: baseline —— 两行标签的**末行基线**要跟数值那格（行高 26）对齐，
+   于是行被撑到 32px（实测 li 32、label 24，多出来的 8px 全在上面）。改成居中后行高回到 26。 */
+.artis ul.detail li.tight span.title,
+.artis ul.detail li.tight span.val {
+  vertical-align: middle;
 }
 .artis ul.detail li span.val {
   padding-right: 10px;
