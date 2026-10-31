@@ -5,7 +5,7 @@
 
 import {
   $, state, T, el, setBg, rankOf, backToRoster, richText,
-  weaponFallback, weightClass, api, reg, hitMark
+  weaponFallback, weightClass, api, reg, hitMark, renderAll, uidApiUrl, banner
 } from './core.js'
 import { downloadDetailCard } from './share.js'
 
@@ -146,7 +146,12 @@ function renderDetail () {
     ret.append(d)
   }
   statBox.append(ret)
-  if (av.score.classTitle) statBox.append(el('div', 'arti-class-title', `${T('rule')}：${av.score.classTitle}`))
+  /* 评分规则那条细条：多套规则的角色，把它就地变成规则下拉（复用这一格，不另起大块）；
+     单套仍是静态规则名。列表要异步拉，先按静态文案占位，回来再替换。 */
+  const titleBar = el('div', 'arti-class-title')
+  if (av.score.classTitle) titleBar.textContent = `${T('rule')}：${av.score.classTitle}`
+  statBox.append(titleBar)
+  loadRubric(av, titleBar)
 
   const infoBox = el('div', 'arti-info')
   const allWrap = el('div', 'arti-all-attr')
@@ -193,6 +198,73 @@ function renderDetail () {
   cont.append(el('div', 'pd-scored-at', `${T('scoredAt')} ${av.fetchedAt || '—'}`))
 
   fitDetailZoom()
+}
+
+/*
+ * 评分规则下拉 —— 用户觉得评分不合自己理解时，换成 miao 给这个角色内置的另一套规则。
+ * 选中后覆盖主评分并落库（后端），所以走「重拉整包视图」：评分/档位/逐件分/首页卡片一起更新。
+ *
+ * 复用「评分规则」那条小细条（.arti-class-title，185px × 25px）：就地换成「评分规则」标签 + 下拉，
+ * 不再另起一块大条（用户嫌大）。自动模式下，下拉选项直接写成「自动：<匹配到的规则名>」。
+ * 单套规则不换 —— 选不选一样，静态「评分规则：X-通用」已经够。
+ * renderDetail 是同步的（reg 契约），列表得异步拉；回来前可能已切走或页面已重画，
+ * 填之前核对还在同一角色、且这一格还挂在文档上。
+ */
+async function loadRubric (av, bar) {
+  let data
+  try {
+    data = await api(`accounts/${av.uid}/characters/${av.avatarId}/rubrics`)
+  } catch (e) {
+    /* 拉不到就维持静态规则名，评分照旧 —— 附加能力不该拖累主流程 */
+    console.error('[rubric] 拉规则列表失败:', e)
+    return
+  }
+  if (state.selectedAvatarId !== av.avatarId || !bar.isConnected) return
+  if (!data.rubrics || data.rubrics.length <= 1) return
+
+  bar.classList.add('has-select')
+  bar.textContent = ''
+  /* 明示「评分规则」标签（复用 rule 键），后面跟下拉 */
+  const label = el('span', 'arti-rubric-label', T('rule'))
+  const sel = el('select', 'arti-rubric-select')
+  sel.setAttribute('aria-label', T('rule'))
+  /* 当前是「自动」时，把匹配到的规则名直接写进选项文案，一眼看出自动匹配到哪条 */
+  const autoText = data.current == null
+    ? T('rubricAutoMatch', { name: av.score.classTitle || '—' })
+    : T('rubricAuto')
+  const auto = el('option', '', autoText)
+  auto.value = ''
+  sel.append(auto)
+  for (const s of data.rubrics) {
+    /* 显示用「角色名-规则名」全名（和自动 / classTitle 同形），提交仍用裸 name */
+    const o = el('option', '', s.label || s.name)
+    o.value = s.name
+    sel.append(o)
+  }
+  sel.value = data.current ?? ''
+  bar.append(label, sel)
+
+  /* 失败回滚到「页面渲染时生效的那个」—— 成功后整页重画，这个闭包随之作废，只有失败路径用得上 */
+  const confirmed = data.current ?? ''
+  sel.addEventListener('change', async () => {
+    const next = sel.value || null
+    sel.disabled = true
+    try {
+      await api(`accounts/${av.uid}/characters/${av.avatarId}/rubric`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rubric: next })
+      })
+      /* 选完重拉整包视图：评分、档位、逐件分数、首页卡片全变 —— 复用切语言那条路。
+         不切视图（还在明细页），renderAll 只重画不跳转 */
+      state.view = await api(uidApiUrl(av.uid))
+      renderAll()
+    } catch (e) {
+      banner(e.message, 'err')
+      sel.value = confirmed
+      sel.disabled = false
+    }
+  })
 }
 
 /* 分享：截整张卡并下载；过程中置灰，失败打 console */
