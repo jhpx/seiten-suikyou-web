@@ -234,12 +234,32 @@
 }
 
 .char-attr li .title {
-  /* 90px：最长的名字是 5 个字 × 17px = 85px —— 元素伤加成那行在有元素时写「火伤加成」（4 字），
-     但拿不到元素（旅行者）时退回通名「元素伤加成」，仍是 5 字，所以这条宽度没变。
-     旧值 75px 只装得下 4 个字，「害」会被裁掉。多出的 15px 从 .value（100→85）挪来，
-     总宽 300 不变 —— 数值列最长「158.0%」≈70px，85 装得下。 */
+  /* 90px 是按「中文最长 5 字（元素伤加成，85px）不折行」定的；数值列因此从 100 收到 85，总宽 300 不变。
+     但属性名各语言长短差很多（English «Elemental Mastery» ≈ 170px、日本語「元素ダメージ加成」≈ 104px），
+     90px 一行装不下；而行高是写死的 32px，长名字直接折行会溢到下一行变成叠字。
+
+     所以这里默认仍是「一行 + 省略号」，真正要不要折行由前端量出来再决定：
+     detail.js 的 fitAttrTitles() 比一次 scrollWidth / clientWidth，装不下就给这个 .title 加 .two-line,
+     换成小一号字排两行（两行共 30px，仍在 32px 行内，**行高不变**）。
+     ⚠️ 别再靠「把文案改短」来避让：改短一种语言，另一种语言又对不上（2026-10-31 反复踩过）。 */
   width: 90px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-shadow: 0 0 1px rgba(0, 0, 0, .8), 1px 1px 3px rgba(0, 0, 0, .5);
+}
+/* 属性名太长：小一号字 + 两行。字号 13px / 行高 15px × 2 = 30px，塞进 32px 的行里还余 2px。
+   用 grid 而不是 flex：grid 的匿名 item 默认撑满列宽，文字才会在 90px 处折行；
+   flex 的 item 是 max-content 宽度，可能先撑出去再被裁掉。 */
+.char-attr li .title.two-line {
+  display: grid;
+  align-content: center;
+  white-space: normal;
+  text-overflow: clip;
+  font-size: 13px;
+  line-height: 15px;
+  /* 单个超长单词也允许断行，不撑破 90px；超过两行会被上面的 overflow:hidden 裁掉（当前九种语言都不会到三行） */
+  overflow-wrap: anywhere;
 }
 /* 权重：黑底小胶囊，≥80 金色 */
 .char-attr li .weight { width: 36px; }
@@ -453,6 +473,44 @@
   width: 60%;
   text-align: left;
 }
+/* 词条名一行装不下（English «Energy Recharge» 比中文「充能」长一倍多；中文 2 字一直装得下）
+   → 不动文案，整张表统一小一号：名字排两行 + 数值一起缩，li 仍是 26px。
+   ⚠️ 为什么不只缩那一格：同一张表里字号一大一小，看着像排版出错。
+   所以 fitLongText 的判据是「只要有一格装不下，整张表都加 .compact」，能一行排下的自然还在一行。
+   ⚠️ 为什么数值也要缩：这一格只有 124px 宽 —— 角标 30 + 名字 + 数值。只缩名字的话
+   「Recharge」这种单词（10.5px 下 47px）会被数值挤成三行，被 26px 的行裁掉。
+   类名打在 li 上（fitLongText 里判 title 溢出），角标和数值才好跟着一起缩。 */
+.arti-info .arti-all-attr .arti-attr li.compact {
+  /* 两行的名字要顶格排满 26px，所以三个元素都按行盒垂直居中，别再顶着基线上 */
+  align-items: center;
+}
+.arti-info .arti-all-attr .arti-attr li.compact span.title {
+  padding-left: 31px;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  display: grid;
+  align-content: center;
+  white-space: normal;
+  font-size: 10px;
+  /* 两行必须**矮于** 26px：填满 26px 时第一行会溢出 1px 到上一行，被上一行斑马纹底色盖掉半截
+     （实测 line1 顶 620 / li 顶 621）。10px 字 + 12px 行高 = 24px，居中后上下各余 1px。 */
+  line-height: 12px;
+  overflow-wrap: anywhere;
+}
+.arti-info .arti-all-attr .arti-attr li.compact span.title i.eff {
+  left: 4px;
+  top: 5px;
+  width: 26px; height: 16px;
+  line-height: 16px;
+  font-size: 11px;
+}
+.arti-info .arti-all-attr .arti-attr li.compact span.val {
+  flex: 0 0 auto;
+  width: auto;
+  font-size: 10px;
+  padding-right: 2px;
+}
 .arti-info .arti-all-attr .arti-attr li span.title i.eff {
   position: absolute;
   left: 5px;
@@ -546,6 +604,19 @@
 }
 .artis .weapon .weapon-attr div { width: 50%; text-align: left; }
 .artis .weapon .weapon-attr div span { color: #ffe699; font-weight: bold; }
+/* 主副属性一行放不下（English «Energy Recharge 45.9%» 在 85px 里必然折行，
+   而这一条写死 26px，折了就溢出压到卡面上）：改成「名字一行 / 数值一行」的小字，
+   两行 12px = 24px，仍在 26px 里。中文「基础攻击力 510」一行装得下，不会走到这里。 */
+.artis .weapon .weapon-attr div.stacked {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* 10px 是这条的实用下限：名字本身可能就占满一整行（English «Energy Recharge» 在 85px 里装不下，
+     日本語「元素チャージ効率」也差一点），11px 会折成三行（名字两行 + 数值一行 = 36px），
+     把 26px 的行撑破、压到上面的「精N Lv.N」。10px 下两者都刚好一行，两行 24px 塞进 26px。 */
+  font-size: 10px;
+  line-height: 12px;
+}
 .artis .weapon .weapon-desc-cont {
   height: 100px;
   overflow: hidden;
@@ -576,7 +647,11 @@
 /* 精炼徽章：1~5 阶各一色（照 miao） */
 .artis .weapon .affix {
   display: inline-block;
-  width: 40px;
+  /* 原来是写死 width:40px —— 中文「精5」/ 英文「R5」装得下，日文「精錬5」(42px)、韩文「재련5」装不下，
+     徽章内部折成两行（高 39px），把「Lv.90」那行顶到下面的属性条上。
+     改成最小宽度 + 不换行：短词还是 40px，长词把胶囊撑开一点（信息行有富余）。 */
+  min-width: 40px;
+  white-space: nowrap;
   margin-right: 5px;
   padding: 0 7px;
   border-radius: 4px;

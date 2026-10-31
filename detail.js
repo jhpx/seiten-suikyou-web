@@ -149,7 +149,11 @@ function renderDetail () {
   /* 评分规则那条细条：多套规则的角色，把它就地变成规则下拉（复用这一格，不另起大块）；
      单套仍是静态规则名。列表要异步拉，先按静态文案占位，回来再替换。 */
   const titleBar = el('div', 'arti-class-title')
-  if (av.score.classTitle) titleBar.textContent = `${T('rule')}：${av.score.classTitle}`
+  /* 显示后端拼好的 rubricLabel（当前语言的「角色名-规则名」）；classTitle 是 miao 的中文原文，
+     只在后端认不出这条规则时才会等于它 */
+  const ruleName = av.score.rubricLabel || av.score.classTitle
+  /* 冒号也按语言来（英文半角、中日韩全角），所以整句交给一个键，不在前端拼 */
+  if (ruleName) titleBar.textContent = T('ruleLine', { name: ruleName })
   statBox.append(titleBar)
   loadRubric(av, titleBar)
 
@@ -197,7 +201,52 @@ function renderDetail () {
   /* 同上：报这个角色自己的同步时间 */
   cont.append(el('div', 'pd-scored-at', `${T('scoredAt')} ${av.fetchedAt || '—'}`))
 
+  fitLongText()
   fitDetailZoom()
+}
+
+/*
+ * 长文案防重叠（明细页统一入口）。原则：**不做文案裁剪**，交给版式自己消化 ——
+ * 改短一种语言，另一种语言又对不上（2026-10-31 在这上面反复踩过），
+ * 所以这里一律量真实渲染尺寸，再按「行有多高」决定怎么让：
+ *   ① 属性面板 32px 的行 → 小一号字排两行（CSS .char-attr li .title.two-line）
+ *   ② 评分表顶三词条 26px 的行 → 小一号字排两行（.arti-attr li span.title.two-line）
+ *   ③ 武器主副属性 26px 的行 → 「名字一行 / 数值一行」（.weapon-attr div.stacked）
+ *
+ * 为什么不用「字符数」判断：一个英文单词可能比六个汉字还宽，
+ * 按字符数中英两边都会判错；量宽度/高度才是真的。
+ *
+ * ⚠️ 为什么推到下一帧：openDetail 是「先 renderDetail、再 showView」，
+ * 渲染那一刻 .view-detail 还没 active（display:none），量出来全是 0，判据永远不成立。
+ * 推到下一帧视图已经显示；若那时仍然隐藏（在首页切语言顺带重画了明细页）就直接跳过 ——
+ * 用户点进明细页时 renderDetail 会重画一遍再量。
+ */
+function fitLongText () {
+  requestAnimationFrame(() => {
+    /* ① 属性面板：一行装不下 → 两行小字（行高不变，仍是 32px） */
+    for (const t of document.querySelectorAll('.char-attr li .title')) {
+      if (!t.clientWidth) continue
+      /* 默认 nowrap：scrollWidth 就是整串字的真实宽度，比 clientWidth 大 = 一行装不下 */
+      t.classList.toggle('two-line', t.scrollWidth > t.clientWidth + 1)
+    }
+    /* ② 评分表顶三词条：只要有一格装不下，整张表统一小一号（名字该折行的折行）。
+       只缩装不下的那几格的话，同一张表里字号一大一小，看着像排版出错。
+       类名打在 li 上，角标和数值才好一起缩（只缩名字的话单词仍排不下）。 */
+    const cells = [...document.querySelectorAll('.arti-attr li')]
+    for (const li of cells) li.classList.remove('compact')
+    const over = cells.some(li => {
+      const t = li.querySelector('.title')
+      return t && t.clientWidth && t.scrollWidth > t.clientWidth + 1
+    })
+    if (over) for (const li of cells) li.classList.add('compact')
+    /* ③ 武器主副属性：这行写死 26px，文字折行会把行撑破 → 改成上下两行小字。
+       判据看高度（宽度永远等于 50%，折行不会撑宽，只会撑高）。 */
+    for (const d of document.querySelectorAll('.weapon-attr div')) {
+      if (!d.clientHeight) continue
+      d.classList.remove('stacked')
+      if (d.scrollHeight > d.clientHeight + 1) d.classList.add('stacked')
+    }
+  })
 }
 
 /*
@@ -213,7 +262,8 @@ function renderDetail () {
 async function loadRubric (av, bar) {
   let data
   try {
-    data = await api(`accounts/${av.uid}/characters/${av.avatarId}/rubrics`)
+    /* locale 必须带上：规则名（角色名+规则名）是后端按语言拼的，漏了就一直拿默认语言（中文） */
+    data = await api(`accounts/${av.uid}/characters/${av.avatarId}/rubrics?locale=${encodeURIComponent(state.locale)}`)
   } catch (e) {
     /* 拉不到就维持静态规则名，评分照旧 —— 附加能力不该拖累主流程 */
     console.error('[rubric] 拉规则列表失败:', e)
@@ -230,7 +280,7 @@ async function loadRubric (av, bar) {
   sel.setAttribute('aria-label', T('rule'))
   /* 当前是「自动」时，把匹配到的规则名直接写进选项文案，一眼看出自动匹配到哪条 */
   const autoText = data.current == null
-    ? T('rubricAutoMatch', { name: av.score.classTitle || '—' })
+    ? T('rubricAutoMatch', { name: av.score.rubricLabel || av.score.classTitle || '—' })
     : T('rubricAuto')
   const auto = el('option', '', autoText)
   auto.value = ''
@@ -243,6 +293,9 @@ async function loadRubric (av, bar) {
   }
   sel.value = data.current ?? ''
   bar.append(label, sel)
+  /* 细条只有 185px（左边还要放「评分规则」标签），各语言里日文最长 ——
+     差十来个像素就被原生 select 从半个字切开（原生 select 不打省略号）。量一下再定字号。 */
+  fitSelectText(sel)
 
   /* 失败回滚到「页面渲染时生效的那个」—— 成功后整页重画，这个闭包随之作废，只有失败路径用得上 */
   const confirmed = data.current ?? ''
@@ -265,6 +318,28 @@ async function loadRubric (av, bar) {
       sel.disabled = false
     }
   })
+}
+
+/* 把下拉的选中文字压进可用宽度。
+ * 细条 .arti-class-title 只有 185px，左边还要放「评分规则」标签，留给下拉的只有 100~130px；
+ * 各语言里中文最短、日文最长，差十来个像素就会被原生 select 从半个字切开（原生 select 不打省略号）。
+ * 这里按 canvas 量出来的实际宽度逐档降字号（11 → 9.5）。极长的名字（英文全名 + 长规则名）
+ * 降到 9.5px 还放不下就让它切 —— 那是名字太长，不是版式算错。 */
+let measureCtx = null
+function fitSelectText (sel) {
+  const cs = getComputedStyle(sel)
+  const avail = sel.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+  const text = sel.options[sel.selectedIndex]?.text || ''
+  if (avail <= 0 || !text) return
+  if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d')
+  for (const size of [11, 10.5, 10, 9.5]) {
+    measureCtx.font = `${size}px ${cs.fontFamily}`
+    if (measureCtx.measureText(text).width <= avail) {
+      sel.style.fontSize = `${size}px`
+      return
+    }
+  }
+  sel.style.fontSize = '9.5px'
 }
 
 /* 分享：截整张卡并下载；过程中置灰，失败打 console */
