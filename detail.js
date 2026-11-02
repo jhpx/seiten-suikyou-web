@@ -23,13 +23,11 @@ function renderDetail () {
   const bar = el('div', 'detail-bar')
   const back = el('button', 'btn back', '← ' + T('back'))
   back.addEventListener('click', backToRoster)
-  /* 原来右边还挂了个角色名（.detail-title）。名字在下面 600px 画布最顶上写了更大一号，
-     这儿再来一遍是重复，而且灰色小字跟金色按钮挨着，视觉上把按钮的分量分走了一半 ——
-     删掉，让「← 返回」独占这一行（2026-10-07）。 */
+  /* 这一行只放返回钮：角色名在下面 600px 画布最顶上写了更大一号，这儿再来一遍是重复，
+     灰色小字挨着金色按钮还会分走按钮的分量。 */
   bar.append(back)
 
-  /* 右端一组：模拟比对 + 分享。原来只有分享一个圆钮，space-between 直接贴右；
-     现在多一个文字钮，得用容器兜住 gap，否则两个钮会被 space-between 拉到栏的两端。 */
+  /* 右端一组：模拟比对 + 分享。两个钮要 gap，不能用 space-between 拉到栏的两端。 */
   const actions = el('div', 'detail-actions')
 
   /* 进模拟比对页：点哪个角色就把哪个角色带过去（reg 反调，避免 detail→sim 直接 import 成环） */
@@ -195,9 +193,7 @@ function renderDetail () {
   cont.append(dmgBox)
   loadDamage(av, dmgBox)
 
-  /* 画布最底下这行原来写的是出处「miao-plugin · 圣遗物评级 SS · 梦见月-星扩散」——
-     评级和评分规则在 .arti-stat / .arti-class-title 里各占一块，这行只是把同样的字
-     又抄了一遍，等于白占一行。改成数据时间（和首页页脚同一个键、同一句话）。 */
+  /* 这行报数据时间，不再抄一遍评级/规则名（那两块在 .arti-stat / .arti-class-title 里） */
   /* 同上：报这个角色自己的同步时间 */
   cont.append(el('div', 'pd-scored-at', `${T('scoredAt')} ${av.fetchedAt || '—'}`))
 

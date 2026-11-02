@@ -324,19 +324,23 @@ export function rosterRanks (view) {
 }
 
 /* 圣遗物套装：名单里实际出现过的套装。
- * 按 nameZh（miao 的中文全名、稳定键）去重；name 是本地化显示名、icon 是花部位图，
- * 都随某只带这套的角色借来（URL/文案一律后端给，前端不拼路径、不写死套装名）。
- * 顺序按 nameZh 排，弹窗里渲染稳定。 */
+ * 身份用权威的 setId（后端按每件圣遗物的 itemId 推出的 enka 套装 id，跨角色/跨刷新都稳定），
+ * 不能用 miao 的显示名去重 —— 同一套物理圣遗物 miao 可能吐两个不同的显示名，会把一个套裂成两组。
+ * name 是本地化显示名、icon 是花部位图，都随某只带这套的角色借来（URL/文案一律后端给）。
+ * 排序按 setId 升序：这就是图鉴编号，跨语言/跨刷新顺序都一样；
+ * 缺 setId 的（理论上不该有）排到最后，同 id 再按显示名兜底。 */
 export function rosterSets (view) {
   const map = new Map()
   for (const a of view.avatars) {
     for (const s of a.sets || []) {
-      if (!map.has(s.nameZh)) map.set(s.nameZh, { name: s.name, icon: s.icon })
+      const key = String(s.setId ?? s.nameZh)
+      const id = s.setId == null ? Infinity : Number(s.setId)
+      if (!map.has(key)) map.set(key, { id, name: s.name, icon: s.icon })
     }
   }
   return [...map.entries()]
-    .sort((x, y) => (x[0] < y[0] ? -1 : 1))
-    .map(([nameZh, v]) => ({ nameZh, name: v.name, icon: v.icon }))
+    .sort((x, y) => (x[1].id - y[1].id) || x[1].name.localeCompare(y[1].name))
+    .map(([setId, v]) => ({ setId, name: v.name, icon: v.icon }))
 }
 
 /* 稀有度（角色星级）：只列名单里真有人是这档的（4★ / 5★）。
@@ -395,9 +399,24 @@ export function openDetail (avatarId) {
   showView('detail')
 }
 
-/* 新数据到手后统一走这里：记地址、重画、回首页 */
+/* 新数据到手后统一走这里：记地址、换账号时清掉「排序/筛选」这份临时状态、重画、回首页 */
 export function applyView (view) {
+  /* ⚠️ uid 在 `view.account.uid` 里，**账号视图顶层没有 uid**（每个 avatar 也各带一份）。
+     早先这里写的是 `view.uid`，于是 state.uid 一直是 undefined —— 两个后果：
+       ① `switched` 永远是 false，换账号时排序/筛选不重置（本该有的那个修复等于没生效）；
+       ② 模拟比对页拿 state.uid 拼接口，拼出 `accounts/undefined/.../simulator` 全部 404，
+          装备目录拿不到、改完也不重算（页面只显示「伤害计算中…」，右栏永远是账号原值）。
+     取 account.uid 就好，别再用 view.uid。 */
+  const uid = view.account?.uid ?? null
+  /* 换了账号（上一份的 uid 跟这次不同）→ 排序和筛选是「在这份名单里找人」的临时状态，
+     不能从上一个账号泄漏过来，否则会出现「不同账号排序不一样」的假象。同账号刷新不动它。 */
+  const switched = state.uid != null && state.uid !== uid
   state.view = view
+  state.uid = uid
+  if (switched) {
+    state.sort = [{ key: 'mark', dir: 'desc' }]
+    state.filter = { elem: [], rank: [], weight: [], set: [], star: [] }
+  }
   syncUrl()
   renderAll()
   showView('roster')

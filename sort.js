@@ -150,8 +150,9 @@ function filteredAvatars (view) {
     .filter(a => !f.weight.length || f.weight.some(w => (a.charWeight?.[w] || 0) !== 0))
     /* 稀有度（角色星级）：选了 4★ 就只留 4★；同时选 4★+5★ 等于这两个都放进来（维度内 OR） */
     .filter(a => !f.star.length || f.star.includes(String(a.star || 5)))
-    /* 圣遗物套装：角色身上只要有一件属于选中套装（已激活、>=2 件）就命中（维度内 OR） */
-    .filter(a => !f.set.length || (a.sets || []).some(s => f.set.includes(s.nameZh)))
+    /* 圣遗物套装：角色身上只要有一件属于选中套装就命中（维度内 OR）。
+       身份用权威 setId（缺了退回 nameZh），同一个套不会裂成两组 */
+    .filter(a => !f.set.length || (a.sets || []).some(s => f.set.includes(String(s.setId ?? s.nameZh))))
 }
 
 export { sortAvatars, filteredAvatars, sortPanel }

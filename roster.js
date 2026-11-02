@@ -164,9 +164,6 @@ function renderRoster () {
   const box = $('view-roster')
   box.innerHTML = ''
 
-  /* 原来这儿有个「角色大全」的 h2。它是账号头上面孤零零一行大字，
-     而账号头里已经有昵称/签名/等级这一整套身份信息，下面紧接着就是筛选条 ——
-     标题夹在中间既没有新增信息，又把首屏往下推了一行。删掉（2026-10-07）。 */
   box.append(renderAccountHeader(view?.account))
 
   /* 页脚只报「数据时间」。写在这里（早退之前）：没角色可评时卡片不画，

@@ -48,7 +48,8 @@ function setOption (set) {
   img.onerror = () => imgError(img)
   const node = el('span', 'rf-opt-set')
   node.append(img)
-  return { value: set.nameZh, label: set.name, node }
+  /* value 用权威 setId（缺了退回 nameZh）：套装身份以它为准，同一个套不会裂成两组 */
+  return { value: String(set.setId ?? set.nameZh), label: set.name, node }
 }
 
 /* 漏斗图标：上口宽、下管细的滤斗形。描边继承文字色（currentColor），
@@ -103,7 +104,7 @@ function filterModal (view, paintBadge) {
   const stars = rosterStars(view)
   dropStaleFilter('elem', elems)
   dropStaleFilter('rank', ranks)
-  dropStaleFilter('set', sets.map(s => s.nameZh))
+  dropStaleFilter('set', sets.map(s => String(s.setId ?? s.nameZh)))
   dropStaleFilter('star', stars)
   const draft = {
     elem: [...state.filter.elem],
