@@ -633,6 +633,9 @@ function artiCard (a, editable, cw = {}) {
     li.append(lab, valCell(newText, oldText, dirty))
     ul.append(li)
   }
+  /* 补齐到固定行数（跟武器卡同一套）：副词条只有 3 条的件比邻居矮 18px，
+     一行两张卡底边就参差。空行不画条纹（CSS 的 .sim-row-empty），看着就是留白。 */
+  for (let i = ul.children.length; i < WEAPON_ROWS; i++) ul.append(el('li', 'sim-row-empty'))
   c.append(ul)
   c.append(simCardBtns(editable, () => openArtiDialog(a), dirty, () => revertArti(a.pos)))
   return c
