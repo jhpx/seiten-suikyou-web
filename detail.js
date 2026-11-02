@@ -389,14 +389,20 @@ function fitSelectText (sel) {
   sel.style.fontSize = '9.5px'
 }
 
-/* 分享：截整张卡并下载；过程中置灰，失败打 console */
+/* 分享：截整张卡并下载；过程中置灰，失败要**在页面上说一声** */
 async function onShare (btn) {
   if (btn.disabled) return
   btn.disabled = true
   try {
-    await downloadDetailCard()
+    /* downloadDetailCard 返回 false = 没画布 / 没生成出图，同样算失败 */
+    const ok = await downloadDetailCard()
+    if (!ok) banner(T('shareFail'), 'err')
   } catch (e) {
+    /* ⚠️ 别只 console.error：失败时页面上一点动静都没有，用户只会觉得「按钮坏了」。
+       吃过一次亏 —— 线上托管把 vendor 里那个 .mjs 当 application/octet-stream 返回，
+       浏览器对模块脚本卡死 MIME 校验，import 直接抛，界面全然无声。 */
     console.error('[share] 截图失败:', e)
+    banner(T('shareFail'), 'err')
   } finally {
     btn.disabled = false
   }

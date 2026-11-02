@@ -1,7 +1,12 @@
 /*
  * 明细页截图分享：把 .pd-canvas 整张配装卡（含伤害表）栅格成 PNG 并直接下载。
  * 卡片内图片全是同源相对路径（web/assets/...，后端 serveStatic 提供），无跨域污染，modern-screenshot 直接内联。
- * 截图库用本地 vendored 的 web/vendor/modern-screenshot.mjs（单文件 ESM、零 CDN 依赖）。
+ * 截图库用本地 vendored 的 web/vendor/modern-screenshot.js（单文件 ESM、零 CDN 依赖）。
+ *
+ * ⚠️ 文件名**必须是 .js，不能是 .mjs**：线上前端托管在 GitHub Pages，它对 .mjs 回的
+ *   Content-Type 是 `application/octet-stream`，而浏览器对模块脚本的 MIME 是硬校验 ——
+ *   动态 import 直接抛 "Expected a JavaScript module script"。本地 serveStatic 会给
+ *   `text/javascript`，所以「127 能下、线上域名不能下」。改名即可，别再换回 .mjs。
  */
 
 import { state } from './core.js'
@@ -9,7 +14,7 @@ import { state } from './core.js'
 let lib = null
 /* 动态 import 才加载截图库（约 37KB），只取一次缓存住 */
 async function loadLib () {
-  if (!lib) lib = await import('./vendor/modern-screenshot.mjs')
+  if (!lib) lib = await import('./vendor/modern-screenshot.js')
   return lib
 }
 
