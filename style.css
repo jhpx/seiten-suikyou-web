@@ -1349,8 +1349,9 @@ body.on-detail #footmeta { display: none; }
  * 单栏版式。以前是左右两栏（当前配装 / 调整后）各一套卡，共 12 块；
  * 现在每张卡自己就写着「旧 → 新」，左栏那份纯旧值是完全重复的，砍掉后只剩 6 块。
  *
- * 6 张装备卡（武器 + 5 圣遗物）排同一个网格：**两列**（PC 每张 ~283、手机 ~172），
- * 手机也不堆成一列 —— 堆了就得来回滚，反而比原来还长。
+ * 6 张装备卡（武器 + 5 圣遗物）排同一个网格：**PC 两列**（每张 282）。
+ * 手机反过来是**一行一张**（346，比 PC 每张还宽）—— 见文件末尾 520 断点那段：
+ * 两列时每张只剩 157，词条名被省略号吃掉、按钮还得挪到卡外，手机版看着像另一个页面。
  */
 .sim-pieces {
   display: grid;
@@ -1819,52 +1820,38 @@ body.on-detail #footmeta { display: none; }
 .detail-actions { display: flex; align-items: center; gap: 10px; }
 .btn.sim-entry { height: 40px; font-size: 14px; }
 
-/* 窄屏（手机）适配：**两列不变**（比对页不能堆成一列），只把内部尺寸全部收紧。
-   两栏各只剩 ~160px，属性表名称列、卡片内边距、字号都得收，否则词条会折得一行放不下两个词。
-   ⚠️ 这个 520 是「手机/平板分界」断点，**不是** --app-width（那是 628）—— 两数撞车纯属巧合，
-      改动时别顺手同步，改错会同时动到外壳宽度。 */
+/* 窄屏（手机）适配：**只把装备卡从两列改成一行一张，卡内一律照 PC**。
+ *
+ * 这里原先是一大段「手机专属缩水」规则（头像 96→64、名字 34→22、属性表两列→单列、
+ * 按钮挪到卡片下面、字号全线小一号），结果手机版看着像另一个页面。
+ * 其实手机 390 屏下、一行一张卡有 346px，比 PC 的 282px 还宽 —— PC 那套尺寸原样放得下，
+ * 没必要缩（用户 2026-11-03：「手机没那么窄，很多地方都有空间，放得下」）。
+ * 代价是页面比两列时长了约一倍，换来的是一张卡跟 PC 一模一样：
+ * 96px 头像、两列属性表、词条名不被省略号吃掉、按钮在卡内右上。
+ *
+ * ⚠️ 这个 520 是「手机/平板分界」断点，**不是** --app-width（那是 628）—— 两数撞车纯属巧合，
+ *    改动时别顺手同步，改错会同时动到外壳宽度。 */
 @media (max-width: 520px) {
-  /* 卡片与栏目的内边距先收，给内容腾地方 */
-  .sim-card { padding: 10px 7px 12px; }
+  /* 6 张装备卡：两列 → 一行一张（其余尺寸全部继承 PC 那份） */
+  #view-sim .sim-pieces { grid-template-columns: 1fr; }
 
-  /* hero：肖像缩到 64、天赋图缩到 28，横条还是横条 */
-  .sim-hero { gap: 8px; padding: 0 2px 8px; }
-  .sim-av { width: 64px; height: 64px; }
-  .sim-av-ring { inset: -4px; }
-  .sim-hero-name { font-size: 22px; }
-  .sim-hero-elem { width: 20px; height: 20px; }
-  .sim-hero-lv { font-size: 13px; }
-  .sim-hero-lv b { font-size: 14px; }
-  .sim-hero-tal { gap: 5px; margin-top: 4px; }
-  .sim-tal { width: 28px; height: 28px; }
-  .sim-tal strong { font-size: 9px; line-height: 12px; }
+  /* 角色头一行放不下：头像 96 + 名字 + 等级/天赋三连（46×3）≈ 460px，手机只有 346。
+     所以只在这里换行 —— 头像和名字占第一行，等级/天赋整行掉到第二行右对齐。
+     名字因此拿到整行剩余宽度（4 字中文名、英文长名都放得下）。
+     ⚠️ 别改成缩头像 / 缩字号 —— 那正是上面删掉的那套「手机专属缩水」。 */
+  .sim-hero { flex-wrap: wrap; row-gap: 6px; }
+  .sim-hero-rt { width: 100%; }
 
-  /* 属性表：手机上回到单列（两列每列只剩 150px，名称 + 旧→新挤不下） */
-  .sim-attrs { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-flow: row; }
-  .sim-attr { grid-template-columns: 54px 1fr; padding: 3px 5px; font-size: 11.5px; }
-  .sim-abreak { font-size: 9px; }
-  .sim-old { font-size: 10px; }
+  /* 属性表：骨架照 PC —— 仍是 **4 行 × 2 列**，只是每个格子里改成「名称一行 / 数值一行」。
+     手机上每列只有 147px，PC 那种「名称 68 + 值 55」左右排法装不下改过的值
+     （「197.7% → 175.1%」要 ~90px，硬塞会折成三四行把整张表带歪）；
+     上下排之后值独占 147px，一行就放得下。 */
+  .sim-attr { grid-template-columns: 1fr; row-gap: 1px; padding: 4px 7px; }
+  .sim-aname { grid-row: auto; }
+  .sim-aval { grid-column: 1; }
+  .sim-abreak { grid-column: 1; }
 
-  /* 手机每张卡只有 ~172px，卡内任何位置都会压到名称/等级 ——
-     按钮组挪到**卡片下方**，网格行距留 32px 给它。按钮挂在 .item 上，
-     所以 bottom 是相对整张卡（不是 head）。
-     ⚠️ 必须把 .item.arti / .item.weapon 那两条也列上：它们带两个类、特异性比
-       `#view-sim .item > .sim-btns` 高，只写一条的话 top:32px 会赢、bottom 失效，
-       按钮就又跑回卡片里压住词条（踩过一次）。 */
-  #view-sim .sim-pieces { gap: 32px; }
-  #view-sim .item > .sim-btns,
-  #view-sim .item.arti > .sim-btns,
-  #view-sim .item.weapon > .sim-btns {
-    right: 6px; top: auto; bottom: -27px;
-    gap: 5px;
-  }
-  #view-sim .sim-inbtn {
-    height: 24px; padding: 0 10px; font-size: 12px;
-  }
-  /* 手机上按钮在卡片下面，head 只让开右上那颗新图标（PC 那边还要让开按钮，116 → 40） */
-  #view-sim .item .head { padding-right: 40px; }
-
-  /* 改武器弹窗：两栏变上下（每栏只剩一百多 px，简介会被挤成一列字） */
+  /* 改装备弹窗仍是上下堆叠：弹窗比卡片区窄得多，两栏会把「简介 / 属性」挤出格子 */
   .sim-wbody { grid-template-columns: 1fr; }
 
 }
