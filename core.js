@@ -323,7 +323,9 @@ export function rosterRanks (view) {
   return RANK_ORDER.filter(r => view.avatars.some(a => a.score.markClass === r))
 }
 
-/* 圣遗物套装：名单里实际出现过的套装。
+/* 圣遗物套装：名单里**穿满 2 件**的套装。
+ * 为什么要卡 2 件：单件不激活套装效果，算不上「穿这套」。放进筛选项就是个假选项 ——
+ * 点下去一个人也筛不出来（筛选那边同样只认 2 件，见 sort.js 的 filteredAvatars）。
  * 身份用权威的 setId（后端按每件圣遗物的 itemId 推出的 enka 套装 id，跨角色/跨刷新都稳定），
  * 不能用 miao 的显示名去重 —— 同一套物理圣遗物 miao 可能吐两个不同的显示名，会把一个套裂成两组。
  * name 是本地化显示名、icon 是花部位图，都随某只带这套的角色借来（URL/文案一律后端给）。
@@ -333,6 +335,7 @@ export function rosterSets (view) {
   const map = new Map()
   for (const a of view.avatars) {
     for (const s of a.sets || []) {
+      if ((s.count || 0) < 2) continue
       const key = String(s.setId ?? s.nameZh)
       const id = s.setId == null ? Infinity : Number(s.setId)
       if (!map.has(key)) map.set(key, { id, name: s.name, icon: s.icon })
