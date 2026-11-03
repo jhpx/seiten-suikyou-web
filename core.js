@@ -37,6 +37,24 @@ export const $ = (id) => document.getElementById(id)
 export const UID_RE = /^(?:[1-9]\d{8}|18\d{8})$/
 export const isValidUid = (v) => UID_RE.test(String(v ?? '').trim())
 
+/* 根据浏览器语言推断默认 locale：只在「URL 没带 ?locale=、localStorage 也没存过」时才用。
+ * 别名表跟后端 src/common/names.ts 的 ALIASES 对齐（zh-cn→chs、zh-tw/zh-hk→cht、jp→ja、kr→ko）。
+ * 认不出的语言退回 chs，后面 bootstrap 还会用 /api/meta 的 locales 再校验一遍。 */
+export function detectLocale () {
+  const nav = (navigator.language || navigator.languages?.[0] || '').toLowerCase()
+  if (!nav) return 'chs'
+  const ALIASES = {
+    zh: 'chs', 'zh-cn': 'chs', 'zh-hans': 'chs', cn: 'chs',
+    'zh-tw': 'cht', 'zh-hk': 'cht', 'zh-hant': 'cht', tw: 'cht',
+    jp: 'ja', kr: 'ko'
+  }
+  if (ALIASES[nav]) return ALIASES[nav]
+  const main = nav.split('-')[0]
+  if (main === 'zh') return 'chs'                 // 没带地区的 zh 默认按简体
+  if (['chs', 'cht', 'en', 'ja', 'ko'].includes(main)) return main
+  return 'chs'
+}
+
 /* 页面自己所在的目录（末尾带 /）。切语言、进明细页改写地址栏时用它拼 ——
    写根绝对路径（/?uid=…）在 Pages 那种 /<repo>/ 子路径部署下会被打回域名根，刷新即 404。 */
 export const PAGE_BASE = new URL('.', document.baseURI).href

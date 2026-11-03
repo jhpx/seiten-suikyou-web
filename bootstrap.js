@@ -15,7 +15,7 @@ import './detail.js'
 import './sim.js'
 import { loadMeta, applyStaticUi, changeLocale } from './i18n.js'
 import { persistUid, renderUidHistory } from './history.js'
-import { $, state, T, el, api, uidApiUrl, banner, showLoading, applyView, renderAll, showView, reg, isValidUid } from './core.js'
+import { $, state, T, el, api, uidApiUrl, banner, showLoading, applyView, renderAll, showView, reg, isValidUid, detectLocale } from './core.js'
 
 /* ── 整页缩放：全站只维护 600 一套版式 ──
  *
@@ -100,7 +100,7 @@ async function fetchUid (uid) {
 
 async function boot () {
   const params = new URLSearchParams(location.search)
-  state.locale = params.get('locale') || localStorage.getItem('st.locale') || 'chs'
+  state.locale = params.get('locale') || localStorage.getItem('st.locale') || detectLocale()
   renderUidHistory()
 
   try {
