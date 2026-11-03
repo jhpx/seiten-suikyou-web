@@ -9,13 +9,38 @@
  *   `text/javascript`，所以「127 能下、线上域名不能下」。改名即可，别再换回 .mjs。
  */
 
-import { state } from './core.js'
+import { el, state } from './core.js'
 
 let lib = null
 /* 动态 import 才加载截图库（约 37KB），只取一次缓存住 */
 async function loadLib () {
   if (!lib) lib = await import('./vendor/modern-screenshot.js')
   return lib
+}
+
+/* 出图倍率：600px 设计稿 × 1.25 = 750px 宽。
+ *
+ * 实测（600×1782 画布，同机两轮取最快）：
+ *   scale 2    → 1321ms / 3200KB
+ *   scale 1.5  → 1092ms / 2025KB
+ *   scale 1.25 →  957ms / 1458KB   ← 当前
+ *   scale 1    →  812ms / 1007KB
+ * 再往下收益就很小了：那 800ms 打底的是克隆 DOM（约 550ms）和把几十张图内联进 SVG，
+ * 跟分辨率无关。同尺寸改用 JPEG 只能再省 100ms 出头，小字还会出色边，不值。
+ * 卡里最小的字是 9px 词条，1.25 倍后 11.25px 仍然清楚；手机上看这张图只有 380pt 宽，
+ * 750px 够用，1200px 全是白等。 */
+const SHOT_SCALE = 1.25
+
+/* 生成期间盖一层「只转圈、不写字」的蒙版 —— 出图要等几秒，不给反馈用户只会以为按钮坏了。
+ *   · 挂在 body 上（和弹窗一样在 .shell 外）：不参与整页缩放，也不会被截进图里；
+ *   · 顺手挡住点击：生成途中切页面、再点一次分享，下载都会落空；
+ *   · 淡入延迟 120ms 写在 style.css 的 .shot-mask 上：桌面端常常 100ms 就完事，
+ *     一闪而过的黑影比没有更糟。 */
+function showBusy () {
+  const mask = el('div', 'shot-mask')
+  mask.append(el('div', 'shot-spin'))
+  document.body.append(mask)
+  return () => mask.remove()
 }
 
 /* 等伤害表定型再截（最多 4s），避免截到「伤害计算中…」；超时也不阻塞 */
@@ -31,32 +56,43 @@ async function waitDamage (timeout = 4000) {
 
 /* 截整张明细卡并下载；返回 true 表示已触发下载 */
 export async function downloadDetailCard () {
-  const frame = document.querySelector('#view-detail .pd-frame')
   const canvas = document.querySelector('#view-detail .pd-canvas')
   if (!canvas) return false
 
-  await waitDamage()
+  /* 蒙版先挂上：光 waitDamage 最长就能等 4s，这段没有任何反馈足够让人以为按钮坏了 */
+  const hideBusy = showBusy()
+  /* 让出一帧再干活：domToBlob 开头要把整张卡克隆一遍，那段是同步的；
+     不先让浏览器画完这一帧，转圈会等到克隆结束才出现，等于没提示。 */
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
 
-  /* 截图要拿满 600px 分辨率，所以截的这一刻把「整页缩放」临时撤掉
-     （.shell-in 上的 transform，见 bootstrap.js 的 fitShell）——
-     不撤的话 modern-screenshot 按缩放后的可视宽出图（440 屏上是 420），只有 840px 宽，糊。
-     同时放开外壳的 overflow/height：否则 600px 画布会被裁掉或塌成缩放后的高度。 */
-  const shell = document.getElementById('shell')
-  const shellIn = document.getElementById('shellIn')
-  const shellTransform = shellIn ? shellIn.style.transform : ''
-  const shellHeight = shell ? shell.style.height : ''
+  /* 画布自己若也被缩过（fitDetailScale 在窄外壳下会写 scale），克隆出来会带着 transform
+     缩一次、留白一圈，临时置空。transform 不改布局盒，不影响下面量到的宽高。 */
   const prevTransform = canvas.style.transform
   const prevOrigin = canvas.style.transformOrigin
-  const frameOverflow = frame ? frame.style.overflow : ''
-  const frameHeight = frame ? frame.style.height : ''
-  canvas.style.transform = 'none'
-  canvas.style.transformOrigin = 'top left'
-  if (shellIn) shellIn.style.transform = ''
-  if (shell) shell.style.height = ''
-  if (frame) { frame.style.overflow = 'visible'; frame.style.height = 'auto' }
+
   try {
+    await waitDamage()
+
+    /* 出图尺寸必须**显式传**，不能让库自己去量。
+     *
+     * modern-screenshot 没收到 width/height 时会用 getBoundingClientRect() 量节点，
+     * 而手机上是 .shell-in 的整页 scale()（见 bootstrap.js 的 fitShell）在缩放：
+     * 390 宽屏上 rect 只有 600 × 0.633 ≈ 380 宽、1128 高。库按这个尺寸建画布、
+     * 再把整张 600px 设计稿塞进去，于是只截到卡片左上角 63% —— 就是「只有半边」。
+     * 之前那版「截之前临时撤掉整页缩放」治不了根：撤 transform 会改变 .shell 高度，
+     * 触发 ResizeObserver → fitShell 立刻又把 scale 写回去，等 domToBlob 真读尺寸时
+     * 往往已经复原了（实测过的就是这个竞态）。
+     *
+     * offsetWidth/offsetHeight 是布局尺寸，不受祖先 transform 影响，恒等于 600 × 实际高度。
+     */
+    const width = canvas.offsetWidth
+    const height = canvas.offsetHeight
+
+    canvas.style.transform = 'none'
+    canvas.style.transformOrigin = 'top left'
+
     const { domToBlob } = await loadLib()
-    const blob = await domToBlob(canvas, { scale: 2 })   // 600px → 1200px
+    const blob = await domToBlob(canvas, { width, height, scale: SHOT_SCALE })   // 600 → 750px
     if (!blob) return false
 
     const av = state.view?.avatars?.find(a => a.avatarId === state.selectedAvatarId)
@@ -74,8 +110,6 @@ export async function downloadDetailCard () {
   } finally {
     canvas.style.transform = prevTransform
     canvas.style.transformOrigin = prevOrigin
-    if (shellIn) shellIn.style.transform = shellTransform
-    if (shell) shell.style.height = shellHeight
-    if (frame) { frame.style.overflow = frameOverflow; frame.style.height = frameHeight }
+    hideBusy()
   }
 }

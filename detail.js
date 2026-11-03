@@ -387,7 +387,7 @@ function fitSelectText (sel) {
   sel.style.fontSize = '9.5px'
 }
 
-/* 分享：截整张卡并下载；过程中置灰，失败要**在页面上说一声** */
+/* 分享：截整张卡并下载；生成期间由 share.js 盖一层转圈蒙版，失败要**在页面上说一声** */
 async function onShare (btn) {
   if (btn.disabled) return
   btn.disabled = true
