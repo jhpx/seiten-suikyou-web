@@ -36,12 +36,12 @@
   --sim-affix: #ffe699;
   --radius: 14px;
   --radius-sm: 10px;
-  /* 外壳宽度 = 内容区宽度 = 600。左右内边距已经全部归零（2026-11-03 用户要「视觉上正好 600」），
-     所以这两个数现在是同一个。600 是 miao 画布的原设计宽度，明细页在 PC 上恒 1 倍原尺寸显示。
+  /* 外壳宽度 = 616 = 内容区 600 + 左右各 8 的内边距。
+     600 是 miao 画布的原设计宽度，内容区保 600，明细页在 PC 上恒 1 倍原尺寸显示。
      ⚠️ 内容区**不能再低于 600**：明细页画布的缩放是 frame 宽 / 600，一低于 600 就会被二次缩小，
         字变成「整页倍率 × 0.98」双缩，比现在更小。这是硬底线。
      ⚠️ 改这里要同时改 bootstrap.js 的 SHELL_W（缩放的分母），两处是同一个数。 */
-  --app-width: 600px;
+  --app-width: 616px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -110,13 +110,13 @@ body {
   /* 底边那条线由原来的实心灰蓝 border 换成下面的金线；
      sticky + z-index 已经建了包含块，::after 才定得住 */
 }
-/* 顶栏内容宽度取 --app-width（和 .app 同一个数），左右 padding 也一起归零，
+/* 顶栏内容宽度取 --app-width（和 .app 同一个数），左右 padding 也是同一个 8px，
    于是顶栏内容的左右边缘和下面账号头、网格、页脚严格对齐。 */
 .brand, .query {
   width: 100%;
   max-width: var(--app-width);
   margin: 0 auto;
-  padding: 0;
+  padding: 0 8px;
 }
 /* 底边金线：两头淡、中间实。和明细页卡片描边、评级胶囊是同一支金色，
    比一条从左边灌到右边的实线更像游戏里的分隔条。 */
@@ -319,7 +319,7 @@ body {
   width: 100%;
   max-width: var(--app-width);
   margin: 0 auto;
-  padding: 12px 0 24px;
+  padding: 12px 8px 24px;
 }
 
 .view { display: none; }
@@ -1208,7 +1208,7 @@ body.on-detail #footmeta { display: none; }
   width: 100%;
   max-width: var(--app-width);
   margin: 0 auto;
-  padding: 4px 0 32px;
+  padding: 4px 8px 32px;
 }
 .foot > span { font-size: 12px; line-height: 1.6; }
 .foot > .dim { color: var(--ink-3); }

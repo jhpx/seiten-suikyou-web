@@ -19,7 +19,7 @@ import { $, state, T, el, api, uidApiUrl, banner, showLoading, applyView, render
 
 /* ── 整页缩放：全站只维护 600 一套版式 ──
  *
- * 屏幕比 --app-width（600）窄，就把整页等比缩小，版式一个像素都不改。
+ * 屏幕比 --app-width（616 = 600 内容 + 2×8 内边距）窄，就把整页等比缩小，版式一个像素都不改。
  * 所以 style.css 里一条 @media 都没有 —— 任何设备上看到的都是同一张 600 宽的版面，只是倍率不同。
  *
  * ⚠️ transform 不改布局盒：缩小后内容的「布局高度」还是原尺寸，页面底部会多出一段空白，
@@ -28,7 +28,7 @@ import { $, state, T, el, api, uidApiUrl, banner, showLoading, applyView, render
  * ⚠️ 倍率写进 CSS 变量 --shell-s：.shell-in 的 min-height 要用它算
  *    「缩完之后正好一屏」（100vh 是真实视口，除以倍率才换算得回去），否则页脚会浮在屏幕中间。
  */
-const SHELL_W = 600   // 和 style.css 的 --app-width 是同一个数，改一边记得改另一边
+const SHELL_W = 616   // 和 style.css 的 --app-width 是同一个数，改一边记得改另一边
 
 function fitShell () {
   const shell = $('shell')
