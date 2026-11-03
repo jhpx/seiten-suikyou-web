@@ -86,7 +86,10 @@ async function fetchUid (uid) {
     applyView(data)
     banner(T('fetchDone', { n: data.count }), 'ok')
   } catch (e) {
-    banner(e?.code === 'bad_uid' ? T('badUid') : T('fetchFail', { msg: e.message }), 'err')
+    /* 原始错误（含 microgg/enka 各自原因、超时 ms 等）只进控制台给排查用，别原样甩给用户 ——
+       用户看到的是下方统一的友好提示。 */
+    console.error('[fetch] 刷新失败：', e?.message)
+    banner(e?.code === 'bad_uid' ? T('badUid') : T('fetchFail'), 'err')
     if (state.uid) await loadUid(state.uid, { keepSelection: true })
   } finally {
     state.busy = false
