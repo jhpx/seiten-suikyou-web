@@ -23,7 +23,7 @@
  * 排序面板由 sort.js 提供（renderFilterBar 直接拼进来）。
  */
 
-import { $, state, T, el, imgError, closeMenus, closeModal, openDialog, refreshRosterGrid, rosterElems, rosterRanks, rosterSets, rosterStars, dropStaleFilter, reg } from './core.js'
+import { $, state, T, el, imgError, closeMenus, closeModal, openDialog, refreshRosterGrid, rosterElems, rosterRanks, rosterSets, rosterStars, dropStaleFilter, reg } from '../core.js'
 import { sortPanel } from './sort.js'
 
 /* 元素选项：图标 + 名字，都从名单里已有角色身上借（URL 一律由接口返回） */

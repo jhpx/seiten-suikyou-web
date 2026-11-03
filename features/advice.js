@@ -16,7 +16,7 @@
  * 件数/人数用两个内联小图，于是每行只剩「人名 + 一串部位图带分数」。
  */
 
-import { state, T, el, setBg, openDetail, closeMenus, reg } from './core.js'
+import { state, T, el, setBg, openDetail, closeMenus, reg } from '../core.js'
 
 /* 口径开关：SS 件算不算。默认**不算** —— SS 已经接近毕业，算进去只会把「还差多少」摊薄。
    接口一次给了两份（advice / advice.withSS），所以切换只是换一份数据重画，不走网络。 */

@@ -9,12 +9,12 @@
  *   `text/javascript`，所以「127 能下、线上域名不能下」。改名即可，别再换回 .mjs。
  */
 
-import { el, state } from './core.js'
+import { el, state } from '../../core.js'
 
 let lib = null
 /* 动态 import 才加载截图库（约 37KB），只取一次缓存住 */
 async function loadLib () {
-  if (!lib) lib = await import('./vendor/modern-screenshot.js')
+  if (!lib) lib = await import('../../vendor/modern-screenshot.js')
   return lib
 }
 

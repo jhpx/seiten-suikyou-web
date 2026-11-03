@@ -3,7 +3,7 @@
  * 渲染器在加载时注册进 core.reg（renderRoster / renderRosterGrid），由编排函数统一调用。
  */
 
-import { $, state, T, el, setBg, rankOf, weaponFallback, imgError, openDetail, reg } from './core.js'
+import { $, state, T, el, setBg, rankOf, weaponFallback, imgError, openDetail, reg } from '../core.js'
 import { sortAvatars, filteredAvatars } from './sort.js'
 
 function renderAccountHeader (acct) {

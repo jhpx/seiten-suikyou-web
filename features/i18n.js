@@ -3,7 +3,7 @@
  * 渲染器注册进 core.reg（loadMeta / applyStaticUi），由 bootstrap 的 boot() 调用。
  */
 
-import { $, state, T, api, uidApiUrl, syncUrl, showLoading, renderAll, banner, reg } from './core.js'
+import { $, state, T, api, uidApiUrl, syncUrl, showLoading, renderAll, banner, reg } from '../core.js'
 
 /* 拉一次界面文字表 —— 语言解析的规则在后端，这里只负责拿回来 */
 async function loadMeta (locale) {

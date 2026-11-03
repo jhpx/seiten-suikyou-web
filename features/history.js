@@ -4,7 +4,7 @@
  * renderUidHistory 注册进 core.reg，由 bootstrap 的 boot() 调用。
  */
 
-import { $, el, state, reg } from './core.js'
+import { $, el, state, reg } from '../core.js'
 
 const UID_HISTORY_KEY = 'st.uids'
 

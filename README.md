@@ -5,15 +5,30 @@
 
 ## 目录
 
-| 路径 | 干什么 |
-| --- | --- |
-| `index.html` | 入口 |
-| `env.js` | **可选**的部署配置：`API_BASE` 指后端地址；没有这个文件时自动走同源 `/api` |
-| `bootstrap.js` | 引齐各 feature 模块（加载时把渲染器注册进 core.reg） |
-| `core.js` | 基座：全局 state / 取文案 T() / DOM 小工具 / 调后端 api / 视图切换与编排 |
-| `roster.js` `filter.js` `sort.js` `detail.js` `history.js` `i18n.js` | 各管一摊的 feature 模块 |
-| `miao.css` `style.css` | 样式 |
-| `assets/` | 约 101MB 图片素材（角色立绘 / 套装图标 / UI 小图），**必须跟着前端一起发布** |
+```text
+web/
+├── index.html            #   外壳（顶栏 / 视图容器 / 页脚），只引入 bootstrap.js
+├── bootstrap.js          #   入口：引齐 feature 模块（副作用注册渲染器）+ 控制器 + 启动
+├── core.js               #   基座：state / 取文案 T() / DOM 小工具 / 调后端 api / 视图切换与编排
+├── env.js                #   可选部署配置（API_BASE 指定后端地址，缺省走同源 /api）
+├── style.css             #   外壳样式
+├── miao.css              #   评分卡样式（miao 的 profile-detail.css 移植版）
+├── assets/               #   图片素材（约 101MB，随子仓库提交，必须跟着前端发布）
+└── features/             #   业务模块（各自 import ../core.js，经 reg 注册渲染器）
+    ├── roster.js         #   feature：账号头 + 角色网格 + 卡片（武器 / 圣遗物两种视图）
+    ├── filter.js         #   feature：筛选条 = 排序｜视图切换｜漏斗多选面板
+    ├── sort.js           #   feature：多条件排序（至多 3 字段的排序链）
+    ├── advice.js         #   feature：圣遗物刷取建议面板
+    ├── sim.js            #   feature：模拟比对页面
+    ├── i18n.js           #   feature：loadMeta / 切语言 / 静态文案
+    ├── history.js        #   feature：UID 历史（localStorage）
+    └── detail/           #   明细页子模块（import ../../core.js）
+        ├── detail.js             #   编排：renderDetail + loadRubric + onShare
+        ├── detail-card.js        #   卡片渲染（武器 / 圣遗物卡）
+        ├── detail-damage.js      #   伤害表加载与渲染
+        ├── detail-fit.js         #   页面适配（fitLongText / fitSelectText / fitDetailScale）
+        └── detail-screenshot.js  #   截图下载（按需动态导入截图依赖）
+```
 
 ## 本地预览
 

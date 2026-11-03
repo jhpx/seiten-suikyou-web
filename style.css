@@ -1200,7 +1200,7 @@ body.on-detail #footmeta { display: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* 截图生成的等待蒙版：只有转圈，不写任何字。
-   挂在 body 上（在 .shell 外），不参与整页缩放，也不会被截进图里 —— 详见 share.js 的 showBusy()。
+   挂在 body 上（在 .shell 外），不参与整页缩放，也不会被截进图里 —— 详见 detail-screenshot.js 的 showBusy()。
    ⚠️ 延迟 120ms 再淡入：桌面端常常 100ms 就出图，一闪而过的黑影比没有更糟；
       手机端要几秒，这段延迟基本感觉不到。
    暗底沿用筛选弹窗的 rgba(8,7,6,.62)，金圈沿用 .spin —— 不新开一套观感。 */

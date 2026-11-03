@@ -7,14 +7,14 @@
  */
 
 /* 引 side-effect：这些模块在加载时把自己的渲染器写进 core.reg */
-import './roster.js'
-import './advice.js'
-import './filter.js'
-import './sort.js'
-import './detail.js'
-import './sim.js'
-import { loadMeta, applyStaticUi, changeLocale } from './i18n.js'
-import { persistUid, renderUidHistory } from './history.js'
+import './features/roster.js'
+import './features/advice.js'
+import './features/filter.js'
+import './features/sort.js'
+import './features/detail/detail.js'
+import './features/sim.js'
+import { loadMeta, applyStaticUi, changeLocale } from './features/i18n.js'
+import { persistUid, renderUidHistory } from './features/history.js'
 import { $, state, T, el, api, uidApiUrl, banner, showLoading, applyView, renderAll, showView, reg, isValidUid, detectLocale } from './core.js'
 
 /* ── 整页缩放：全站只维护 600 一套版式 ──

@@ -11,7 +11,7 @@
  * 弹窗里勾的是草稿，确定才写回 —— 和筛选同一个规矩，不然每点一下箭头整页闪一次。
  */
 
-import { $, state, T, el, closeMenus, closeModal, openDialog, refreshRosterGrid, rosterElems, rosterRanks } from './core.js'
+import { $, state, T, el, closeMenus, closeModal, openDialog, refreshRosterGrid, rosterElems, rosterRanks } from '../core.js'
 
 /* 排序字段：顺序固定，但谁能进排序链、排第几由用户点。只存 i18n 键。 */
 const SORT_FIELDS = [

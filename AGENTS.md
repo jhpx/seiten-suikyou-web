@@ -12,20 +12,25 @@
 |---|---|
 | `index.html` | 页面外壳：顶栏、视图容器、页脚；只引入 `bootstrap.js` |
 | `bootstrap.js` | 引入 feature 模块、注册渲染器、初始化控制器并启动应用 |
-| `core.js` | 共享状态、`T()` 文案读取、DOM 辅助函数、后端 API、视图切换和跨模块编排 |
+| `core.js` | 共享状态、`T()` 文案读取、DOM 辅助函数、后端 API、视图切换和跨模块编排（留在根，全站依赖它） |
 | `env.js` | 可选部署配置；`API_BASE` 指定后端地址，缺省时使用同源 `/api` |
-| `roster.js` | 账号信息、角色网格和角色卡片 |
-| `advice.js` | 圣遗物刷取建议面板 |
-| `filter.js` | 筛选、排序入口、视图切换和多选面板 |
-| `sort.js` | 多条件排序 |
-| `detail.js` | 角色详情画布和缩放 |
-| `sim.js` | 模拟比对页面 |
-| `share.js` | 详情页截图下载；按需动态导入截图依赖 |
-| `i18n.js` | 加载元数据、切换语言和静态文案 |
-| `history.js` | UID 历史记录，使用 `localStorage` |
+| `features/roster.js` | 账号信息、角色网格和角色卡片 |
+| `features/advice.js` | 圣遗物刷取建议面板 |
+| `features/filter.js` | 筛选、排序入口、视图切换和多选面板 |
+| `features/sort.js` | 多条件排序 |
+| `features/sim.js` | 模拟比对页面 |
+| `features/i18n.js` | 加载元数据、切换语言和静态文案 |
+| `features/history.js` | UID 历史记录，使用 `localStorage` |
+| `features/detail/detail.js` | 角色详情画布和缩放（编排 renderDetail / loadRubric / onShare） |
+| `features/detail/detail-card.js` | 武器 / 圣遗物卡片渲染 |
+| `features/detail/detail-damage.js` | 伤害表加载与渲染 |
+| `features/detail/detail-fit.js` | 页面适配（fitLongText / fitSelectText / fitDetailScale） |
+| `features/detail/detail-screenshot.js` | 详情页截图下载；按需动态导入截图依赖 |
 | `style.css` | 页面整体样式 |
 | `miao.css` | 从 miao 的 `profile-detail.css` 移植的评分卡样式 |
 | `assets/` | 从上游同步的图片素材，随前端发布 |
+
+`features/` 下的模块各自 `import '../core.js'`；`features/detail/` 下的子模块回根需 `import '../../core.js'`。
 
 开始修改前，以实际文件和当前实现为准核对上表；文件职责可能随项目演进调整，不要仅为匹配本表而重命名或移动文件。
 
