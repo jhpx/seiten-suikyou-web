@@ -8,25 +8,31 @@
  *
  * 内部尺寸全部维持 miao 原版的 600px 基准（面板行 300、三列 90/85/70、评分卡 185+390）——
  * 那些数是照 600 画布量出来的，改一个就得连带重算一串。只有两处改成自适应：
- *   ① .pd-frame / .pd-canvas 用 width:100%（否则外壳一窄就横向溢出）
+ *   ① 缩放交给 detail.js 的 transform：.pd-canvas 固定 600px 设计稿，.pd-frame 用
+ *      width:100% + overflow:hidden 兜住，任何宽度/截图都不溢出；
  *   ② .arti-info 用 flex:1 吃掉评分卡右侧剩余宽度
  *
- * 缩放由 detail.js 用 zoom 把整张画布等比缩到屏幕宽度（窄屏才缩，PC 上恒 1）。
  * 立绘是「左溢出、信息浮右侧」：.main-pic 宽 1400px、margin-left -545px，
  * 所以角色图占左三分之二，数值列绝对定位在右上角，不会挡脸。
  * ========================================================================== */
 
-/* 缩放外壳：zoom 由 detail.js 按视口宽度写内联，PC 上恒 1（原尺寸）。
-   ⚠️ 必须 100% 不能写 600px：窄屏时 zoom 把布局宽缩成屏宽，写死就溢出。 */
+/* 缩放外壳：width:100% 收成内容区宽，overflow:hidden 把里面那张 600px 设计稿裁住，
+   这样无论怎么缩，整页横向都不溢出（zoom 做不到这点——它常被截图/长截图引擎忽略，
+   手机上就会只截到左侧一半）。高度由 detail.js 按缩放后的实际高度写内联。 */
 .pd-frame {
   width: 100%;
   margin: 0 auto;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
 }
 
-/* 画布本体：元素背景图由 JS 内联上去（对应 miao 的 <div class="container elem-bg">） */
+/* 画布本体：固定 600px 设计稿基准（内部全是照 600 量的绝对/固定 px），缩放交给
+   detail.js 的 transform:scale，别写 100%——那样会先收一次、transform 再收一次，双缩。
+   元素背景图由 JS 内联上去（对应 miao 的 <div class="container elem-bg">）。 */
 .pd-canvas {
   position: relative;
-  width: 100%;
+  width: 600px;
   overflow: hidden;
   border-radius: 12px;
   background-color: #233;
@@ -37,7 +43,6 @@
   font-size: 16px;
   line-height: 1.4;
   font-family: Number, "PingFang SC", "Microsoft YaHei", sans-serif;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
 }
 
 .profile-cont { padding: 0 10px; margin-right: 5px; }

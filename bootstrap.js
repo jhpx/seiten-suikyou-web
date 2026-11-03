@@ -17,6 +17,34 @@ import { loadMeta, applyStaticUi, changeLocale } from './i18n.js'
 import { persistUid, renderUidHistory } from './history.js'
 import { $, state, T, el, api, uidApiUrl, banner, showLoading, applyView, renderAll, showView, reg, isValidUid } from './core.js'
 
+/* ── 整页缩放：全站只维护 600 一套版式 ──
+ *
+ * 屏幕比 --app-width（600）窄，就把整页等比缩小，版式一个像素都不改。
+ * 所以 style.css 里一条 @media 都没有 —— 任何设备上看到的都是同一张 600 宽的版面，只是倍率不同。
+ *
+ * ⚠️ transform 不改布局盒：缩小后内容的「布局高度」还是原尺寸，页面底部会多出一段空白，
+ *    得自己把 .shell 的高度补成「内容高 × 倍率」。内容一变高（图片加载完、切视图）就重量一次，
+ *    所以挂 ResizeObserver；只在窗口尺寸变化时量是不够的。
+ * ⚠️ 倍率写进 CSS 变量 --shell-s：.shell-in 的 min-height 要用它算
+ *    「缩完之后正好一屏」（100vh 是真实视口，除以倍率才换算得回去），否则页脚会浮在屏幕中间。
+ */
+const SHELL_W = 600   // 和 style.css 的 --app-width 是同一个数，改一边记得改另一边
+
+function fitShell () {
+  const shell = $('shell')
+  const inner = $('shellIn')
+  if (!shell || !inner) return
+  /* 用 clientWidth 不用 innerWidth：后者把滚动条也算进去，桌面窄窗口下会差 15px 出横向滚动 */
+  const s = Math.min(1, document.documentElement.clientWidth / SHELL_W)
+  document.documentElement.style.setProperty('--shell-s', String(s))
+  inner.style.transform = s < 1 ? `scale(${s})` : ''
+  shell.style.height = s < 1 ? `${inner.offsetHeight * s}px` : ''
+}
+
+fitShell()
+addEventListener('resize', fitShell)
+new ResizeObserver(fitShell).observe($('shellIn'))
+
 /* 输入框里的 UID：空 / 非 9–10 位纯数字都先拦下，给本地化提示，不往后端发。 */
 function readUid () {
   const raw = $('uid').value.trim()

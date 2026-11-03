@@ -37,9 +37,23 @@ export async function downloadDetailCard () {
 
   await waitDamage()
 
-  /* 小屏 .pd-frame 被 zoom 缩到 <1 会糊，截时归 1 拿满分辨率，截完复原 */
-  const prevZoom = frame ? frame.style.zoom : ''
-  if (frame) frame.style.zoom = '1'
+  /* 截图要拿满 600px 分辨率，所以截的这一刻把「整页缩放」临时撤掉
+     （.shell-in 上的 transform，见 bootstrap.js 的 fitShell）——
+     不撤的话 modern-screenshot 按缩放后的可视宽出图（440 屏上是 420），只有 840px 宽，糊。
+     同时放开外壳的 overflow/height：否则 600px 画布会被裁掉或塌成缩放后的高度。 */
+  const shell = document.getElementById('shell')
+  const shellIn = document.getElementById('shellIn')
+  const shellTransform = shellIn ? shellIn.style.transform : ''
+  const shellHeight = shell ? shell.style.height : ''
+  const prevTransform = canvas.style.transform
+  const prevOrigin = canvas.style.transformOrigin
+  const frameOverflow = frame ? frame.style.overflow : ''
+  const frameHeight = frame ? frame.style.height : ''
+  canvas.style.transform = 'none'
+  canvas.style.transformOrigin = 'top left'
+  if (shellIn) shellIn.style.transform = ''
+  if (shell) shell.style.height = ''
+  if (frame) { frame.style.overflow = 'visible'; frame.style.height = 'auto' }
   try {
     const { domToBlob } = await loadLib()
     const blob = await domToBlob(canvas, { scale: 2 })   // 600px → 1200px
@@ -58,6 +72,10 @@ export async function downloadDetailCard () {
     setTimeout(() => URL.revokeObjectURL(url), 1000)  // 下载已同步触发，1s 后回收
     return true
   } finally {
-    if (frame) frame.style.zoom = prevZoom
+    canvas.style.transform = prevTransform
+    canvas.style.transformOrigin = prevOrigin
+    if (shellIn) shellIn.style.transform = shellTransform
+    if (shell) shell.style.height = shellHeight
+    if (frame) { frame.style.overflow = frameOverflow; frame.style.height = frameHeight }
   }
 }

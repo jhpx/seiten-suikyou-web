@@ -11,6 +11,10 @@
 </head>
 <body>
 
+<!-- .shell / .shell-in：整页按 600 排一次版，屏幕比它窄就整体等比缩小 ——
+     版式在任何设备上完全一样，只有倍率不同。倍率由 bootstrap.js 的 fitShell() 写进 .shell-in 的 transform。 -->
+<div class="shell" id="shell"><div class="shell-in" id="shellIn">
+
 <header class="top" id="top">
   <div class="brand">
     <span class="mark">✦</span>
@@ -47,6 +51,8 @@
 <footer class="foot">
   <span class="dim" id="footmeta"></span>
 </footer>
+
+</div></div><!-- /shell-in /shell -->
 
 <script type="module" src="bootstrap.js"></script>
 </body>

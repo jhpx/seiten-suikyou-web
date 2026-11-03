@@ -36,10 +36,12 @@
   --sim-affix: #ffe699;
   --radius: 14px;
   --radius-sm: 10px;
-  /* 主要显示区 600px：628 = 600 内容区 + .app 左右内边距 28。
-     600 是 miao 画布的原设计宽度，外壳刚好等于它，明细页 PC 上 zoom 恒 1 原尺寸显示。
-     ⚠️ 这是**外壳**宽度，内容区 = 它 − 28。想改主要显示区就改这里，别去改内容区那几个数。 */
-  --app-width: 628px;
+  /* 外壳宽度 = 内容区宽度 = 600。左右内边距已经全部归零（2026-11-03 用户要「视觉上正好 600」），
+     所以这两个数现在是同一个。600 是 miao 画布的原设计宽度，明细页在 PC 上恒 1 倍原尺寸显示。
+     ⚠️ 内容区**不能再低于 600**：明细页画布的缩放是 frame 宽 / 600，一低于 600 就会被二次缩小，
+        字变成「整页倍率 × 0.98」双缩，比现在更小。这是硬底线。
+     ⚠️ 改这里要同时改 bootstrap.js 的 SHELL_W（缩放的分母），两处是同一个数。 */
+  --app-width: 600px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -47,7 +49,8 @@
 html, body {
   margin: 0;
   background: var(--bg);
-  /* 600px 画布在窄屏上居中时允许向两侧溢出，别让它顶出横向滚动条 */
+  /* .shell 按 600 排版、屏窄时被缩放，但它的**布局盒**仍是 600 宽（会超出视口），
+     这里挡住横向滚动条，不然手机上能左右拖出一条空带 */
   overflow-x: hidden;
   color: var(--ink);
   font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -61,6 +64,37 @@ body {
   flex-direction: column;
 }
 
+/* ───────────────────────── 整页缩放：全站只维护 600 一套版式 ─────────────────────────
+ *
+ * 样式只按 --app-width（600）写一遍，屏幕比它窄就整页等比缩小，
+ * 版式在任何设备上逐像素相同、只有倍率不同 —— 所以下面**一条 @media 都没有**。
+ * （用户 2026-11-03：「不要再支持小屏了，我主宽度就是 600px」。）
+ *
+ * 倍率由 bootstrap.js 的 fitShell() 写进 .shell-in 的 transform（scale = 屏宽/600，最多 1）。
+ * ⚠️ transform 不改布局盒，所以 .shell 的高度得由 JS 补成「内容高 × 倍率」，
+ *    否则页面底部多出一整段空白（内容按原尺寸算高、按缩小后画）。
+ * ⚠️ overflow 必须是 clip 不能是 hidden：hidden 会变成滚动容器，
+ *    里面 .top 的 position: sticky 就粘在「这个永远不滚的容器」上 = 顶栏不再吸顶。
+ * ⚠️ 弹窗（.rf-mask）是运行时挂到 document.body 上的，在 .shell 外面，因此**不参与缩放**、
+ *    保持原生 fixed —— 屏窄时弹窗比页面字大一号，这正是要的（不然弹窗也糊）。
+ */
+.shell {
+  width: var(--app-width);
+  margin: 0 auto;
+  overflow: clip;
+}
+.shell-in {
+  display: flex;
+  flex-direction: column;
+  /* 缩放从左上角起算：缩小后内容的左边缘才和视口对齐。
+     （默认是 50% 50%，会往中间收 —— 左边缘偏右 94px，实测过。）
+     居中交给 .shell 的 margin: auto，屏窄时它自动变 0。 */
+  transform-origin: top left;
+  /* 倍率 <1 时把被缩掉的视口高度补回来（100vh 是真实视口，得除以倍率才是缩放后的坐标），
+     否则页脚会跑到屏幕中间 */
+  min-height: calc(100vh / var(--shell-s, 1));
+}
+
 /* ───────────────────────── 顶栏 ───────────────────────── */
 
 .top {
@@ -69,21 +103,20 @@ body {
   z-index: 100;
   background: rgba(10, 12, 16, .92);
   backdrop-filter: blur(12px);
-  /* 左右内边距从 .top 挪到里面的 .brand / .query 上：顶栏**背景和底边金线仍然通栏**
-     （sticky 背景条只有 --app-width 宽的话，两侧会露出一条缝，比内容宽更丑），
-     限宽的只是内容 —— 内容和下面 .app / .foot 一样收在 --app-width 里居中，
-     桌面和手机看到的才是同一条内容带。 */
+  /* 左右内边距从 .top 挪到里面的 .brand / .query 上：顶栏背景和底边金线跟着整页走
+     （它在 .shell 里，宽度就是 --app-width），限宽的只是内容 —— 内容和下面 .app / .foot
+     一样收在 --app-width 里居中，于是顶栏内容的左右边缘和账号头、网格、页脚严格对齐。 */
   padding: 10px 0;
   /* 底边那条线由原来的实心灰蓝 border 换成下面的金线；
      sticky + z-index 已经建了包含块，::after 才定得住 */
 }
-/* 顶栏内容限宽居中：宽度取 --app-width（和 .app 同一个数），左右 padding 也是同一个 14px，
+/* 顶栏内容宽度取 --app-width（和 .app 同一个数），左右 padding 也一起归零，
    于是顶栏内容的左右边缘和下面账号头、网格、页脚严格对齐。 */
 .brand, .query {
   width: 100%;
   max-width: var(--app-width);
   margin: 0 auto;
-  padding: 0 14px;
+  padding: 0;
 }
 /* 底边金线：两头淡、中间实。和明细页卡片描边、评级胶囊是同一支金色，
    比一条从左边灌到右边的实线更像游戏里的分隔条。 */
@@ -268,6 +301,7 @@ body {
   width: 100%;
   max-width: var(--app-width);
   margin: 8px auto 0;
+  /* 左右 12 是**盒内文字**的内缩，不是和卡片对齐用的布局留白 —— 条子自身外边缘已经是 600 */
   padding: 8px 12px;
   border-radius: 8px;
   background: var(--bg-3);
@@ -278,14 +312,14 @@ body {
 .banner.err { border-color: #e85656; color: #ffb3b3; }
 .banner.ok { border-color: #4caf7d; color: #aef0c9; }
 
-/* ───────────────────────── 主容器：手机宽度 ───────────────────────── */
+/* ───────────────────────── 主容器：600 内容带 ───────────────────────── */
 
 .app {
   flex: 1;
   width: 100%;
   max-width: var(--app-width);
   margin: 0 auto;
-  padding: 12px 14px 24px;
+  padding: 12px 0 24px;
 }
 
 .view { display: none; }
@@ -480,7 +514,7 @@ body {
 /* 一行 = 一个角色：人名 + 五个**定宽槽位**（花羽沙杯冠），整行可点。
  * ⚠️ 必须用网格不能用 flex 排队：缺件也占着自己的列，各行的花才落在同一列；
  *   flex 里缺一件后面四件整体左移，竖着就没法比了。
- * 槽位宽写死，窄屏靠文件末尾那两档改几个变量（列数不动）。
+ * 槽位宽写死，600 内容区下一行正好放下（屏幕更窄时整页等比缩小，这里不用再分档）。
  * 尺寸全在这几个变量里，改一处全行跟着变 —— 2026-10-25 整体放大过一档
  * （字 10.5→13、图 16→22、槽 54→66），原因是 600 内容区下这些格子原本偏挤。 */
 .advice-line {
@@ -492,7 +526,7 @@ body {
   --advice-pr: 4px;
   --advice-pt: 3px;       /* 块内上下留白：块比图标高一点 */
   --advice-gap: 3px;      /* 标签内「图 ↔ 分」的间距 */
-  --advice-col: 14px;     /* 块与块之间的间隔（窄屏按档收，见文件末尾那两档） */
+  --advice-col: 14px;     /* 块与块之间的间隔 */
   --advice-fill: rgba(255, 255, 255, .07);    /* 真件与空框共用这块淡底 */
   display: grid; align-items: center; gap: 2px var(--advice-col);
   grid-template-columns: var(--advice-name) repeat(5, minmax(0, var(--advice-cav)));
@@ -556,21 +590,8 @@ body {
 /* 内核的 mark-D 是给浅底调的灰，压在深底上看不见 —— 只在本面板提亮一档 */
 .advice-piece .ap-mark.mark-D { color: #9aa4b6; }
 
-/* 窄屏两档：只收「块多宽 / 间隔多宽 / 字多大」这几个变量，**列数不动**。
- * 槽位列写的是 minmax(0, var(--advice-cav))，放不下时列自己会压缩，不会撑破整行。 */
-@media (max-width: 379px) {
-  .advice-line { --advice-col: 12px; --advice-pl: 3px; --advice-pr: 3px; }
-  .advice-strip { --advice-seg: 10px; }
-}
-@media (max-width: 352px) {
-  .advice-line {
-    --advice-name: 52px; --advice-cav: 52px;
-    --advice-ic: 18px; --advice-fs: 12px;
-    --advice-pl: 3px; --advice-pr: 3px; --advice-gap: 2px;
-    --advice-col: 9px;
-  }
-  .advice-strip { --advice-seg: 8px; }
-}
+/* 槽位列写的是 minmax(0, var(--advice-cav))，放不下时列自己会压缩，不会撑破整行，
+ * 所以这里不需要再按屏宽分档（窄屏唯一的动作是整页缩小，见文件顶部 .shell）。 */
 
 /* ───────────────────────── 首页：筛选条 ─────────────────────────
  *
@@ -1187,15 +1208,15 @@ body.on-detail #footmeta { display: none; }
   width: 100%;
   max-width: var(--app-width);
   margin: 0 auto;
-  padding: 4px 14px 32px;
+  padding: 4px 0 32px;
 }
 .foot > span { font-size: 12px; line-height: 1.6; }
 .foot > .dim { color: var(--ink-3); }
 
 /* ───────────────────────── 模拟比对页 ─────────────────────────
  *
- * 宽度一律 `width: 100%` 挂在 .app 底下，不自己算像素 —— 三页才严格同宽；
- * 窄屏由 .app 的 max-width 自动收成屏宽，.sim-pieces 的 `minmax(0,1fr)` 自己会缩。
+ * 宽度一律 `width: 100%` 挂在 .app 底下，不自己算像素 —— 三页才严格同宽。
+ * 三页都是 600 内容区这一套版式，屏幕更窄时由 .shell 整页缩小，这里不做任何窄屏分支。
  *
  * ⚠️ 类名避开广告词（ad/adv/bar/slot/box/frame/column）—— 这些词会被 AdBlock/uBlock
  *   当广告容器隐藏，症状「PC 看不见、手机正常」。所以叫 .sim-head 不叫 .sim-bar。 */
@@ -1763,8 +1784,9 @@ body.on-detail #footmeta { display: none; }
 .sim-subkey { flex: 1; min-width: 0; }
 
 /* ── 改武器弹窗：左边表单 + 右边简介 ──
- * 它比筛选那类弹窗多一栏内容，默认 520 宽塞两栏太挤，单独放宽到 600；
- * 窄屏（弹窗本来就占满）仍然上下排 —— 见文末 520 断点。 */
+ * 它比筛选那类弹窗多一栏内容，默认 520 宽塞两栏太挤，单独放宽到 600。
+ * ⚠️ 弹窗不参与整页缩放（它挂在 body 上、在 .shell 外面），所以 600 宽在窄屏上会被
+ *    `min(600px, 100%)` 收到屏宽，这时两栏仍然成立 —— 别再给它加窄屏单列的断点。 */
 .rf-modal.sim-wwide { width: min(600px, 100%); }
 .sim-wbody {
   display: grid;
@@ -1820,41 +1842,9 @@ body.on-detail #footmeta { display: none; }
 .detail-actions { display: flex; align-items: center; gap: 10px; }
 .btn.sim-entry { height: 40px; font-size: 14px; }
 
-/* 窄屏（手机）适配：**只把装备卡从两列改成一行一张，卡内一律照 PC**。
- *
- * 这里原先是一大段「手机专属缩水」规则（头像 96→64、名字 34→22、属性表两列→单列、
- * 按钮挪到卡片下面、字号全线小一号），结果手机版看着像另一个页面。
- * 其实手机 390 屏下、一行一张卡有 346px，比 PC 的 282px 还宽 —— PC 那套尺寸原样放得下，
- * 没必要缩（用户 2026-11-03：「手机没那么窄，很多地方都有空间，放得下」）。
- * 代价是页面比两列时长了约一倍，换来的是一张卡跟 PC 一模一样：
- * 96px 头像、两列属性表、词条名不被省略号吃掉、按钮在卡内右上。
- *
- * ⚠️ 这个 520 是「手机/平板分界」断点，**不是** --app-width（那是 628）—— 两数撞车纯属巧合，
- *    改动时别顺手同步，改错会同时动到外壳宽度。 */
-@media (max-width: 520px) {
-  /* 6 张装备卡：两列 → 一行一张（其余尺寸全部继承 PC 那份） */
-  #view-sim .sim-pieces { grid-template-columns: 1fr; }
-
-  /* 角色头一行放不下：头像 96 + 名字 + 等级/天赋三连（46×3）≈ 460px，手机只有 346。
-     所以只在这里换行 —— 头像和名字占第一行，等级/天赋整行掉到第二行右对齐。
-     名字因此拿到整行剩余宽度（4 字中文名、英文长名都放得下）。
-     ⚠️ 别改成缩头像 / 缩字号 —— 那正是上面删掉的那套「手机专属缩水」。 */
-  .sim-hero { flex-wrap: wrap; row-gap: 6px; }
-  .sim-hero-rt { width: 100%; }
-
-  /* 属性表：骨架照 PC —— 仍是 **4 行 × 2 列**，只是每个格子里改成「名称一行 / 数值一行」。
-     手机上每列只有 147px，PC 那种「名称 68 + 值 55」左右排法装不下改过的值
-     （「197.7% → 175.1%」要 ~90px，硬塞会折成三四行把整张表带歪）；
-     上下排之后值独占 147px，一行就放得下。 */
-  .sim-attr { grid-template-columns: 1fr; row-gap: 1px; padding: 4px 7px; }
-  .sim-aname { grid-row: auto; }
-  .sim-aval { grid-column: 1; }
-  .sim-abreak { grid-column: 1; }
-
-  /* 改装备弹窗仍是上下堆叠：弹窗比卡片区窄得多，两栏会把「简介 / 属性」挤出格子 */
-  .sim-wbody { grid-template-columns: 1fr; }
-
-}
+/* 模拟比对页**没有**窄屏分支：全站只按 600 内容宽排版一次，屏窄就整页等比缩小
+ * （见文件顶部 .shell）。所以这里不需要任何「手机上换成两列 / 缩字号 / 名字单行省略」的补丁 ——
+ * 版式在 600 下长什么样，在任何设备上就长什么样。 */
 
 /* ───────────────────────── 明细页：评分规则下拉（复用原「评分规则」细条，185×25） ─────────────────────────
  * 多套规则的角色，把 .arti-class-title 那条细条就地变成「评分规则」标签 + 下拉；单套仍是静态规则名。

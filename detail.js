@@ -198,7 +198,9 @@ function renderDetail () {
   cont.append(el('div', 'pd-scored-at', `${T('scoredAt')} ${av.fetchedAt || '—'}`))
 
   fitLongText()
-  fitDetailZoom()
+  fitDetailScale()
+  /* 字体/图片回流可能改高度，下一帧再算一次兜底 */
+  requestAnimationFrame(fitDetailScale)
 }
 
 /*
@@ -447,19 +449,26 @@ function renderWeaponCard (w) {
 }
 
 /*
- * 把 600px 画布等比缩到可用宽度 = `.app` 内容区（min(视口, --app-width) − 28）。
- * --app-width 628 时内容区正好 600，PC 上 zoom 恒 1；只有窄屏才真缩。
- * 直接写 zoom 内联（实测 CSS 变量转一手在这儿不生效）。 */
-function fitDetailZoom () {
+ * 把固定 600px 设计稿的 .pd-canvas 等比缩到外壳宽（.pd-frame = .app 内容区）。
+ * 用 transform:scale 而不是 zoom：zoom 在被截图/长截图引擎渲染时常被忽略，
+ * 导致 600px 画布撑出视口、手机上只截到左侧一半；transform 的布局盒由外壳
+ * （width:100% + overflow:hidden + 这里设的高度）兜住，任何截图都能截全。
+ * 只缩一次（画布本身就是 600px 设计稿），避免「width:100% 先收一次、zoom 再收一次」的双缩。 */
+function fitDetailScale () {
   const frame = document.querySelector('.pd-frame')
-  if (!frame) return
-  const vw = document.documentElement.clientWidth || window.innerWidth
-  /* --app-width 从 CSS 读，别在 JS 里再抄一份数字（两处会漂） */
-  const appW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-width')) || 628
-  const avail = Math.min(vw, appW) - 28
-  frame.style.zoom = String(Math.min(1, avail / 600))
+  const canvas = document.querySelector('.pd-canvas')
+  if (!frame || !canvas) return
+  /* 外壳宽就是可用内容宽；画布按它等比缩。没量到宽/高时跳过，等下一帧再算 */
+  if (!frame.clientWidth || !canvas.offsetHeight) return
+  const s = Math.min(1, frame.clientWidth / 600)
+  canvas.style.transformOrigin = 'top left'
+  canvas.style.transform = s === 1 ? '' : `scale(${s})`
+  /* transform 不改布局盒：外壳高度得手动跟上，否则画布缩放后下方内容会叠上来 */
+  frame.style.height = Math.round(canvas.offsetHeight * s) + 'px'
 }
-window.addEventListener('resize', fitDetailZoom)
+window.addEventListener('resize', fitDetailScale)
+/* 字体（Number 等）异步落位可能改高度，落位后再算一次 */
+window.addEventListener('load', fitDetailScale)
 
 /* 强化命中次数的标记：实心圆 + 镂空数字（数字从圆里抠掉，露出词条行的底色），
  * 对齐游戏 5.3 的「强化次数标记」（米游社那篇教学里叫「强化命中次数」）。
@@ -571,6 +580,8 @@ async function loadDamage (av, box) {
   if (!dmg) { box.append(dmgStatus(T('dmgNone'))); return }
   box.append(renderDmgList(dmg))
   if (dmg.buffs?.length) box.append(renderDmgBuffs(dmg.buffs))
+  /* 伤害表加到画布里会让整卡变高，重算外壳高度，否则下方内容叠上来 */
+  fitDetailScale()
 }
 
 /* 骨架 / 失败 / 无数据三种「只有一行字」的状态共用一个外壳 */
