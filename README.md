@@ -43,7 +43,7 @@ web/
 
 ### miao-plugin
 
-评分算法、角色数据、i18n 文案，以及这里的 `assets/` 图片素材，全部来自
+评分算法、角色数据，以及这里的 `assets/` 图片素材，全部来自
 [yoimiya-kokomi/miao-plugin](https://github.com/yoimiya-kokomi/miao-plugin) —— 一个 Yunzai-Bot 的角色面板 / 角色查询插件。
 
 - 作者：Yoimiya（[@yoimiya-kokomi](https://github.com/yoimiya-kokomi)）
@@ -52,7 +52,11 @@ web/
 
 ### 数据来源
 
-角色面板数据由 [Enka.Network](https://enka.network/) 提供，miao-plugin 已获 Enka 官方授权（见其 issue #63）。
+- **角色面板数据**：由 [Enka.Network](https://enka.network/) 提供，miao-plugin 已获 Enka 官方授权（见其 issue #63）。
+- **多语言文案（i18n）**：角色 / 武器 / 套装 / 词条名来自 Enka 的 `store/gi/` 原样文件；圣遗物部件名来自
+  [Dimbreath/AnimeGameData](https://gitlab.com/Dimbreath/AnimeGameData) 的 TextMap 提取件（Enka 不收录部件名）。
+  这一路**与 miao-plugin 无关**，由母仓库的 `tools/sync_i18n.py` 直接同步。
+
 上游还致谢了 MiniGG-Api（@MiniGrayGay）与 Snap.Hutao（DGP Studio 胡桃 API），一并致谢。
 
 ### 素材与非商业声明
