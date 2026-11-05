@@ -37,6 +37,11 @@
       <select id="locale"></select>
     </label>
   </form>
+
+  <!-- 各区分服在线状态：后端周期拉 status.enka.network 缓存在 /api/health，前端进页面读一次，直接铺开显示 -->
+  <div class="src-line">
+    <span class="src-regions" id="src-regions" role="status" aria-live="polite"></span>
+  </div>
 </header>
 
 <div class="banner" id="banner" hidden></div>

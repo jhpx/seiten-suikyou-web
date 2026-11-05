@@ -260,6 +260,72 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .65), 0 2px 12px rgba(211, 188, 142, .3);
 }
 
+/* 各区分服在线状态行：顶栏查询栏下方一条细线，铺开每个区服的「状态图标 + 代号」胶囊。
+   身份色里有绿(cht)/红(china)/粉(bilibili)，单靠一个彩色圆点分不清在线断线，
+   所以状态用两层编码：① 形状图标 ✓/✕/○ ② 红绿胶囊底色（断线再加深描边 + 柔光）。
+   文字始终完整显示身份色，不加删除线 —— 划线会让区服名看着像被废弃的内容。
+   文字身份色（--c，抄 status.enka.network）只作用于 .src-name，图标另取状态色 --dot。 */
+.src-line {
+  width: 100%;
+  max-width: var(--app-width);
+  margin: 0 auto;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+}
+.src-regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-items: center;
+}
+.src-region {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px 2px 6px;
+  border-radius: 9px;
+  border: 1px solid var(--state-line);
+  background: var(--state-bg);
+  font-size: 11px;
+  letter-spacing: .03em;
+  cursor: default;
+}
+.src-region::before {
+  content: '○';
+  font-size: 10px;
+  line-height: 1;
+  color: var(--dot, var(--ink-3));
+}
+.src-name { color: var(--c, var(--ink-3)); }
+/* 在线：✓ 绿底；断线：✕ 红底；未知：○ 灰底 */
+.src-region.is-up {
+  --dot: #5fd08a; --state-bg: rgba(95, 208, 138, .09); --state-line: rgba(95, 208, 138, .28);
+}
+.src-region.is-up::before { content: '✓'; }
+/* 断线要一眼跳出来：底更红、边更亮、✕ 更大、再补一圈柔光；文字保持完整 */
+.src-region.is-down {
+  --dot: #ff6b6b; --state-bg: rgba(224, 106, 106, .22); --state-line: rgba(224, 106, 106, .62);
+  box-shadow: 0 0 7px rgba(224, 106, 106, .18);
+}
+.src-region.is-down::before { content: '✕'; font-size: 11px; }
+.src-region.is-unknown {
+  --dot: var(--ink-3); --state-bg: rgba(111, 122, 142, .10); --state-line: var(--line);
+}
+/* 两个分组标签对称：enka（官方 6 区）/ microgg（镜像 2 服）。
+   只有第二组前面画竖线，第一组贴着左边起头。 */
+.src-group-label {
+  font-size: 10px;
+  letter-spacing: .04em;
+  color: var(--ink-3);
+  padding-right: 2px;
+}
+.src-group-label:not(:first-child) {
+  margin-left: 6px;
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+}
+
 /* 明细页的「← 返回」做成**金色实心**：顶栏在明细页整排收掉后，它是这一屏唯一的退出入口，
    原来那套「纯灰文字、无边框、14px」跟右边灰色的角色名一个分量，扫一眼根本找不到。
    现在和顶栏「刷新」用同一块金 —— 深棕字压在金上 8.3:1（白字只有 1.6:1），过 AA。
