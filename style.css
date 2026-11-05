@@ -268,7 +268,9 @@ body {
 .src-line {
   width: 100%;
   max-width: var(--app-width);
-  margin: 0 auto;
+  /* 和顶栏其它间距一样留 8px：原来 margin-top 是 0，状态胶囊上沿正好贴着刷新按钮下沿，
+     再被按钮那圈向下的金色柔光一糊，看着就像两层叠在一起。 */
+  margin: 8px auto 0;
   padding: 0 8px;
   display: flex;
   align-items: center;
