@@ -161,7 +161,8 @@ function renderDetail () {
   const infoBox = el('div', 'arti-info')
   const allWrap = el('div', 'arti-all-attr')
   const allUl = el('ul', 'detail attr arti-attr')
-  for (const a of (av.allAttr || [])) {
+  /* 右边网格只取前 9 个；第 10 个走上面的溢出格，不在循环里 */
+  for (const a of (av.allAttr || []).slice(0, 9)) {
     if (!a || !a.key) { allUl.append(el('li')); continue }
     const li = el('li', a.cls || 'nouse')
     const title = el('span', 'title')
@@ -172,8 +173,24 @@ function renderDetail () {
   }
   allWrap.append(allUl)
   infoBox.append(allWrap)
-  /* 后端文案表里已把上游那句「可使用 #角色名圣遗物 …」QQ 指令提示剪掉，这里不再拼 tag 插值 */
-  infoBox.append(richText(el('div', 'arti-notice'), T('artisNotice')))
+  /* 后端文案表里已把上游那句「可使用 #角色名圣遗物 …」QQ 指令提示剪掉，这里不再拼 tag 插值。
+     第 10 个副词条（按有效值排最末那条）不进右边 3×3 网格，也不单独占一行 ——
+     它拼到「评分为喵喵版规则…」这行的右端：文案占左侧 flex:1，溢出格占右侧 33.33%
+     （与上方第 9 个词条的第 3 列同宽、右端对齐），二者同行。右边网格永远只排前 9 个。 */
+  const notice = el('div', 'arti-notice')
+  const noticeText = el('span', 'notice-text')
+  richText(noticeText, T('artisNotice'))
+  notice.append(noticeText)
+  const overflowAttr = (av.allAttr || [])[9]
+  if (overflowAttr && overflowAttr.key) {
+    const cell = el('div', 'arti-overflow ' + (overflowAttr.cls || 'nouse'))
+    const oTitle = el('span', 'title')
+    if (overflowAttr.eff && overflowAttr.eff !== '-') oTitle.append(el('i', 'eff', overflowAttr.eff))
+    oTitle.append(document.createTextNode(overflowAttr.label))
+    cell.append(oTitle, el('span', 'val', '+' + overflowAttr.value))
+    notice.append(cell)
+  }
+  infoBox.append(notice)
 
   const markCont = el('div', 'arti-mark-cont')
   markCont.append(statBox, infoBox)

@@ -422,12 +422,56 @@
 }
 .arti-stat span { font-size: 12px; line-height: 20px; color: #bbb; }
 .arti-class-title {
-  height: 25px; line-height: 25px;
+  height: 22px; line-height: 22px;
   font-size: 12px;
   color: rgba(255, 255, 255, .9);
-  text-align: center;
+  text-align: left;
+  padding-left: 8px;
   text-shadow: 0 0 2px #000;
   background: rgba(0, 0, 0, .5);
+}
+/* 第 10 个副词条（按有效值排最末那条）3×3 装不下，挪到评分卡下方、规则行之后的空位。
+   结构照抄右边 3×3 里的 <li>（角标/名字/数值三件套），只是改成整行宽的块级，好跟其它 9 个长得一样。 */
+/* 第 10 副词条：拼在「评分为喵喵版规则…」那行的右端，占右侧 33.33%（与上方第 9 词条第 3 列同宽、
+   右端对齐），不另起行。样式照搬右侧网格格，保证视觉一致。 */
+.arti-info .arti-notice .arti-overflow {
+  position: relative;
+  flex: 0 0 33.33%;
+  display: flex;
+  align-items: center;
+  height: 26px;
+  line-height: 26px;
+  font-size: 14px;
+  padding: 0 3px;
+  white-space: nowrap;
+  background: rgba(50, 50, 50, .4);
+}
+.arti-info .arti-notice .arti-overflow span { color: #fff; }
+.arti-info .arti-notice .arti-overflow.great span.title { color: #ffe699; }
+.arti-info .arti-notice .arti-overflow.nouse span { color: #888; }
+.arti-info .arti-notice .arti-overflow span.title {
+  padding-left: 36px;
+  width: 60%;
+  text-align: left;
+}
+.arti-info .arti-notice .arti-overflow span.title i.eff {
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  width: 28px; height: 18px;
+  line-height: 18px;
+  font-size: 12px;
+  font-style: normal;
+  text-align: center;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, .5);
+}
+.arti-info .arti-notice .arti-overflow span.val {
+  padding-right: 5px;
+  width: 40%;
+  font-size: 13px;
+  text-align: right;
+  color: #fff;
 }
 
 /* 右侧：有效词条汇总。上游写死 390px，这里用 flex:1 吃掉 185px 评分卡之外的剩余宽度。 */
@@ -540,20 +584,30 @@
   text-align: right;
   color: #fff;
 }
+/* 评分为喵喵版规则… 那行。默认（无第 10 词条）是带左内边距的暗条、文字居中，与 miao 一致；
+   拼进第 10 副词条时整行变 flex：左侧文案占 flex:1、右侧溢出格占 33.33%，二者同行，
+   右格与上方第 3 列（第 9 词条）对齐。 */
 .arti-info .arti-notice {
-  height: 25px;
-  line-height: 25px;
+  display: flex;
+  align-items: center;
+  height: 26px;
+  line-height: 26px;
   margin-left: 1px;
-  /* 照 miao 只留左边距 —— 文案（带 #角色圣遗物 那句）本来就贴着宽度上限，
-     两边都塞 10px 就会挤掉最后一截 */
-  padding: 0 0 0 10px;
+  padding: 0;
   font-size: 10px;
-  text-align: center;
   color: #aaa;
   background: rgba(0, 0, 0, .7);
-  /* 兜底：真放不下时截断，而不是溢到左边的总分卡上 */
   overflow: hidden;
+}
+.arti-info .arti-notice .notice-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* 照 miao 只留左边距 —— 文案（带 #角色圣遗物 那句）本来就贴着宽度上限，
+     两边都塞 10px 就会挤掉最后一截 */
+  padding-left: 10px;
+  text-align: center;
   white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
 }
 .arti-info .arti-notice strong { color: #d3bc8e; font-weight: normal; padding: 0 3px; }
