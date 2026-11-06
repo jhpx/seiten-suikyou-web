@@ -124,19 +124,21 @@ function renderDetail () {
   }
   basic.append(cons)
 
+  /* 角色卡右下脚注：原来那个时间戳（与画布底部重复）已删，这里改放喵喵规则免责句，
+     腾出右侧通知行的左半区块给「有效词条数」。 */
   const info = el('div', 'data-info')
-  /* 明细页报这个角色的上次同步时间（av.fetchedAt），不是整个 UID 的 ——
-     展柜分批攒，角色之间能差好几天，报 UID 级会把老角色说成刚抓过。 */
-  if (av.fetchedAt) info.append(el('span', 'time', `${T('scoredAt')} ${av.fetchedAt}`))
+  richText(info, T('artisNotice'))
   basic.append(info)
   cont.append(basic)
 
   /* ===== .profile-detail ===== */
   const pd = el('div', 'profile-detail')
 
-  /* 圣遗物评分汇总：左总分卡 + 右有效词条 */
+  /* 左评分卡：只留「总分 / 评级」两个英雄数字（垂直居中、撑满整卡高度，与右侧网格+通知行齐平），
+     评分规则下拉在卡底。有效词条数已挪到右侧通知行左半区块。 */
   const statBox = el('div', 'arti-stat')
   const ret = el('div', 'arti-stat-ret')
+  const retMain = el('div', 'ret-main')
   for (const [label, value, cls] of [
     [T('artisTotal'), av.score.mark, ''],
     /* 档位本身按 miao 的配色上色：红(ACE/MAX) / 黄(SSS/SS) / 紫(S/A) */
@@ -144,8 +146,9 @@ function renderDetail () {
   ]) {
     const d = el('div')
     d.append(el('span', '', label), el('strong', cls, value))
-    ret.append(d)
+    retMain.append(d)
   }
+  ret.append(retMain)
   statBox.append(ret)
   /* 评分规则那条细条：多套规则的角色，把它就地变成规则下拉（复用这一格，不另起大块）；
      单套仍是静态规则名。列表要异步拉，先按静态文案占位，回来再替换。 */
@@ -159,11 +162,25 @@ function renderDetail () {
   loadRubric(av, titleBar)
 
   const infoBox = el('div', 'arti-info')
+  /* ⚠️ 后端 allAttr 固定是 10 个槽位（Array.from({length:10})），没词条的位置是 {}。
+     判断「9 还是 10 词条」必须数真正有 key 的，不能看数组长度 —— 那样永远是 10，
+     9 词条那一行就永远出不来。 */
+  const attrCells = (av.allAttr || []).filter(a => a && a.key)
+  const hasTenth = attrCells.length >= 10
+  /* 统一 3 列网格，每格等宽（横向平分），文本左端·数值右端两端对齐。
+     · 10 词条：末行排成 [有效词条数][无效词条数][第 10 词条] —— 统计两格占左下角，
+       第 10 个副词条仍在右侧（跟上面 9 格同样的阅读顺序，不被挤到左边）；
+     · 9 词条：9 个副词条格 = 3 行 × 3 列，统计格另起一行、横向 2 格平分（各 1/2 宽）。 */
+  const statCells = [
+    statCell('eff', T('artisEffValid'), Number(av.score.effValid ?? 0).toFixed(1)),
+    statCell('inv', T('artisEffInvalid'), Number(av.score.effInvalid ?? 0).toFixed(1))
+  ]
   const allWrap = el('div', 'arti-all-attr')
   const allUl = el('ul', 'detail attr arti-attr')
-  /* 右边网格只取前 9 个；第 10 个走上面的溢出格，不在循环里 */
-  for (const a of (av.allAttr || []).slice(0, 9)) {
-    if (!a || !a.key) { allUl.append(el('li')); continue }
+  for (let i = 0; i < attrCells.length; i++) {
+    /* 10 词条时在第 10 格之前插统计格：第 4 行 = 统计两格 + 第 10 词条 */
+    if (hasTenth && i === 9) for (const c of statCells) allUl.append(c)
+    const a = attrCells[i]
     const li = el('li', a.cls || 'nouse')
     const title = el('span', 'title')
     if (a.eff && a.eff !== '-') title.append(el('i', 'eff', a.eff))
@@ -171,26 +188,18 @@ function renderDetail () {
     li.append(title, el('span', 'val', '+' + a.value))
     allUl.append(li)
   }
+  if (!hasTenth) {
+    /* 不足 9 种时用空格补齐到 3 的倍数，保证网格每行都是满的 3 格 */
+    while (allUl.children.length % 3 !== 0) allUl.append(el('li'))
+  }
   allWrap.append(allUl)
   infoBox.append(allWrap)
-  /* 后端文案表里已把上游那句「可使用 #角色名圣遗物 …」QQ 指令提示剪掉，这里不再拼 tag 插值。
-     第 10 个副词条（按有效值排最末那条）不进右边 3×3 网格，也不单独占一行 ——
-     它拼到「评分为喵喵版规则…」这行的右端：文案占左侧 flex:1，溢出格占右侧 33.33%
-     （与上方第 9 个词条的第 3 列同宽、右端对齐），二者同行。右边网格永远只排前 9 个。 */
-  const notice = el('div', 'arti-notice')
-  const noticeText = el('span', 'notice-text')
-  richText(noticeText, T('artisNotice'))
-  notice.append(noticeText)
-  const overflowAttr = (av.allAttr || [])[9]
-  if (overflowAttr && overflowAttr.key) {
-    const cell = el('div', 'arti-overflow ' + (overflowAttr.cls || 'nouse'))
-    const oTitle = el('span', 'title')
-    if (overflowAttr.eff && overflowAttr.eff !== '-') oTitle.append(el('i', 'eff', overflowAttr.eff))
-    oTitle.append(document.createTextNode(overflowAttr.label))
-    cell.append(oTitle, el('span', 'val', '+' + overflowAttr.value))
-    notice.append(cell)
+  if (!hasTenth) {
+    /* 9 词条：统计格单独成行，横向 2 格平分（各占一半宽） */
+    const statRow = el('ul', 'arti-stat-row')
+    for (const c of statCells) statRow.append(c)
+    infoBox.append(statRow)
   }
-  infoBox.append(notice)
 
   const markCont = el('div', 'arti-mark-cont')
   markCont.append(statBox, infoBox)
@@ -219,6 +228,16 @@ function renderDetail () {
   fitDetailScale()
   /* 字体/图片回流可能改高度，下一帧再算一次兜底 */
   requestAnimationFrame(fitDetailScale)
+}
+
+/*
+ * 统计格（有效词条数 / 无效词条数）：与副词条格同款的两端对齐单元格 —— 文本左端、数值右端。
+ * 返回 <li class="stat-cell ...">：10 词条时并进主网格第 4 行，9 词条时放进 .arti-stat-row 单独成行。
+ */
+function statCell (kind, label, value) {
+  const li = el('li', 'stat-cell ' + kind)
+  li.append(el('span', 'title', label), el('span', 'val', value))
+  return li
 }
 
 /*

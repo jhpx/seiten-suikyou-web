@@ -36,8 +36,10 @@ function fitLongText () {
       for (const t of titles) t.classList.toggle('two-line', cut(t))
     }
 
-    /* ② 评分表顶三词条：整张表统一降档（类名打在 li 上，角标和数值才好跟着缩） */
-    const cells = [...document.querySelectorAll('.arti-attr li')]
+    /* ② 评分表顶三词条：整张表统一降档（类名打在 li 上，角标和数值才好跟着缩）。
+       统计格（有效/无效词条数）也一起降 —— 同组字号必须一致，否则「词条 10px、汇总 14px」
+       看起来像排版出错；它们的角标留白/折行由 miao.css 的 .compact.stat-cell 覆盖修正。 */
+    const cells = [...document.querySelectorAll('.arti-attr li, .arti-stat-row li')]
     for (const li of cells) li.classList.remove('compact')
     const scoreOver = cells.some(li => {
       const t = li.querySelector('.title')

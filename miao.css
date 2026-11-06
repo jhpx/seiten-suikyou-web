@@ -377,7 +377,7 @@
   text-shadow: 1px 1px 1px #000;
   z-index: 2;
 }
-.data-info .time { margin-left: 5px; }
+.data-info strong { color: #ffd866; font-weight: bold; }
 
 /* ───────────────────────── 通用卡片底 (.cont) ───────────────────────── */
 
@@ -401,23 +401,35 @@
   flex: none;
   background: rgba(0, 0, 0, .4);
   box-shadow: 0 0 1px 0 #ccc, 2px 2px 4px 0 rgba(50, 50, 50, .8);
+  display: flex;
+  flex-direction: column;
 }
 .arti-stat-ret {
   width: 100%;
-  height: 78px;
-  padding: 12px 10px 2px;
-  display: table;
+  /* 双数字垂直居中，撑满评分卡高度（与右侧网格+通知行齐平）；评分规则行在卡底 */
+  flex: 1;
+  padding: 4px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
-.arti-stat-ret > div {
-  display: table-cell;
+/* 双数字：圣遗物总分 + 评级（两列等宽、中加细分隔线，数值 26px 醒目；标签在上） */
+.arti-stat-ret .ret-main {
+  display: flex;
+}
+.arti-stat-ret .ret-main > div {
+  flex: 1 1 0;
   text-align: center;
-  color: #fff;
+  color: #fff;   /* 评分白；评级由 mark-* 覆盖 */
+  padding: 0 4px;
 }
-.arti-stat-ret strong {
+.arti-stat-ret .ret-main > div + div {
+  border-left: 1px solid rgba(255, 255, 255, .14);
+}
+.arti-stat-ret .ret-main strong {
   display: block;
-  height: 35px;
-  font-size: 30px;
-  line-height: 32px;
+  font-size:26px;
+  line-height: 30px;
   font-weight: bold;
 }
 .arti-stat span { font-size: 12px; line-height: 20px; color: #bbb; }
@@ -430,53 +442,12 @@
   text-shadow: 0 0 2px #000;
   background: rgba(0, 0, 0, .5);
 }
-/* 第 10 个副词条（按有效值排最末那条）3×3 装不下，挪到评分卡下方、规则行之后的空位。
-   结构照抄右边 3×3 里的 <li>（角标/名字/数值三件套），只是改成整行宽的块级，好跟其它 9 个长得一样。 */
-/* 第 10 副词条：拼在「评分为喵喵版规则…」那行的右端，占右侧 33.33%（与上方第 9 词条第 3 列同宽、
-   右端对齐），不另起行。样式照搬右侧网格格，保证视觉一致。 */
-.arti-info .arti-notice .arti-overflow {
-  position: relative;
-  flex: 0 0 33.33%;
-  display: flex;
-  align-items: center;
-  height: 26px;
-  line-height: 26px;
-  font-size: 14px;
-  padding: 0 3px;
-  white-space: nowrap;
-  background: rgba(50, 50, 50, .4);
-}
-.arti-info .arti-notice .arti-overflow span { color: #fff; }
-.arti-info .arti-notice .arti-overflow.great span.title { color: #ffe699; }
-.arti-info .arti-notice .arti-overflow.nouse span { color: #888; }
-.arti-info .arti-notice .arti-overflow span.title {
-  padding-left: 36px;
-  width: 60%;
-  text-align: left;
-}
-.arti-info .arti-notice .arti-overflow span.title i.eff {
-  position: absolute;
-  left: 5px;
-  top: 6px;
-  width: 28px; height: 18px;
-  line-height: 18px;
-  font-size: 12px;
-  font-style: normal;
-  text-align: center;
-  border-radius: 5px;
-  background: rgba(0, 0, 0, .5);
-}
-.arti-info .arti-notice .arti-overflow span.val {
-  padding-right: 5px;
-  width: 40%;
-  font-size: 13px;
-  text-align: right;
-  color: #fff;
-}
+/* 第 10 个副词条已并进上面的统一 3 列网格（10 词条 = 4 行 × 3 列 = 12 格），
+   不再单独做溢出格 —— 旧的 .arti-overflow 样式已删。 */
 
 /* 右侧：有效词条汇总。上游写死 390px，这里用 flex:1 吃掉 185px 评分卡之外的剩余宽度。 */
 .arti-info { flex: 1; min-width: 0; }
-.arti-info .arti-all-attr { height: 78px; overflow: hidden; }
+.arti-info .arti-all-attr { height: auto; overflow: visible; }
 .arti-info .arti-all-attr .arti-attr {
   position: relative;
   /* 这个 ul 身上还挂着 .detail，会被上面 `.detail { position:absolute; right:20px }`
@@ -484,11 +455,14 @@
      分数卡盖掉一截。上游同样用 right/top 归零来解，照抄。 */
   right: 0;
   top: 0;
-  display: flex;
-  flex-wrap: wrap;
-  flex-direction: column;
-  /* 3 条 × 26px —— 和后一条（评分规则那行）严丝合缝，多了会压到它上面 */
-  height: 78px;
+  /* 统一 3 列网格：每格等宽（横向平分）。10 词组 = 4 行 × 3 = 12 格（含有效/无效统计格），
+     9 词组 = 3 行 + 统计格单独成行（.arti-stat-row）。格间 1px 暗缝靠容器深色底透出来。
+     ⚠️ 必须 minmax(0, 1fr)：裸 1fr 等于 minmax(auto, 1fr)，格内文字的 min-content 会把列撑宽
+     （实测 150/150/136 溢出容器、第三列被画布裁掉），就不是「横向平分」了。 */
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: rgba(0, 0, 0, .7);
   width: 100%;
   margin: 0; padding: 0;
   list-style: none;
@@ -507,19 +481,85 @@
   height: 26px;
   white-space: nowrap;
 }
-.arti-info ul.detail li:nth-child(even) { background: rgba(0, 0, 0, .4); }
-.arti-info ul.detail li:nth-child(odd) { background: rgba(50, 50, 50, .4); }
 .arti-info ul.detail li span { color: #fff; }
 .arti-info ul.detail li.great span.title { color: #ffe699; }
 .arti-info ul.detail li.nouse span { color: #888; }
+/* 统一单元格：每格等宽、两端对齐（文本左·数值右），同款底色 —— 格间 1px 暗缝已是分隔 */
 .arti-info .arti-all-attr .arti-attr li {
-  width: 33.33%;
   display: flex;
+  align-items: center;
   line-height: 26px;
   height: 26px;
   font-size: 14px;
   padding: 0 3px;
   white-space: nowrap;
+  background: rgba(50, 50, 50, .4);
+}
+/* ── 统计格（有效词条数 / 无效词条数）────────────────────────────────
+   两种落位共用这一套外观，保证 9 / 10 词条看起来是同一张表：
+     · 10 词条：并进主网格第 4 行左侧两格，第 10 个副词条排在同一行的右侧；
+     ·  9 词条：单独成一行 .arti-stat-row，横向 2 格平分（各占 1/2 宽）。
+   格内两端对齐：标签贴左、数值贴右。
+   「汇总」性质靠底色区分：比普通词条格更亮的一层白 + 一圈淡内描边，
+   不和上面 9 个词条格混成一片（box-shadow 不占盒尺寸，不会破坏 12 格等宽）。
+   ⚠️ 这两个格没有词条角标，别吃上面 `li span.title { padding-left:36px }` 的角标留白。 */
+.arti-info .arti-all-attr .arti-attr li.stat-cell,
+.arti-info .arti-stat-row li.stat-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 26px;
+  line-height: 26px;
+  font-size: 14px;
+  padding: 0 6px;
+  white-space: nowrap;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .21), rgba(255, 255, 255, .10));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .26);
+}
+.arti-info .arti-all-attr .arti-attr li.stat-cell span.title,
+.arti-info .arti-stat-row li.stat-cell span.title {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  padding-left: 0;
+  text-align: left;
+  color: #e6e6e6;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.arti-info .arti-all-attr .arti-attr li.stat-cell span.val,
+.arti-info .arti-stat-row li.stat-cell span.val {
+  flex: 0 0 auto;
+  width: auto;
+  padding-right: 0;
+  font-size: 14px;
+  text-align: right;
+  color: #fff;
+  font-weight: bold;
+}
+/* 无效词条数是「浪费掉的那部分」，压成灰色，与白色的有效词条数形成一好一坏 */
+.arti-info .arti-all-attr .arti-attr li.stat-cell.inv span.title,
+.arti-info .arti-stat-row li.stat-cell.inv span.title {
+  color: #8f8f8f;
+}
+.arti-info .arti-all-attr .arti-attr li.stat-cell.inv span.val,
+.arti-info .arti-stat-row li.stat-cell.inv span.val {
+  color: #8f8f8f;
+}
+/* 9 词条时统计行：2 列等宽（横向平分），格间 1px 暗缝；顶边 1px 暗缝让它与上方网格连成一张表。
+   行高 = 26 + 1（border-top）= 27；主网格 3 行（3×26 + 2×1）= 80 → 合计 107，
+   正好等于 10 词条时 4 行（4×26 + 3×1）= 107，左侧评分卡高度两种情形完全一致。 */
+.arti-info .arti-stat-row {
+  display: grid;
+  /* 同主网格：minmax(0, 1fr) 才是真正两等分，裸 1fr 会被文字 min-content 撑宽 */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: rgba(0, 0, 0, .7);
+  border-top: 1px solid rgba(0, 0, 0, .7);
 }
 /* .title 不设定位：角标按上游口径锚在 li 上（li 才是 relative） */
 .arti-info .arti-all-attr .arti-attr li span.title {
@@ -565,6 +605,26 @@
   font-size: 10px;
   padding-right: 2px;
 }
+/* 统计格跟着整表一起降字号（同组字号必须一致），但它没有词条角标 —— 不能吃 .compact 给
+   角标留的 31px 左内边距，也不该折两行。只把字号交给 .compact，其余保持统计格自己的排版。 */
+.arti-info .arti-all-attr .arti-attr li.compact.stat-cell span.title,
+.arti-info .arti-stat-row li.compact.stat-cell span.title {
+  /* 统计格外层 li 已有 6px 内边距，标题不再额外缩进（非 compact 时也是 0） */
+  padding-left: 0;
+  display: block;
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  font-size: 10px;
+  line-height: 26px;
+  white-space: nowrap;
+  align-content: normal;
+}
+.arti-info .arti-all-attr .arti-attr li.compact.stat-cell span.val,
+.arti-info .arti-stat-row li.compact.stat-cell span.val {
+  font-size: 10px;
+  padding-right: 0;
+}
 .arti-info .arti-all-attr .arti-attr li span.title i.eff {
   position: absolute;
   left: 5px;
@@ -574,6 +634,9 @@
   font-size: 12px;
   font-style: normal;
   text-align: center;
+  /* 角标是「100%」这种定宽小块：整表降档时 .compact 会给标题 overflow-wrap:anywhere，
+     不锁 nowrap 就会把 100% 拆成两行（100 / %），一整格看着像坏了 */
+  white-space: nowrap;
   border-radius: 5px;
   background: rgba(0, 0, 0, .5);
 }
@@ -584,33 +647,15 @@
   text-align: right;
   color: #fff;
 }
-/* 评分为喵喵版规则… 那行。默认（无第 10 词条）是带左内边距的暗条、文字居中，与 miao 一致；
-   拼进第 10 副词条时整行变 flex：左侧文案占 flex:1、右侧溢出格占 33.33%，二者同行，
-   右格与上方第 3 列（第 9 词条）对齐。 */
-.arti-info .arti-notice {
-  display: flex;
-  align-items: center;
-  height: 26px;
-  line-height: 26px;
-  margin-left: 1px;
-  padding: 0;
-  font-size: 10px;
-  color: #aaa;
-  background: rgba(0, 0, 0, .7);
-  overflow: hidden;
+/* 无效词条（nouse）的数值也压灰。
+   ⚠️ 上游那条 `.arti-info ul.detail li.nouse span { color:#888 }` 管不到这里 ——
+   它只有 (0,2,3) 的分量，被上面 `.arti-all-attr .arti-attr li span.val` 的 (0,3,2) 盖掉了，
+   结果 nouse 格只有名字是灰的、加成数值还是白的，看着像「有效词条」。这里补一条更具体的。 */
+.arti-info .arti-all-attr .arti-attr li.nouse span.val {
+  color: #888;
 }
-.arti-info .arti-notice .notice-text {
-  flex: 1 1 auto;
-  min-width: 0;
-  /* 照 miao 只留左边距 —— 文案（带 #角色圣遗物 那句）本来就贴着宽度上限，
-     两边都塞 10px 就会挤掉最后一截 */
-  padding-left: 10px;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.arti-info .arti-notice strong { color: #d3bc8e; font-weight: normal; padding: 0 3px; }
+/* 旧的 .arti-notice / .notice-eff / .arti-overflow 一整套已删除：
+   有效/无效词条数现在是统一网格里的 .stat-cell，不再单独做通知行。 */
 
 /* ───────────────────────── 武器 + 5 件圣遗物 (.artis) ───────────────────────── */
 
