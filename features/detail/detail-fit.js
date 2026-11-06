@@ -92,7 +92,9 @@ function fitLongText () {
 /* 把下拉的选中文字压进可用宽度。
  * 细条 .arti-class-title 只有 185px，左边还要放「评分规则」标签，留给下拉的只有 100~130px；
  * 各语言里中文最短、日文最长，差十来个像素就会被原生 select 从半个字切开（原生 select 不打省略号）。
- * 这里按 canvas 量出来的实际宽度逐档降字号（11 → 9.5）。极长的名字降到 9.5px 还放不下就让它切。 */
+ * 这里按 canvas 量出来的实际宽度逐档降字号（13 → 9.5）：
+ * 13px 是 CSS 里的基准（规则名要看得清），放不下才一档档退。
+ * 度量必须带上 fontWeight —— 下面下拉是 600 半粗，按 400 量会偏窄、刚好放不下时仍被切。 */
 let measureCtx = null
 function fitSelectText (sel) {
   const cs = getComputedStyle(sel)
@@ -100,8 +102,8 @@ function fitSelectText (sel) {
   const text = sel.options[sel.selectedIndex]?.text || ''
   if (avail <= 0 || !text) return
   if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d')
-  for (const size of [11, 10.5, 10, 9.5]) {
-    measureCtx.font = `${size}px ${cs.fontFamily}`
+  for (const size of [13, 12.5, 12, 11.5, 11, 10.5, 10, 9.5]) {
+    measureCtx.font = `${cs.fontWeight} ${size}px ${cs.fontFamily}`
     if (measureCtx.measureText(text).width <= avail) {
       sel.style.fontSize = `${size}px`
       return

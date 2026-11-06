@@ -1946,7 +1946,13 @@ body.on-detail #footmeta { display: none; }
   padding: 0 6px;
   text-align: left;
 }
-.arti-rubric-label { flex: none; font-size: 11px; line-height: 1; color: #bbb; white-space: nowrap; }
+/* 「评分规则」标签：这一行是解释评分的出处，要比右边的词条信息更清楚一点。
+   标签本身保持次要（浅色小字），把份量让给后面的规则名。 */
+.arti-rubric-label { flex: none; font-size: 11px; line-height: 1; color: #d3cdc0; white-space: nowrap; }
+/* 「评分规则」只是前缀，别和规则名一起变粗（.arti-class-title 现在是 600 半粗，
+   标签会继承过去；这里压回常规字重，让视觉重心落在「自动：甘雨-通用」上）。
+   ⚠️ 选择器要带 .arti-stat 才压得住上游 `.arti-stat span { font-size:12px; color:#bbb }`。 */
+.arti-stat .arti-rubric-label { font-weight: 400; color: #cfc9bd; }
 .arti-rubric-select {
   flex: 1;
   min-width: 0;
@@ -1960,8 +1966,11 @@ body.on-detail #footmeta { display: none; }
   background-position: right 2px center;
   background-size: 9px 9px;
   border: none;
-  color: rgba(255, 255, 255, .92);
-  font-size: 11px;
+  /* 规则名是「评分从哪来的」唯一线索：字号提到 13px、纯白、半粗。
+     条子只有 185px，放不下时 fitSelectText() 会逐档退字号，最长也不会被切半个字。 */
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
   font-family: inherit;
   text-align: left;
   appearance: none;

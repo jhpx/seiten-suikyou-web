@@ -395,7 +395,11 @@
 
 /* ───────────────────────── 圣遗物总分卡 (.arti-mark-cont) ───────────────────────── */
 
-.arti-mark-cont { display: flex; }
+/* clip-path 只裁**下缘**（负值＝向外扩，所以左右和上方 2px 投影保留）：
+   左卡的 `0 0 1px #ccc` 高光 + `2px 2px 4px` 投影会在底边外侧多出 5px，
+   和右侧网格平切的底边对不上，看着像左边多出一截。裁到 107px 底边后，
+   两侧底缘落在同一行；底部 1px 亮线由 .arti-class-title 自己补（见下）。 */
+.arti-mark-cont { display: flex; clip-path: inset(-8px -8px 0 -8px); }
 .arti-stat {
   width: 185px;
   flex: none;
@@ -433,14 +437,27 @@
   font-weight: bold;
 }
 .arti-stat span { font-size: 12px; line-height: 20px; color: #bbb; }
+/* 评分规则那一行：这是「分数怎么来的」的唯一出处，比右侧词条信息更该看清。
+   单规则角色直接显示「评分规则：xxx」，所以字号/颜色在这里定；多规则角色会换成
+   标签 + 下拉（.has-select），下拉的字号在 style.css 里，同样是 13px 半粗。
+   ⚠️ 高度必须是 26px（= 右侧统计格的行高），底边才对得齐：
+      之前写 22px，左条 y=672、右统计格 y=668，横着看就有一级 4px 的台阶。
+      右侧 9/10 词条两种情形总高都是 107，这里 26 之后左卡内部剩 81，正好一致。 */
 .arti-class-title {
-  height: 22px; line-height: 22px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, .9);
+  height: 26px; line-height: 26px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
   text-align: left;
   padding-left: 8px;
   text-shadow: 0 0 2px #000;
   background: rgba(0, 0, 0, .5);
+  /* 底缘那 1px 亮线要和右侧统计格（inset 0 -1px 0 rgba(255,255,255,.26)）完全一致，
+     否则同一行里左边是纯深色、右边带一条灰线，看着底边就是齐不了。 */
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .26);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* 第 10 个副词条已并进上面的统一 3 列网格（10 词条 = 4 行 × 3 列 = 12 格），
    不再单独做溢出格 —— 旧的 .arti-overflow 样式已删。 */
@@ -500,8 +517,15 @@
      · 10 词条：并进主网格第 4 行左侧两格，第 10 个副词条排在同一行的右侧；
      ·  9 词条：单独成一行 .arti-stat-row，横向 2 格平分（各占 1/2 宽）。
    格内两端对齐：标签贴左、数值贴右。
-   「汇总」性质靠底色区分：比普通词条格更亮的一层白 + 一圈淡内描边，
-   不和上面 9 个词条格混成一片（box-shadow 不占盒尺寸，不会破坏 12 格等宽）。
+   「汇总」性质靠「成组」区分：两格共用一个外框、底比词条格深一档，
+   中间的 1px 网格缝自然变成内部分隔 —— 不再每格各套一圈框（那样接缝会出现双线，
+   两格读起来像两个按钮，不像表格的页脚）。
+   ⚠️ 但它是**脚注**，不是主角：左侧评分/评级（26px）+ 评分规则才是主视觉。
+   所以这里的底和框都压在“刚好能认出是一块”的程度：底 .18、框 .26。
+   ⚠️ 字号必须和词条行完全一致：标签 14px、数值 13px。
+      试过把标签压到 12px 制造层级，结果同一张表里一大一小，看着像没对齐 ——
+      **降低存在感靠底色/边框，不靠字号**。
+   ⚠️ 用 inset box-shadow 画线而不是 border：不占盒尺寸，12 格仍严格等宽。
    ⚠️ 这两个格没有词条角标，别吃上面 `li span.title { padding-left:36px }` 的角标留白。 */
 .arti-info .arti-all-attr .arti-attr li.stat-cell,
 .arti-info .arti-stat-row li.stat-cell {
@@ -513,8 +537,24 @@
   font-size: 14px;
   padding: 0 6px;
   white-space: nowrap;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .21), rgba(255, 255, 255, .10));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .26);
+  background: rgba(0, 0, 0, .18);
+  box-shadow: none;
+}
+/* 两块合成一块面板：eff 只画左/上/下，inv 只画右/上/下。
+   各自少画靠内的一边，接缝处只剩网格本身的 1px 暗缝，不会出现双线。 */
+.arti-info .arti-all-attr .arti-attr li.stat-cell.eff,
+.arti-info .arti-stat-row li.stat-cell.eff {
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, .26),
+    inset 0 1px 0 rgba(255, 255, 255, .26),
+    inset 0 -1px 0 rgba(255, 255, 255, .26);
+}
+.arti-info .arti-all-attr .arti-attr li.stat-cell.inv,
+.arti-info .arti-stat-row li.stat-cell.inv {
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, .26),
+    inset 0 1px 0 rgba(255, 255, 255, .26),
+    inset 0 -1px 0 rgba(255, 255, 255, .26);
 }
 .arti-info .arti-all-attr .arti-attr li.stat-cell span.title,
 .arti-info .arti-stat-row li.stat-cell span.title {
@@ -533,7 +573,8 @@
   flex: 0 0 auto;
   width: auto;
   padding-right: 0;
-  font-size: 14px;
+  /* 与词条数值同号（13px），不再比上面的词条更响 */
+  font-size: 13px;
   text-align: right;
   color: #fff;
   font-weight: bold;
