@@ -76,7 +76,11 @@ function byChar (list) {
 /* 五个部位 = 五列，编号固定：1 花 2 羽 3 沙 4 杯 5 冠 */
 const POSITIONS = [1, 2, 3, 4, 5]
 
-/* 套装图是「.../imgs/<套装>/1.webp」（1 = 生之花），把末段换成部位号就是该部位的图 */
+/* 五个部位小图就在「.../thumbs/<setId>/」下的 1~5.webp：文件名末段就是部位号，
+   后端给的 s.icon 已经是 .../1.webp（1 号花图兼作套装代表图），只换末段即可，
+   pos=1 时换出来还是自己。
+   ⚠️ 目录名是 enka 的 setId；imgs/ 那层上游原图仍是中文目录，留给明细页
+      （100px 显示）用 —— 这里只有 18px（窄档 14px），96px 的预处理件够用。 */
 function slotIcon (setIcon, pos) {
   return setIcon ? setIcon.replace(/[^/]+$/, pos + '.webp') : ''
 }

@@ -99,76 +99,19 @@ function renderCharCard (av) {
  * 两套就是两行、每行各一个图标，所以「第几个图标 = 第几行字」是结构保证的，
  * 不靠算偏移 —— 名字折成两行时图标也跟着那一行居中。
  *
- * 为什么用**花**：每套都出全五件，部位图不缺；而五件里花（和羽）的造型差别最大 ——
- * 沙/杯/冠在不同套之间轮廓很接近，缩到 17cqw 分不出来。
- * 为什么不再把两套拼成一格（2026-11-07 放弃）：拼接要么各切一半、要么一朵压一朵，
- * 拼出来那张图既不是 A 套也不是 B 套，认不出来；宁可两个小图标，也别一张看不出是什么的图。
- * 为什么也不再用「左边单独一栏、上下两个等高槽」：槽的位置是算出来的，
- * 和右侧文字行高对不上（槽中心 9.5/28.6 vs 文字行中心 11.9/26.3），看着挤在中间。
+ * 用**花**（1 号位）当代表图：每套都出全五件，部位图不缺；而五件里花（和羽）的
+ * 造型差别最大 —— 沙/杯/冠在不同套之间轮廓很接近，缩到 17cqw 分不出来。
+ * thumbs/<setId>/1.webp 是已经裁掉透明边、等比缩到 96px 的预处理件
+ * （生成方式见 tools/gen_flower.py）：卡片、筛选框、刷取建议拿到的是同一张图，
+ * 主体大小天然一致，前端只管摆放。
  */
-/*
- * 图标素材四周的透明留白**不统一**：老素材内容占 92~95%（几乎满格），
- * 新素材只有 73~87%（风起之日 87%×73%、天之美赐 75%×73%、晨星与月的晓歌 76%×74%…）。
- * 同样缩到 19px，留白大的那套主体就明显小一圈，一排卡片看着参差。
- *
- * 这里**只改显示**：把透明边裁掉、等比放大到填满格子（原图一个字节不动）。
- * 系数 = 1 / max(内容占宽比, 内容占高比) —— 按「较宽的那一边刚好填满」算，
- * 所以裁掉的只有透明留白，不会切到花瓣本身。
- * 为什么要现算而不是写死一张表：这属于素材自带的属性，上游换图（tools/sync.py 同步
- * miao 素材）之后表就过期了；现算一次、按 src 缓存，以后新增套装自动跟上。
- */
-const iconTrim = new Map()
-
-function trimIcon (img) {
-  const apply = (k) => {
-    if (k > 1.02) img.style.transform = `scale(${k})`
-  }
-  const cached = iconTrim.get(img.src)
-  if (cached) { apply(cached); return }
-  const measure = async () => {
-    try {
-      if (!img.naturalWidth) await img.decode()
-      const W = img.naturalWidth
-      const H = img.naturalHeight
-      if (!W || !H) return
-      /* 缩到 64px 宽再扫：判留白不需要原分辨率，扫描量从几万像素降到几千 */
-      const w = 64
-      const h = Math.max(8, Math.round(64 * H / W))
-      const cv = document.createElement('canvas')
-      cv.width = w
-      cv.height = h
-      const ctx = cv.getContext('2d', { willReadFrequently: true })
-      ctx.drawImage(img, 0, 0, w, h)
-      const d = ctx.getImageData(0, 0, w, h).data
-      let x0 = w; let x1 = -1; let y0 = h; let y1 = -1
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          if (d[(y * w + x) * 4 + 3] > 16) {      /* 16 是「肉眼看不见」那档透明度，柔边也算内容 */
-            if (x < x0) x0 = x
-            if (x > x1) x1 = x
-            if (y < y0) y0 = y
-            if (y > y1) y1 = y
-          }
-        }
-      }
-      if (x1 < 0) return                          /* 整张全透明，别动 */
-      const k = 1 / Math.max((x1 - x0 + 1) / w, (y1 - y0 + 1) / h)
-      iconTrim.set(img.src, k)
-      apply(k)
-    } catch { /* 没加载好 / 解码失败：保持原样，顶多小一点，不报错 */ }
-  }
-  void measure()
-}
-
 function setIcon (src) {
-  /* 一个图标一个槽：槽自己 overflow:hidden，放大后的图在槽里被裁边，不会溢到右边的名字 */
   const slot = el('div', 'ci-slot')
   const i = el('img')
   i.src = src || ''
   i.alt = ''
   i.onerror = () => imgError(i)
   slot.append(i)
-  trimIcon(i)
   return slot
 }
 function renderArtiCard (av) {
