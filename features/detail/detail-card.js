@@ -5,6 +5,7 @@ import { el, setBg, T, weaponFallback, rankOf, weightClass, hitMark } from '../.
 
 /*
  * 武器卡：图标（右上溢出）+ 名字 + 精N Lv.N + 属性条 + 描述。
+ * 图标用 w.icon 的上游原图（这里显示 100px），不用 96px 的 thumb —— 那是首页小格用的。
  *
  * 「名字 / 精N Lv.N」两行是上限，别再往里加行：.head 高 90px，底部 26px 被属性条
  * （absolute bottom:0）占掉，剩下 64px 刚好装下这两行。曾加过一行星级，结果等级行被顶到 64px

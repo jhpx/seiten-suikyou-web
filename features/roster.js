@@ -1,5 +1,10 @@
 /*
- * 首页：账号头 + 角色网格 + 卡片。
+ * 首页：账号头 + 角色网格 + 卡片，实际上就是整个首屏。
+ * 名字里的 roster 是「花名册 / 阵容」：游戏里说 my roster，就是「我账号里这堆角色」。
+ * 三个视图按粒度分：roster（全体名单）→ detail（单人明细）→ sim（模拟推演）。
+ * 名字比内容窄了点：筛选、排序、刷取建议面板也都长在这个模块里。
+ * ⚠️ state.rosterMode 跟名单无关，它管的是卡片下半块显示武器还是圣遗物套装。
+ *
  * 渲染器在加载时注册进 core.reg（renderRoster / renderRosterGrid），由编排函数统一调用。
  */
 
@@ -77,7 +82,7 @@ function renderCharCard (av) {
   wText.append(meta)
 
   const wp = el('div', 'cc-weapon')
-  wp.append(setBg(el('div', 'cc-wicon'), av.weapon?.icon), wText)
+  wp.append(setBg(el('div', 'cc-wicon'), av.weapon?.thumb), wText)
 
   card.append(top, wp)
   card.addEventListener('click', () => openDetail(av.avatarId))

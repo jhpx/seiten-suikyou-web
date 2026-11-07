@@ -243,12 +243,13 @@ function weaponCard (av, editable) {
   const equipped = dirty ? currentAvatar()?.weapon : null
   const item = el('div', 'item weapon' + (dirty ? ' is-sim' : ''))
 
-  /* 左上图标不带角标：等级/精炼已进词条表，角标重复且会盖住竖长的武器图下半截。 */
+  /* 左上图标不带角标：等级/精炼已进词条表，角标重复且会盖住竖长的武器图下半截。
+     40px 小格用 weapon.thumb（96px 预处理件）；w.icon 原图留给明细页那张 100px 的卡。 */
   const icon = el('div', 'sim-wicon')
-  icon.append(setBg(el('div', 'sim-wimg'), (equipped?.icon || weapon.icon) || ''))
+  icon.append(setBg(el('div', 'sim-wimg'), (equipped?.thumb || weapon.thumb) || ''))
   item.append(icon)
 
-  if (dirty) item.append(simNewIcon(weapon.icon))
+  if (dirty) item.append(simNewIcon(weapon.thumb))
 
   const head = el('div', 'head')
   head.append(nameCell(equipped?.name, weapon.name || weapon.sName || T('noWeapon')))
