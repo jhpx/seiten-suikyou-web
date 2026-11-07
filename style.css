@@ -1143,69 +1143,57 @@ body {
 /* 精炼度用金色。白底上 #d3bc8e 太浅，压深一档才看得清 */
 .cc-wmeta b.refine { color: #a9853c; }
 
-/* 圣遗物套装块：白底，与武器块同构（flex:1 拉平排高、白底深字）——
-   切视图只换下半块内容，整排卡片高度不变。
-   没有图标栏（套装只有部位图、没有整套图，硬借一张部位图反而指代不明），
-   两行文字垂直居中。 */
+/* 圣遗物套装块：白底，和武器块同一个壳子（白底深字、flex:1）。
+   切视图时它顶替武器块的位置，最矮的那档高度与武器块一致。
+   没有单独的图标栏：图标就在每一行的最左边（见 .ci-slot），
+   所以「两套上下两行」天然和文字行齐。 */
 .cc-sets {
-  display: flex; align-items: center; gap: 3cqw;
+  display: flex; align-items: center;
   padding: 3cqw;
   background: #fff;
   flex: 1;
+  /* 白块给一个**下限**，不追高度一致（用户 2026-11-07：有长有短没关系，武器视图也这样，
+     但最矮的不能比以前矮）。下限取 40cqw = 旧版的「图标 34 + 上下内边距 3×2」：
+     单套只有一行时内容才 17cqw，没有这条下限白块会塌到 23cqw，卡片比旧版矮一截。
+     两套两行时 17×2 = 34 正好等于内容区，所以两行卡的下限天然就够，折行更多就让它自己长高。 */
+  min-height: 40cqw;
 }
-/* 套装图标那一栏：宽 25cqw、高 34cqw 照抄 .cc-wicon ——
-   两种视图的白块必须一样高，切视图时整排卡片不能跳。
-   高是**定值**（不是 min-height）：圣遗物图是居中的方图，栏高随内容变会让接缝位置飘。 */
-.cc-set-icon {
+/* 图标**就是文字行里的第一格**（2026-11-07 第三版，前两版都废了）：
+   ① 两套拼成一格 —— 拼出来那张图不是任何一套的样子，认不出；
+   ② 左边单独一栏、上下两个等高槽 —— 槽中心 9.5 / 28.6，右侧文字两行中心 11.9 / 26.3，
+      两者本来就对不上，两个图标看着挤在中间、也不跟字齐；
+   ③ 现在：每行 = 图标 + 名字 + 件数，同一行 `align-items:center` ——
+      图标和它那一行字永远同高、同中心，不用算任何偏移，也不怕名字以后再折行。
+      顺带把左边那栏从 25cqw 收到 17cqw：多出来的宽度还给名字。
+   ⚠️ 行与行之间**不留 gap**：白块内容区固定 34cqw（40 减去上下内边距 6），两行图标
+      17×2 正好塞满；再留 .8cqw 就顶出去 0.8，两行卡的白块会比单行卡高 0.9px。
+      间距靠图标自己的留白就够（素材内容占 92~95%，四周本来有空）。 */
+.ci-slot {
   position: relative; flex: 0 0 auto;
-  width: 25cqw; height: 34cqw;
+  /* 方的、且和素材同比例：contain 之后 trimIcon 的系数正好把内容填满，不会一边留白 */
+  width: 17cqw; height: 17cqw;
+  /* ⚠️ 必须 overflow:hidden：trimIcon 会把留白大的素材等比放大（最多 1.35 倍）撑满槽，
+     多出来的部分靠这里裁掉，不然会压到右边的名字 */
+  overflow: hidden;
 }
-.cc-set-icon img { width: 100%; height: 100%; object-fit: contain; }
-/* 2+2：**两朵花左右错开 + 沿两花中点的对角线切开**，各留大半 —— 两朵都看得清。
-   演进史（三版都试过、拼图肉眼选的）：
-   ① 各切一半硬拼 —— 两套的花在素材里大小/位置不一致，拼出来轮廓对不上，看着是两个半朵；
-   ② 一朵完整打底 + 第二套切角楔形 —— 外形是一朵花，但花是圆的、居中放格里，
-      楔形罩住的多是花瓣外的留白，切浅了右下认不出、切深了（-30%）又把左上盖没了；
-   ③ 定稿这版：两朵花**各往左右挪 14%**，中心错开之后沿中点对角线切，
-      每朵留在自己那侧的都是「过半 + 带花心」，不再有谁被盖住。
-   ⚠️ clip-path 在元素**本地**坐标系里生效、transform 之后才整体搬走 ——
-   第二朵往右挪了 s%，它的切线在本地就得往左补回 s%（斜边顶点取 (100-s)% / -s%），
-   不然切线会跟着图一起被挪走、对不上第一朵的边。 */
-.cc-set-icon.mix img { position: absolute; inset: 0; }
-
-.cc-set-icon.mix img:last-child {
-  transform: translate(10%, 10%);
-  clip-path: polygon(80% 10%, 100% 0%, 100% 100%, -20% 100%);
-}
-/* 一条斜向切线，自然切开两花 */
-.cc-set-icon.mix::after {
-  content: ''; 
-  position: absolute;
-  /* 因为图B向右向下各移了10%，两图中心点的中点需要跟着向右向下偏移 5% */
-  left: calc(50% + 5%); 
-  top: calc(50% + 5%); 
-  width: 28cqw; 
-  height: 1.5cqw;
-  transform: translate(-50%, -50%) rotate(-52.8deg);
-  background: linear-gradient(90deg,
-    transparent, rgba(169, 133, 60, .95) 20%, rgba(169, 133, 60, .95) 80%, transparent);
-  pointer-events: none;
+.ci-slot img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain;
+  /* 裁边的放大系数是图解码完才量出来的，晚一两帧才生效；
+     有个过渡就不会「先小后大」硬跳一下，看着像轻轻浮上来 */
+  transition: transform .12s ease;
 }
 
-.cc-sets-list { display: flex; flex-direction: column; gap: .8cqw; min-width: 0; flex: 1; }
-/* 字号 10.5cqw：与武器名同规矩，可折行、不断词（anywhere 兜底）。
-   件数**右锚定**（flex 两栏），不写在名字后面 —— 加了图标之后名字那栏只剩 66cqw
-   （6 字多），七字名必折行；件数混在折行文本里会粘在断开的半个词后面
-   （实测「角斗士的终幕 / 礼×2」），锚到右边则名字怎么折它都在同一列 */
-/* 件数**纵向居中**而不是贴第一行：名字被图标挤窄后会折行（七字名必然），
-   baseline 对齐让「×2」吊在第一行的基线上、下面空一整行，看着像属于第一行。
-   center 让它对着**整块名字**（不管几行）居中，读起来是「这一套几件」 */
+.cc-sets-list { display: flex; flex-direction: column; justify-content: center; min-width: 0; flex: 1; }
+/* 字号 10.5cqw，和武器名同一档（用户 2026-11-07 明确不要为了压高度把字缩小）。
+   代价是七字套装名（角斗士的终幕礼 / 华馆梦醒形骸记）会折行，白块比单套的高 8~16px ——
+   接受：卡片本来就有长有短，武器视图一样，只要最矮的那张不塌（见上面的 min-height）。 */
 .cc-set-row {
   display: flex; align-items: center; gap: 1.2cqw;
   font-size: 10.5cqw; line-height: 1.15; color: #2f2f33;
 }
 .cc-set-row span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-/* 件数金色：跟白块里「精1」同一支金，扫一眼就知道哪个数是件数 */
+/* 件数金色：跟白块里「精1」同一支金，扫一眼就知道哪个数是件数。 */
 .cc-set-n { flex: 0 0 auto; font-weight: 600; color: #a9853c; }
 .cc-sets-empty { font-size: 10.5cqw; color: #9a9aa2; }
 

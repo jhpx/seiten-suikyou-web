@@ -90,31 +90,86 @@ function renderCharCard (av) {
  *
  * 套装构成 = 花图标 + 名字 + 件数（「绝缘之旗印 ×4」），不搞缩写 —— 缩写（「绝4」）
  * 认不出来是哪套，而这批名字最长 7 字（华馆梦醒形骸记），10px 下一行放得下。
- * miao 的 sets 只收 >=2 件的（1 件不激活套装效果），所以最多两行：4件 或 2+2。
- * 一个套装都没带（或没带满 2 件的）时出「无圣遗物」占位，高度才整齐。
+ * 只列 2 件以上的套装（单件不激活效果，见下面 renderArtiCard 里的过滤），
+ * 所以最多两行：4件 或 2+2。一个套装都没带（或没带满 2 件的）时出「无圣遗物」占位，高度才整齐。
  */
 
 /*
- * 套装图标：一套 → 一张完整的花；两套（2+2）→ 两朵花**左右错开一点、
- * 沿两花中点的对角线切开**，各留大半（CSS 画那条斜切线）。两套的顺序跟文字行顺序一致。
+ * 套装图标：**一套一个图标，放在它自己那一行的最左边**（图标 + 名字 + 件数同一行）。
+ * 两套就是两行、每行各一个图标，所以「第几个图标 = 第几行字」是结构保证的，
+ * 不靠算偏移 —— 名字折成两行时图标也跟着那一行居中。
  *
  * 为什么用**花**：每套都出全五件，部位图不缺；而五件里花（和羽）的造型差别最大 ——
- * 沙/杯/冠在不同套之间轮廓很接近，缩到 24cqw 分不出来。
- * 为什么错开再切：切线过中点时，每朵留在自己那侧的都是「过半 + 带花心」——
- * 硬拼两个半朵轮廓对不上（素材大小/位置不一致），一朵打底盖另一朵则总有谁被盖住。
+ * 沙/杯/冠在不同套之间轮廓很接近，缩到 17cqw 分不出来。
+ * 为什么不再把两套拼成一格（2026-11-07 放弃）：拼接要么各切一半、要么一朵压一朵，
+ * 拼出来那张图既不是 A 套也不是 B 套，认不出来；宁可两个小图标，也别一张看不出是什么的图。
+ * 为什么也不再用「左边单独一栏、上下两个等高槽」：槽的位置是算出来的，
+ * 和右侧文字行高对不上（槽中心 9.5/28.6 vs 文字行中心 11.9/26.3），看着挤在中间。
  */
-function setIconBox (sets) {
-  const box = el('div', 'cc-set-icon' + (sets.length > 1 ? ' mix' : ''))
-  const piece = (src) => {
-    const i = el('img')
-    i.src = src || ''
-    i.alt = ''
-    i.onerror = () => imgError(i)
-    return i
+/*
+ * 图标素材四周的透明留白**不统一**：老素材内容占 92~95%（几乎满格），
+ * 新素材只有 73~87%（风起之日 87%×73%、天之美赐 75%×73%、晨星与月的晓歌 76%×74%…）。
+ * 同样缩到 19px，留白大的那套主体就明显小一圈，一排卡片看着参差。
+ *
+ * 这里**只改显示**：把透明边裁掉、等比放大到填满格子（原图一个字节不动）。
+ * 系数 = 1 / max(内容占宽比, 内容占高比) —— 按「较宽的那一边刚好填满」算，
+ * 所以裁掉的只有透明留白，不会切到花瓣本身。
+ * 为什么要现算而不是写死一张表：这属于素材自带的属性，上游换图（tools/sync.py 同步
+ * miao 素材）之后表就过期了；现算一次、按 src 缓存，以后新增套装自动跟上。
+ */
+const iconTrim = new Map()
+
+function trimIcon (img) {
+  const apply = (k) => {
+    if (k > 1.02) img.style.transform = `scale(${k})`
   }
-  box.append(piece(sets[0].icon))
-  if (sets.length > 1) box.append(piece(sets[1].icon))
-  return box
+  const cached = iconTrim.get(img.src)
+  if (cached) { apply(cached); return }
+  const measure = async () => {
+    try {
+      if (!img.naturalWidth) await img.decode()
+      const W = img.naturalWidth
+      const H = img.naturalHeight
+      if (!W || !H) return
+      /* 缩到 64px 宽再扫：判留白不需要原分辨率，扫描量从几万像素降到几千 */
+      const w = 64
+      const h = Math.max(8, Math.round(64 * H / W))
+      const cv = document.createElement('canvas')
+      cv.width = w
+      cv.height = h
+      const ctx = cv.getContext('2d', { willReadFrequently: true })
+      ctx.drawImage(img, 0, 0, w, h)
+      const d = ctx.getImageData(0, 0, w, h).data
+      let x0 = w; let x1 = -1; let y0 = h; let y1 = -1
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (d[(y * w + x) * 4 + 3] > 16) {      /* 16 是「肉眼看不见」那档透明度，柔边也算内容 */
+            if (x < x0) x0 = x
+            if (x > x1) x1 = x
+            if (y < y0) y0 = y
+            if (y > y1) y1 = y
+          }
+        }
+      }
+      if (x1 < 0) return                          /* 整张全透明，别动 */
+      const k = 1 / Math.max((x1 - x0 + 1) / w, (y1 - y0 + 1) / h)
+      iconTrim.set(img.src, k)
+      apply(k)
+    } catch { /* 没加载好 / 解码失败：保持原样，顶多小一点，不报错 */ }
+  }
+  void measure()
+}
+
+function setIcon (src) {
+  /* 一个图标一个槽：槽自己 overflow:hidden，放大后的图在槽里被裁边，不会溢到右边的名字 */
+  const slot = el('div', 'ci-slot')
+  const i = el('img')
+  i.src = src || ''
+  i.alt = ''
+  i.onerror = () => imgError(i)
+  slot.append(i)
+  trimIcon(i)
+  return slot
 }
 function renderArtiCard (av) {
   const rank = rankOf(av.score.markClass)
@@ -140,7 +195,11 @@ function renderArtiCard (av) {
   const top = el('div', 'cc-top')
   top.append(bg, face, elem, lv, score, badge)
 
-  const sets = (av.sets || []).slice().sort((a, b) => b.count - a.count)
+  /* 只认**激活的套装**（2 件起）：单件不激活套装效果，列出来只是噪音 ——
+     它会多占一行「××× ×1」、图标区也多画一个图标（4 件套 + 1 散件是最常见的穿法，
+     等于每张卡都显示成「两套」）。接口给的是全量件数（含 count: 1，
+     见 docs/API.md），过滤放在显示层，筛选项那边也是同一个口径。 */
+  const sets = (av.sets || []).filter(s => s.count >= 2).sort((a, b) => b.count - a.count)
   const sp = el('div', 'cc-sets')
   if (!sets.length) {
     sp.append(el('div', 'cc-sets-empty', T('noArtis')))
@@ -148,10 +207,11 @@ function renderArtiCard (av) {
     const box = el('div', 'cc-sets-list')
     for (const s of sets) {
       const row = el('div', 'cc-set-row')
-      row.append(el('span', '', s.name), el('b', 'cc-set-n', `×${s.count}`))
+      /* 图标是这一行的第一个格子：同一行垂直居中 → 天然和这行字对齐 */
+      row.append(setIcon(s.icon), el('span', '', s.name), el('b', 'cc-set-n', `×${s.count}`))
       box.append(row)
     }
-    sp.append(setIconBox(sets), box)
+    sp.append(box)
   }
 
   card.append(top, sp)
