@@ -522,9 +522,9 @@
    两格读起来像两个按钮，不像表格的页脚）。
    ⚠️ 但它是**脚注**，不是主角：左侧评分/评级（26px）+ 评分规则才是主视觉。
    所以这里的底和框都压在“刚好能认出是一块”的程度：底 .18、框 .26。
-   ⚠️ 字号必须和词条行完全一致：标签 14px、数值 13px。
-      试过把标签压到 12px 制造层级，结果同一张表里一大一小，看着像没对齐 ——
-      **降低存在感靠底色/边框，不靠字号**。
+   ⚠️ 字重和字号都要**比评分规则弱**（规则行 13px / 600）：
+      这里 13px / 400，且去掉数值的粗体 —— 「有效词条数只是 miao 的副产物」，
+      不该和规则名一样抢眼。13px 也是上限，别再往上调。
    ⚠️ 用 inset box-shadow 画线而不是 border：不占盒尺寸，12 格仍严格等宽。
    ⚠️ 这两个格没有词条角标，别吃上面 `li span.title { padding-left:36px }` 的角标留白。 */
 .arti-info .arti-all-attr .arti-attr li.stat-cell,
@@ -534,7 +534,7 @@
   justify-content: space-between;
   height: 26px;
   line-height: 26px;
-  font-size: 14px;
+  font-size: 13px;
   padding: 0 6px;
   white-space: nowrap;
   background: rgba(0, 0, 0, .18);
@@ -564,7 +564,8 @@
   padding-left: 0;
   text-align: left;
   color: #e6e6e6;
-  font-weight: 600;
+  /* 不上粗体：评分规则行才是 600，这里只能更轻 */
+  font-weight: 400;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -577,7 +578,8 @@
   font-size: 13px;
   text-align: right;
   color: #fff;
-  font-weight: bold;
+  /* 数值同样不加粗，靠颜色区分有效/无效即可 */
+  font-weight: 400;
 }
 /* 无效词条数是「浪费掉的那部分」，压成灰色，与白色的有效词条数形成一好一坏 */
 .arti-info .arti-all-attr .arti-attr li.stat-cell.inv span.title,
