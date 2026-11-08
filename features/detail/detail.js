@@ -124,18 +124,14 @@ function renderDetail () {
   }
   basic.append(cons)
 
-  /* 角色卡右下脚注：原来那个时间戳（与画布底部重复）已删，这里改放喵喵规则免责句，
-     腾出右侧通知行的左半区块给「有效词条数」。 */
-  const info = el('div', 'data-info')
-  richText(info, T('artisNotice'))
-  basic.append(info)
+  /* 喵喵规则免责句不再浮在角色卡右下角：它和「评分规则」一起放在评分区最下面的说明行。 */
   cont.append(basic)
 
   /* ===== .profile-detail ===== */
   const pd = el('div', 'profile-detail')
 
-  /* 左评分卡：只留「总分 / 评级」两个英雄数字（垂直居中、撑满整卡高度，与右侧网格+通知行齐平），
-     评分规则下拉在卡底。有效词条数已挪到右侧通知行左半区块。 */
+  /* 左评分卡：只留「总分 / 评级」两个英雄数字（垂直居中、撑满整卡高度，与右侧词条网格齐平）。
+     有效词条与五件部件的统计、以及评分规则与免责句，都在下面另起两行。 */
   const statBox = el('div', 'arti-stat')
   const ret = el('div', 'arti-stat-ret')
   const retMain = el('div', 'ret-main')
@@ -151,36 +147,22 @@ function renderDetail () {
   ret.append(retMain)
   statBox.append(ret)
   /* 评分规则那条细条：多套规则的角色，把它就地变成规则下拉（复用这一格，不另起大块）；
-     单套仍是静态规则名。列表要异步拉，先按静态文案占位，回来再替换。 */
+     单套仍是静态规则名。它现在和免责句一起放在最下面的「说明行」，
+     所以先建好、不急着塞进左卡。规则列表要异步拉，等说明行挂上后再调 loadRubric。 */
   const titleBar = el('div', 'arti-class-title')
   /* 显示后端拼好的 rubricLabel（当前语言的「角色名-规则名」）；classTitle 是 miao 的中文原文，
      只在后端认不出这条规则时才会等于它 */
   const ruleName = av.score.rubricLabel || av.score.classTitle
   /* 冒号也按语言来（英文半角、中日韩全角），所以整句交给一个键，不在前端拼 */
   if (ruleName) titleBar.textContent = T('ruleLine', { name: ruleName })
-  statBox.append(titleBar)
-  loadRubric(av, titleBar)
 
   const infoBox = el('div', 'arti-info')
-  /* ⚠️ 后端 allAttr 固定是 10 个槽位（Array.from({length:10})），没词条的位置是 {}。
-     判断「9 还是 10 词条」必须数真正有 key 的，不能看数组长度 —— 那样永远是 10，
-     9 词条那一行就永远出不来。 */
+  /* ⚠️ 后端 allAttr 固定是 10 个槽位（Array.from({length:10})），没词条的位置是 {}，
+     所以要数真正有 key 的，不能看数组长度。 */
   const attrCells = (av.allAttr || []).filter(a => a && a.key)
-  const hasTenth = attrCells.length >= 10
-  /* 统一 3 列网格，每格等宽（横向平分），文本左端·数值右端两端对齐。
-     · 10 词条：末行排成 [有效词条数][无效词条数][第 10 词条] —— 统计两格占左下角，
-       第 10 个副词条仍在右侧（跟上面 9 格同样的阅读顺序，不被挤到左边）；
-     · 9 词条：9 个副词条格 = 3 行 × 3 列，统计格另起一行、横向 2 格平分（各 1/2 宽）。 */
-  const statCells = [
-    statCell('eff', T('artisEffValid'), Number(av.score.effValid ?? 0).toFixed(1)),
-    statCell('inv', T('artisEffInvalid'), Number(av.score.effInvalid ?? 0).toFixed(1))
-  ]
   const allWrap = el('div', 'arti-all-attr')
   const allUl = el('ul', 'detail attr arti-attr')
-  for (let i = 0; i < attrCells.length; i++) {
-    /* 10 词条时在第 10 格之前插统计格：第 4 行 = 统计两格 + 第 10 词条 */
-    if (hasTenth && i === 9) for (const c of statCells) allUl.append(c)
-    const a = attrCells[i]
+  for (const a of attrCells) {
     const li = el('li', a.cls || 'nouse')
     const title = el('span', 'title')
     if (a.eff && a.eff !== '-') title.append(el('i', 'eff', a.eff))
@@ -188,22 +170,73 @@ function renderDetail () {
     li.append(title, el('span', 'val', '+' + a.value))
     allUl.append(li)
   }
-  if (!hasTenth) {
-    /* 不足 9 种时用空格补齐到 3 的倍数，保证网格每行都是满的 3 格 */
-    while (allUl.children.length % 3 !== 0) allUl.append(el('li'))
-  }
+  /* 不足 3 的倍数时补空格，保证每行都是满的 3 格 */
+  while (allUl.children.length % 3 !== 0) allUl.append(el('li'))
   allWrap.append(allUl)
   infoBox.append(allWrap)
-  if (!hasTenth) {
-    /* 9 词条：统计格单独成行，横向 2 格平分（各占一半宽） */
-    const statRow = el('ul', 'arti-stat-row')
-    for (const c of statCells) statRow.append(c)
-    infoBox.append(statRow)
-  }
+  /* 免责句和评分规则是一组说明文字，一起沉到最下面的说明行，这里先建好 */
+  const notice = el('div', 'arti-notice')
+  richText(notice, T('artisNotice'))
 
   const markCont = el('div', 'arti-mark-cont')
   markCont.append(statBox, infoBox)
   pd.append(markCont)
+
+  /* 有效 / 总词条用的是「当量」，不是「条数」：每条词条按
+     Σ(实际值 / 该词条最大档位) / 0.85 折算，所以带小数。
+     ÷0.85 那一步是把「按最大档算」换成「按均值算」—— 单档当量落在 0.82~1.18，均值正好 1.0。
+     副作用：有效 + 无效的和**不是固定值**（不是 45 条），而是这套圣遗物实际强化出来的总量，
+     初始 3/4 条、没满级、四星件都会改这个数，实测在 21~46 之间。
+     ⚠️ 数值由后端 artifactOf 用**原始 eff** 按件算好，前端只做 toFixed(1)。
+        别拿 subs[].eff 自己累加：那是四舍五入过的展示串，20 条加起来会漂。 */
+  const parts = (av.artifacts || []).map(a => ({
+    pos: a.pos,
+    icon: a.icon,
+    valid: Number(a.effValid ?? 0),
+    total: Number(a.effTotal ?? 0)
+  }))
+  /* 总栏（左边那格「38.6 / 45.8」）优先用 score 里的角色级权威值：它和下面五件部件格
+     同源、只是按角色求和，所以「总栏 = 五格之和」能对上账。
+     「总」= 有效 + 无效 —— 无效词条现在不单独显示，但它是分母的一部分，不能丢。
+     只有老接口没带 effValid/effInvalid 时才退回把五件加起来，避免整块显示空白。 */
+  const sumValid = Number(av.score?.effValid ?? NaN)
+  const sumInvalid = Number(av.score?.effInvalid ?? NaN)
+  const hasScoreEff = Number.isFinite(sumValid) && Number.isFinite(sumInvalid)
+  const grandValid = hasScoreEff ? sumValid : parts.reduce((s, p) => s + p.valid, 0)
+  const grandTotal = hasScoreEff ? sumValid + sumInvalid : parts.reduce((s, p) => s + p.total, 0)
+
+  /* 紧贴词条网格的一行：左边有效/总词条占 185px，跟左评分卡同一列；
+     右边五件部件占满剩下的宽度，跟上面的词条网格同一列。 */
+  const partsRow = el('div', 'arti-parts-row')
+  const totalCell = el('div', 'parts-total')
+  /* 「9.3 / 9.3」：斜杠前后各留一个空格，两截数字才不会黏在一起。
+     总栏和部件格用同一个写法，看起来是同一组数。 */
+  const ratioText = (valid, total) => total ? `${valid.toFixed(1)} / ${total.toFixed(1)}` : '—'
+  totalCell.append(
+    el('span', 'title', T('artisEffValid')),
+    el('span', 'val', ratioText(grandValid, grandTotal))
+  )
+  partsRow.append(totalCell)
+  const partGrid = el('ul', 'parts-grid')
+  for (const p of parts) {
+    const li = el('li', 'part-cell')
+    /* 用这件圣遗物自己的部位图认身份，不写文字：五种语言的部位名长短差太多，
+       78px 一格装不下英文，图标还省掉十个 i18n 键。没装备的件留空位即可。 */
+    if (p.icon) li.append(setBg(el('div', 'img'), p.icon))
+    li.append(el('span', 'val', ratioText(p.valid, p.total)))
+    partGrid.append(li)
+  }
+  partsRow.append(partGrid)
+  pd.append(partsRow)
+
+  /* 说明行：左「评分规则」+ 右「喵喵规则免责句」。
+     原来这两句紧贴词条网格、统计行在最下面；现在统计行提到紧贴网格，
+     说明文字整体沉到底 —— 数字一行、说明一行，读起来不用来回跳。
+     ⚠️ 两行都是 185px + flex:1 的分栏，起点和上面 markCont 完全一致。 */
+  const noteRow = el('div', 'arti-note-row')
+  noteRow.append(titleBar, notice)
+  pd.append(noteRow)
+  loadRubric(av, titleBar)
 
   /* 武器卡：图标（右上溢出）+ 名 + 精N·Lv.N + 主副属性 + 精炼描述。
      只要装备了就出这张卡（state 非 'none'）—— 元数据不认识这把时名字/属性/描述都是空的，
@@ -228,16 +261,6 @@ function renderDetail () {
   fitDetailScale()
   /* 字体/图片回流可能改高度，下一帧再算一次兜底 */
   requestAnimationFrame(fitDetailScale)
-}
-
-/*
- * 统计格（有效词条数 / 无效词条数）：与副词条格同款的两端对齐单元格 —— 文本左端、数值右端。
- * 返回 <li class="stat-cell ...">：10 词条时并进主网格第 4 行，9 词条时放进 .arti-stat-row 单独成行。
- */
-function statCell (kind, label, value) {
-  const li = el('li', 'stat-cell ' + kind)
-  li.append(el('span', 'title', label), el('span', 'val', value))
-  return li
 }
 
 /*
