@@ -1,10 +1,10 @@
 /*
  * UID 输入历史：用 localStorage 存最近用过的 UID，渲染成 <datalist>。
  * 原生 autocomplete 对 preventDefault 的表单不可靠，所以自己维护。
- * renderUidHistory 注册进 core.reg，由 bootstrap 的 boot() 调用。
+ * bootstrap 启动时直接调用 renderUidHistory / persistUid，不走 core.reg。
  */
 
-import { $, el, state, reg } from '../core.js'
+import { $, el, state } from '../core.js'
 
 const UID_HISTORY_KEY = 'st.uids'
 
@@ -39,6 +39,4 @@ function persistUid (uid) {
   rememberUid(uid)
 }
 
-reg.renderUidHistory = renderUidHistory
-
-export { uidHistory, renderUidHistory, rememberUid, persistUid }
+export { renderUidHistory, persistUid }

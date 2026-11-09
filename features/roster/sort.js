@@ -11,7 +11,8 @@
  * 弹窗里勾的是草稿，确定才写回 —— 和筛选同一个规矩，不然每点一下箭头整页闪一次。
  */
 
-import { $, state, T, el, closeMenus, closeModal, openDialog, refreshRosterGrid, rosterElems, rosterRanks } from '../core.js'
+import { state, T, el, refreshRosterGrid } from '../../core.js'
+import { closeMenus, openDialog } from '../dialog.js'
 
 /* 排序字段：顺序固定，但谁能进排序链、排第几由用户点。只存 i18n 键。 */
 const SORT_FIELDS = [
@@ -139,21 +140,4 @@ function sortAvatars (list) {
   })
 }
 
-function filteredAvatars (view) {
-  const f = state.filter
-  /* 多选：维度内 OR（选了火+水 → 火或水都留）、维度间 AND（元素和等级同时成立）。
-     每个维度空数组 = 不限。 */
-  return view.avatars
-    .filter(a => !f.elem.length || f.elem.includes(a.elem))
-    .filter(a => !f.rank.length || f.rank.includes(a.score.markClass))
-    /* 权重筛选：这一项权重不为 0 就算命中 —— 表里给 0 的，就是这个角色不吃这条属性 */
-    .filter(a => !f.weight.length || f.weight.some(w => (a.charWeight?.[w] || 0) !== 0))
-    /* 稀有度（角色星级）：选了 4★ 就只留 4★；同时选 4★+5★ 等于这两个都放进来（维度内 OR） */
-    .filter(a => !f.star.length || f.star.includes(String(a.star || 5)))
-    /* 圣遗物套装：身上**穿满 2 件**该套装才算命中（维度内 OR）。
-       单件不激活套装效果，一件也当「穿了这套」会筛出一堆沾边的角色。
-       身份用权威 setId（缺了退回 nameZh），同一个套不会裂成两组 */
-    .filter(a => !f.set.length || (a.sets || []).some(s => s.count >= 2 && f.set.includes(String(s.setId ?? s.nameZh))))
-}
-
-export { sortAvatars, filteredAvatars, sortPanel }
+export { sortAvatars, sortPanel }

@@ -1,0 +1,54 @@
+/* ============================================================================
+ * form.css · 输入控件
+ *
+ * .field 输入框 / 下拉 / 占位符 / focus 晕圈，顶栏与模拟页表单共用。
+ *
+ * 来源：style.css:162-207（由原 style.css / miao.css 按行区间拆出，规则内容未改写）
+ * 加载顺序：第 2 / 17 个。index.html 里的 <link> 顺序就是层叠顺序，
+ * 后面的文件覆盖前面同特异性的规则；调整顺序前请先看 docs 里的顺序契约。
+ * ============================================================================ */
+.query .field.locale { justify-self: end; }
+.field { display: flex; flex-direction: column; gap: 3px; }
+/* 标签改用金调暗版（游戏里属性名那种金色小字）+ 拉开字距，不用灰蓝 --ink-3 ——
+   那个灰蓝和顶栏原来那套是一伙的，下面一处都没有。
+   line-height 写死 13.5px 不是随手取的：11px 字继承下来的 1.5 倍是 16.5px，
+   再加 gap 与定高 36px 的输入框，整个 query 行会比改前高 1.3px ——
+   而 .top 是 sticky（**照常占正常流**），这 1.3px 会推着下面全部内容下移，
+   像素对拍时整页都脏。13.5 + 2 + 36 = 51.5，正好是改前那一行的高度。 */
+.field span { font-size: 11px; line-height: 13.5px; color: rgba(211, 188, 142, .75); letter-spacing: .14em; }
+/* 深色玻璃输入控件（顶栏输入框/下拉）共用外观：金描边 + 内阴影 + focus 金晕。
+   输入框与下拉统一 36px 定高（原来 input 31 / select 33，同一行底对齐后顶边差 2px；定高 + 垂直居中严丝合缝），垂直 padding 归零全交 height。 */
+.field input, .field select {
+  padding: 0 12px;
+  background: var(--ctrl-bg);
+  border: 1px solid var(--gold-line);
+  color: var(--cream);
+  border-radius: 10px;
+  font-size: 13px;
+  outline: none;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .45);
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+  height: 36px; width: 100%;
+}
+/* placeholder 是提示不是内容：压到约 3.9:1，够看但不跟真值抢 */
+.field input::placeholder { color: rgba(240, 236, 225, .45); }
+.field input:hover, .field select:hover { border-color: rgba(211, 188, 142, .5); }
+/* focus 走一圈金晕。原来描的是 --accent 蓝边，蓝在这套配色里已经退场了 */
+.field input:focus, .field select:focus {
+  border-color: var(--gold-line-hi);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .45), 0 0 0 3px rgba(211, 188, 142, .13);
+  background: rgba(30, 35, 47, .95);
+}
+/* 原生下拉箭头在深底上是灰的、还紧贴右边缘。换成内联的金色细箭头（data URI，不新引文件），
+   并让出 padding-right，免得选中的文字压到箭头上。 */
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23d3bc8e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+/* 展开后的列表由系统画，不写这条在 Windows/Chrome 上就是一片刺眼的白 */
+.field select option { background: #1a1f2b; color: #e7e0d0; }

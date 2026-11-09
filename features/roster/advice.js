@@ -16,7 +16,8 @@
  * 件数/人数用两个内联小图，于是每行只剩「人名 + 一串部位图带分数」。
  */
 
-import { state, T, el, setBg, openDetail, closeMenus, reg } from '../core.js'
+import { state, T, el, setBg, openDetail, reg } from '../../core.js'
+import { closeMenus } from '../dialog.js'
 
 /* 口径开关：SS 件算不算。默认**不算** —— SS 已经接近毕业，算进去只会把「还差多少」摊薄。
    接口一次给了两份（advice / advice.withSS），所以切换只是换一份数据重画，不走网络。 */
@@ -244,7 +245,7 @@ function scopeToggle () {
 }
 
 /* 排序做成下拉：这里照人物筛选条那套自绘（`.rf-dd` + `.rf-menu` + `.rf-opt`）：点面板外面、按 Esc、
-   选完一项都会走 core.js 的 closeMenus —— 它认的就是 `.rf-dd`，所以容器必须挂这个类。*/
+   选完一项都会走 dialog.js 的 closeMenus —— 它认的就是 `.rf-dd`，所以容器必须挂这个类。*/
 function sortSelect () {
   const dd = el('div', 'rf-dd rf-dd-end advice-sortdd')
   const btn = el('button', 'advice-sortfield')

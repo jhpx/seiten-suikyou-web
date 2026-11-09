@@ -1,9 +1,9 @@
 /*
  * 界面多语言：拉取 / 切换 / 应用静态文案。
- * 渲染器注册进 core.reg（loadMeta / applyStaticUi），由 bootstrap 的 boot() 调用。
+ * bootstrap 启动时直接调用 loadMeta / applyStaticUi / changeLocale，不走 core.reg。
  */
 
-import { $, state, T, api, uidApiUrl, syncUrl, showLoading, renderAll, banner, reg } from '../core.js'
+import { $, state, T, api, uidApiUrl, syncUrl, showLoading, renderAll, banner } from '../core.js'
 
 /* 拉一次界面文字表 —— 语言解析的规则在后端，这里只负责拿回来 */
 async function loadMeta (locale) {
@@ -39,8 +39,5 @@ function applyStaticUi () {
   $('localeLabel').textContent = T('localeLabel')
   $('uid').placeholder = T('uidLabel')
 }
-
-reg.loadMeta = loadMeta
-reg.applyStaticUi = applyStaticUi
 
 export { loadMeta, changeLocale, applyStaticUi }

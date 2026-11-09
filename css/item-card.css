@@ -1,0 +1,443 @@
+/* ============================================================================
+ * item-card.css · 武器与圣遗物卡
+ *
+ * .artis / .item：武器卡、五件圣遗物卡、词条表、档位色 .mark-*、.pd-scored-at 数据时间。
+ *
+ * 来源：miao.css:732-1166（由原 style.css / miao.css 按行区间拆出，规则内容未改写）
+ * 加载顺序：第 16 / 17 个。index.html 里的 <link> 顺序就是层叠顺序，
+ * 后面的文件覆盖前面同特异性的规则；调整顺序前请先看 docs 里的顺序契约。
+ * ============================================================================ */
+/* ───────────────────────── 武器 + 5 件圣遗物 (.artis) ───────────────────────── */
+
+.artis {
+  display: flex;
+  flex-wrap: wrap;
+  width: 600px;
+  margin: 10px -5px 5px;
+}
+.artis .item {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  background: url("../assets/common/cont/card-bg.png") top left repeat-x;
+  background-size: auto 100%;
+  box-shadow: 0 0 1px 0 #ccc, 2px 2px 4px 0 rgba(50, 50, 50, .8);
+}
+/* 每张卡 185px，600px 画布下正好放 3 列 */
+.artis .item.arti { width: 185px; margin: 5px; overflow: visible; }
+/* 武器卡高度从「写死 190」改成「至少 190」：英文武器名（«Thrilling Tales of Dragon Slayers»）
+   在 170px 的宽度里一行放不下，要折两行；头高固定 90 的话第二行会压到「精N Lv.N」和属性条上。
+   放成 auto 后卡片跟着长 15px，同排的圣遗物卡被 flex 拉伸到同高，底部对齐不受影响。 */
+.artis .item.weapon { width: 185px; min-height: 190px; margin: 5px; overflow: visible; }
+
+/* ── 武器卡 ── */
+.artis .weapon .img {
+  position: absolute;
+  top: -10px; right: -10px;
+  width: 100px; height: 100px;
+  z-index: 2;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.artis .weapon .head {
+  position: relative;
+  /* 90px 是「名字一行 + 精N Lv.N」的高度；名字折两行时让头自己长高（属性条是 absolute bottom:0，
+     会跟着贴到新的底边），不这么改第二行就会被「精N Lv.N」盖住。 */
+  min-height: 90px;
+  padding: 15px 0 10px 15px;
+  z-index: 3;
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(to right, rgba(0, 0, 0, .7), rgba(0, 0, 0, .7), rgba(25, 25, 25, .5), rgba(25, 25, 25, 0), rgba(25, 25, 25, 0));
+}
+.artis .weapon .head strong { display: block; font-size: 15px; margin-bottom: 3px; }
+/* 名字折两行时（detail.js 打 .name-2l）：头部底部要给属性条（absolute bottom:0，高 26px）让路，
+   否则「精N Lv.N」那行会被属性条压住。36 = 属性条 26 + 原来的 10。 */
+.artis .item.weapon.name-2l .head { padding-bottom: 36px; }
+.artis .weapon .head > span { display: block; }
+.artis .weapon span.info { font-size: 14px; margin-bottom: 8px; }
+.artis .weapon .weapon-attr {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  display: flex;
+  width: 100%;
+  height: 26px;
+  line-height: 26px;
+  padding: 0 5px 0 10px;
+  font-size: 14px;
+  text-align: center;
+  background: rgba(0, 0, 0, .3);
+  text-shadow: 0 0 1px #000, 1px 1px 2px rgba(0, 0, 0, .7);
+}
+.artis .weapon .weapon-attr div { width: 50%; text-align: left; }
+.artis .weapon .weapon-attr div span { color: #ffe699; font-weight: bold; }
+/* 主副属性一行放不下（English «Energy Recharge 45.9%» 在 85px 里必然折行，
+   而这一条写死 26px，折了就溢出压到卡面上）：改成「名字一行 / 数值一行」的小字，
+   两行 12px = 24px，仍在 26px 里。中文「基础攻击力 510」一行装得下，不会走到这里。 */
+.artis .weapon .weapon-attr div.stacked {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* 10px 是这条的实用下限：名字本身可能就占满一整行（English «Energy Recharge» 在 85px 里装不下，
+     日本語「元素チャージ効率」也差一点），11px 会折成三行（名字两行 + 数值一行 = 36px），
+     把 26px 的行撑破、压到上面的「精N Lv.N」。10px 下两者都刚好一行，两行 24px 塞进 26px。 */
+  font-size: 10px;
+  line-height: 12px;
+}
+.artis .weapon .weapon-desc-cont {
+  height: 100px;
+  overflow: hidden;
+  border-radius: 0 0 10px 10px;
+  background: rgba(0, 0, 0, .4);
+}
+.artis .weapon .weapon-desc {
+  height: 100px;
+  padding: 6px 5px 7px 10px;
+  color: #bbb;
+  font-size: 12px;
+  font-weight: normal;
+  display: table-cell;
+  vertical-align: middle;
+  word-break: break-all;
+}
+.artis .weapon .weapon-desc nobr {
+  display: inline-block;
+  height: 16px; line-height: 16px;
+  padding: 0 3px;
+  margin: 0 2px;
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: center;
+  color: #ffe699;
+  background: rgba(0, 0, 0, .5);
+}
+/* 精炼徽章：1~5 阶各一色（照 miao） */
+.artis .weapon .affix {
+  display: inline-block;
+  /* 原来是写死 width:40px —— 中文「精5」/ 英文「R5」装得下，日文「精錬5」(42px)、韩文「재련5」装不下，
+     徽章内部折成两行（高 39px），把「Lv.90」那行顶到下面的属性条上。
+     改成最小宽度 + 不换行：短词还是 40px，长词把胶囊撑开一点（信息行有富余）。 */
+  min-width: 40px;
+  white-space: nowrap;
+  margin-right: 5px;
+  padding: 0 7px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #000;
+}
+.affix-1 { background: #ebebebaa; box-shadow: 0 0 4px 0 #a3a3a3 inset; }
+.affix-2 { background: #ddffdeaa; box-shadow: 0 0 4px 0 #51b72fbd inset; }
+.affix-3 { background: #ddebffaa; box-shadow: 0 0 4px 0 #396cdecf inset; }
+.affix-4 { background: #ffddf0aa; box-shadow: 0 0 4px 0 #c539debf inset; }
+.affix-5 { background: #fff6dd; box-shadow: 0 0 4px 0 #deaf39 inset; }
+
+/* 武器星级：一张竖排 5 星的图，按星级切。
+   ⚠️ 我们的模板**不渲染**这个元素，两条理由：
+   ① 参考图里武器名下面直接就是「精1 Lv.90」，没有星级行 —— 拿金色像素扫过参考图那一带，是 0；
+   ② .head 只有 90px 预算（名字 21 + 等级行 20 + 属性条 26 + 上下内边距 25），塞不下这 20px，
+      硬塞就把等级行顶到 64px 以下，整行压进属性条里。
+   规则原样留着：本文件是上游 profile-detail.css 的照抄，删掉下次对照就看不出差异了。 */
+.artis .weapon .star {
+  display: inline-block;
+  width: 100px; height: 20px;
+  background: url("../assets/common/item/star.png") no-repeat;
+  background-size: 100px 100px;
+  transform: scale(.8);
+  transform-origin: 0 10px;
+}
+.star-1 { background-position: 0 0; }
+.star-2 { background-position: 0 -20px; }
+.star-3 { background-position: 0 -40px; }
+.star-4 { background-position: 0 -60px; }
+.star-5 { background-position: 0 -80px; }
+
+/* ── 圣遗物卡 ── */
+.artis .item.arti .arti-icon {
+  position: absolute;
+  top: -12px; right: 0;
+  width: 90px; height: 90px;
+  z-index: 2;
+}
+/* 名字和分数要压在图标之上 —— 参考图就是「字盖图」：图标自带 45° 淡出遮罩，
+   白字连描边压上去照样清晰；反过来图标盖字，名字后半截就成了一道糊影子
+   （实测 6 字名重叠 10px、7 字名重叠 25px，命中测试在最上层拿到的都是图标）。
+   只抬这两个文字元素、不抬 .head：.head 自己带一条从黑到透明的渐变底，
+   整体抬到图标之上会把图标左半压暗，而参考图里图标是亮的。 */
+.artis .item.arti .head strong,
+.artis .item.arti .head span.mark { position: relative; z-index: 3; }
+.artis .item.arti .arti-icon .img {
+  width: 100%; height: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  /* 斜切淡出，跟卡面融在一起（miao 用 -webkit-mask 的等价写法） */
+  -webkit-mask: linear-gradient(45deg, #0000 0, #0005 30%, #000 50%);
+  mask: linear-gradient(45deg, #0000 0, #0005 30%, #000 50%);
+}
+.artis .item.arti .arti-icon span {
+  position: absolute;
+  /* 上游就是 50（卡片内 38~56px）。它以前会压住词条表，是因为 sim 去掉评分后
+     head 只剩 41px —— 那边已补 min-height: 63px，词条表从 63px 才开始，
+     所以这里保持上游原值即可，别再往上挪（挪了角标会飘到名称行中间，反而怪）。 */
+  top: 50px; right: 8px;
+  height: 18px; line-height: 18px;
+  padding: 0 3px;
+  border-radius: 5px;
+  font-size: 12px;
+  color: #fff;
+  background: rgba(0, 0, 0, .8);
+}
+.artis .head {
+  position: relative;
+  color: #fff;
+  padding: 15px 10px 5px 15px;
+  border-radius: 10px 10px 0 0;
+  text-shadow: 0 0 1px #000, 1px 1px 2px rgba(0, 0, 0, .7);
+  background: linear-gradient(to right, rgba(0, 0, 0, .7), rgba(0, 0, 0, .7), rgba(25, 25, 25, .3), rgba(25, 25, 25, 0), rgba(25, 25, 25, 0));
+}
+.artis .head strong {
+  display: block;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  /* 英文武器全名（Tulaytullah's Remembrance）比中文缩写长，硬切会断在词中间 */
+  text-overflow: ellipsis;
+}
+/* 名字一行装不下（整卡 185px，名字列只有 160px；«Deep Gallery's Echoing Song» 15px 要 216px）
+   → 专有名词不该被省略号切断：小一号字排两行。类名由 detail.js 的 fitLongText() 量出来再打。
+   行高 15px：两行 30px，比原来一行多 9px，卡片会高一点点（同排的卡是 flex 拉伸，一起变高，不会参差）。
+   ⚠️ 选择器要和上面基础款齐平（(0,3,1) > (0,2,1)），不然 nowrap 压回来。 */
+/* 整组统一降档：六张卡的名字一起降（detail.js 给 .artis 打 .compact），
+   短名字也跟着 13px —— 不然一排卡里 15px / 13px 混着，像两种来源。 */
+.artis.compact .head strong {
+  font-size: 13px;
+}
+.artis .head strong.two-line {
+  white-space: normal;
+  text-overflow: clip;
+  font-size: 13px;
+  line-height: 15px;
+  overflow-wrap: anywhere;
+  /* 收到图标淡出区以内：套装图是从左下往右上 45° 淡出的，x > 130 那段是实心图，字压上去就糊。
+     130px 下 «Deep Gallery's / Echoing Song» 仍是两行，不会多出一行。 */
+  max-width: 130px;
+}
+/* 分项得分与评级（「35.3分 - SS」）。上游是 14px，这里放到 16px。
+   为什么停在 16 不多要一点 —— 拿真实页面扫过 14/15/16/17/18/20 六个值：
+   14~16 的 head 高（63.4）、卡片高（193.4）、mark 底 → 词条表顶的空档（6.4）**三个数一模一样**，
+   也就是这两行文字的**行盒高度没被字体顶开**（这一行的高度由继承来的 line-height 兜着），
+   16px 是「一点不花版式预算就能拿到的最大字号」；到 17px 行盒才开始撑开，
+   head 63.4→64.8、卡片 193.4→194.8，整页会跟着长高。所以 16 是白捡的上限。
+   宽度也不是约束：16px 下最宽的「42.9分 - SSS」墨迹 95.6px，
+   而 .head 内宽 160px（卡 185 − padding 15/10），还差 64px 才碰到右边界。
+   ⚠️ 别把这条和上面的 span.mark 的 z-index 规则合并：那条管「字盖图」的层级，
+   这条管字号，合并后调字号会连带动层级（踩过一次就分着放）。 */
+.artis .head span.mark { font-size: 16px; font-weight: bold; }
+
+/*
+ * 档位配色：灰(D) → 白(C) → 冰蓝(B) → 天蓝(A) → 绿(S) → 紫(SS) → 金(SSS) → 橙(ACE) → 正红(MAX)。
+ *
+ * 九档要九个色，一个都不许重。
+ *
+ * 档位从哪来：miao 的 `ArtisMark.getMarkClass`，D<7 / C<14 / B<21 / A<28 / S<35 / SS<42 /
+ * SSS<49 / ACE<56 / MAX<70。
+ *
+ * 三处都吃这一套，色只有这一份：明细页「评级」行（.arti-stat-ret 里的 strong）、圣遗物卡角标
+ * （.artis .head span.mark）、首页角色卡角标（.cc-rank，roster.js 挂上档位类）。
+ *
+ * ⚠️ 这里**只管颜色、不写 font-weight**：三处的粗细各由自己那条规则给（strong 默认就是粗的、
+ *    .artis .head span.mark 是 bold、.cc-rank 要 800）。本文件在 style.css **之后**加载，
+ *    在这儿写 bold 会把首页角标的 800 压成 700。
+ *
+ * ⚠️ SS 的紫**不能是普通紫**：四星角色卡底色（common/item/bg4.png 主色 #8a6ab0）就是紫，
+ * 首页角标压在那张图上（再垫 50% 黑 = #453558）。最早用的 #b07ae8 和它**色相只差 2°**，
+ * 字直接融进底里。现在的 #ef8ce0 是**偏粉的梅紫**：色相差拉到 42°，同底对比度 3.57 → 4.99。
+ */
+.mark-MAX { color: #ec2b2b; }
+.mark-ACE { color: #ff9f2e; }
+.mark-SSS { color: #ffe066; }
+.mark-SS { color: #ef8ce0; }
+.mark-S { color: #5fd48f; }
+.mark-A { color: #4fb0ee; }
+.mark-B { color: #a9d8ff; }
+.mark-C { color: #ffffff; }
+.mark-D { color: #6b7280; }
+
+/* 词条表：主词条一行 + 副词条若干行 */
+.artis ul.detail {
+  position: initial;
+  display: table;
+  width: 100%;
+  margin: 0; padding: 0;
+  list-style: none;
+  border-radius: 0 0 10px 10px;
+  overflow: hidden;
+  backdrop-filter: blur(2px);
+}
+.artis ul.detail li {
+  display: table-row;
+  width: 100%;
+  height: 26px;
+  line-height: 26px;
+  padding: 0 3px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.artis ul.detail li:nth-child(even) { background: rgba(0, 0, 0, .4); }
+.artis ul.detail li:nth-child(odd) { background: rgba(50, 50, 50, .4); }
+.artis ul.detail li span {
+  display: table-cell;
+  color: #fff;
+}
+.artis ul.detail li span.title {
+  position: relative;
+  padding-left: 30px;
+  text-align: left;
+  font-size: 14px;
+}
+/* 词条名（detail.js 里多包的一层）—— 存在的唯一理由是「能裁」。
+   必须裁：display:table 的列宽由「所有行里最宽的那个单元格」决定，
+   英文标签最长 18 字（Physical DMG Bonus / Elemental Mastery / Electro DMG Bonus），
+   只要有一行这么长，整张表就被撑到 222px（卡只有 185），
+   于是**每一行**的数值都右移到 185 之外，压在隔壁卡的字上（实测溢出 21~37px）。
+   裁在这一层、不裁 .title：同一个 .title 里还有绝对定位的有效率角标 i.eff
+   （left:3）和强化命中圈号 i.up-num（left:91），
+   它们比标签列还宽，加在 .title 上的 overflow:hidden 会把它们整块裁掉。
+   80px 够中文最长的 4 字标签（充能效率/元素精通/暴击伤害/治疗加成/雷伤加成，
+   56px），英文放不下就省略号 —— 宁可自己短，也不许溢出去压别人。
+   必须是 display:block，不能用 inline-block：带 overflow 的 inline-block，
+   基线按 CSS 规定取「底边」而不是文字基线，会把整行从 26px 顶到 34px
+   （5 行下来卡片从 193px 涨到 233px）。块级子元素就老老实实占一行 26px。 */
+.artis ul.detail li span.title > span.label {
+  display: block;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* 必须显式继承：上面那条通用的 .artis ul.detail li span { color:#fff } 会直接命中
+     这一层（它是 span），直接声明胜过继承 —— 不写这句，.great 档的黄色标签
+     就全变白字了（像素对拍逮到的）。 */
+  color: inherit;
+}
+/* 紧跟在强化命中圈号后面的那条标签，要让出圈号那条带子。
+   圈号是绝对定位、left:91（上游 » 角标的位置，照搬没动），标签从 30（.title 的 padding-left）起，
+   所以这一行的标签只有 61px。中文最长 56px，本来就够、仍然留 5px 空档（和上游一致）；
+   「CRIT Rate」(64.7px) / 「Elemental Mastery」(124px) 这类超出的才被收成省略号，
+   省略号正好停在 91 —— 圈号左边。
+   为什么不干脆全局收到 61：没有圈号的行（命中 0 次）本来就有 80px 可用，
+   把 CRIT Rate/CRIT DMG 一起砍掉纯属白砍；圈号才是抢地方的那个，让它赢在它出现的行。
+   用相邻兄弟选择器而不是给 .title 加类：DOM 里 .label 就是 i.up-num 的下一个兄弟，
+   这条规则自己就能表达「跟在圈号后面」，JS 不用承担版式知识。 */
+.artis ul.detail li span.title > i.up-num + span.label {
+  max-width: 61px;
+}
+/* 一行实在放不下（明细页整卡只有 185px，English «Elemental Mastery» 124px、«Hydro DMG Bonus» 132px）
+   → 不砍词、也不让卡片变宽：小一号字排两行。行高 26px 不动。
+   10.5px / 11.5px 是量出来的：11px 字 + 12px 行高时，两行**字盒**叠起来 27px，
+   超出的 1px 会被下一行的斑马纹底色盖掉（实测 overflowY=true，字看着缺一条）。
+   10.5px 下最长的词是 «DMG Bonus»(53px)/«Recharge»(49px)，61px 那一档也放得开。
+   类名 .tight 由 detail.js 的 fitLongText() 量出来再打 —— 中文 4 字（56px）本来一行就够，不会走到这儿。
+   ⚠️ 别再靠把标签改短来避让（Elemental Mastery → EM 那种）：那会牵连其它语言和筛选口径。
+   ⚠️ 选择器要写得和上面那条「基础款」一样长（`span.title > span.label`）：
+      少一级就变成 (0,4,3) < (0,4,4)，被基础款的 nowrap 压掉 —— 第一版就是这么白写的。 */
+/* 整张表统一降档：一张卡里只要有一条装不下，这张卡的词条名全降到 10.5px
+   （detail.js 给 ul.detail 打 .compact），装不下的那几条再 .tight 折两行。 */
+.artis ul.detail.compact li span.title > span.label {
+  font-size: 10.5px;
+}
+.artis ul.detail li.tight span.title > span.label {
+  white-space: normal;
+  text-overflow: clip;
+  font-size: 10.5px;
+  line-height: 11.5px;
+  overflow-wrap: anywhere;
+}
+/* 单元格默认 vertical-align: baseline —— 两行标签的**末行基线**要跟数值那格（行高 26）对齐，
+   于是行被撑到 32px（实测 li 32、label 24，多出来的 8px 全在上面）。改成居中后行高回到 26。 */
+.artis ul.detail li.tight span.title,
+.artis ul.detail li.tight span.val {
+  vertical-align: middle;
+}
+.artis ul.detail li span.val {
+  padding-right: 10px;
+  text-align: right;
+  font-size: 14px;
+}
+/* 词条有效率角标 */
+.artis ul.detail li span.title i.eff {
+  position: absolute;
+  left: 3px; top: 4px;
+  display: block;
+  width: 23px; height: 18px;
+  line-height: 18px;
+  font-size: 12px;
+  font-style: normal;
+  text-align: center;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, .5);
+}
+/* 强化命中次数 —— 实心圆 + 镂空数字（数字从圆里抠掉，露出词条行的底色）。
+   为什么不是上游那套箭头：miao 画的是 up-num-icon0/1/2 三张雪碧图，
+   一行 » 的个数就是命中次数，看的人得先数箭头；游戏 5.3 起给圣遗物加了
+   「强化次数标记」，就是「实心圆里一个镂空的数字」—— 一个数字，一眼看清。
+   位置沿用原来那条带子：left:91 是「标签起点 30 + 标签带宽 61」，所以版式一点没动。
+   圆和数字都在 detail.js 的 hitMark() 造的那只 <svg> 里：
+     圆走 fill="currentColor" —— 三档配色（great 金 / useful 白 / nouse 灰）都落在 span.title 上，
+     这样下面那两条配色规则不用为它再写一遍；
+     color:inherit 就是给这个 currentColor 兜底的（i 本来就能继承到，写出来是让这份依赖看得见）。
+     数字必须镂空而不是填色：行的底色是「模糊的圣遗物图 + 半透明黑」叠出来的，
+     填哪个固定颜色都会露馅；所以只能走 SVG 的 mask，理由写在 detail.js 那段注释里。
+   这里只给字体和尺寸 —— CSS 管不了字形做蒙版这件事。 */
+.artis ul.detail li span.title i.up-num {
+  position: absolute;
+  left: 91px; top: 6px;
+  display: block;
+  width: 14px; height: 14px;
+  color: inherit;
+  /* 必须显式关掉斜体：<i> 天生 italic，而 SVG 的 <text> 照样吃 CSS 继承 ——
+     今天这套字体（Number/PingFang SC）没有斜体字面、浏览器也没给它做倾斜补偿，
+     所以看着是正的；换台机器换个字体就会歪着抠出来。原来的 » 角标是位图，没这个问题。 */
+  font-style: normal;
+}
+.artis ul.detail li span.title i.up-num svg {
+  display: block;
+  width: 100%; height: 100%;
+}
+/* 14px 的圆里放 10px 粗体：数字的笔画约 1.4px，抠出来是一条清楚的缝；
+   再小（9px 常规体）镂空就只剩断续的点，看不出是什么数。 */
+.artis ul.detail li span.title i.up-num text {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* 三档配色：黄=有效且权重大(≥80)、白=有用、灰=无效。
+   圈号跟着走 span.title 的颜色，所以这两条不用再为它单独配一份。 */
+.artis ul.detail li.great span.title { color: #ffe699; }
+.artis ul.detail li.nouse span { color: #888; }
+
+/* 主词条行：加粗、深底 */
+.artis ul.detail li.arti-main {
+  font-size: 16px;
+  font-weight: bold;
+  padding: 3px 3px;
+  background: rgba(25, 25, 25, .5);
+  color: #fff;
+}
+.artis ul.detail li.arti-main .title { padding-left: 15px; }
+
+/* 空位（没装圣遗物） */
+.artis .item.arti.empty { opacity: .5; min-height: 120px; }
+.artis .item.arti.empty .arti-empty {
+  padding: 30px 15px;
+  font-size: 13px;
+  color: #aaa;
+  text-align: center;
+}
+
+/* 底部数据时间行（原来是 miao-plugin 出处那半句） */
+.pd-scored-at {
+  padding: 6px 5px 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, .55);
+  text-align: right;
+}

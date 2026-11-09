@@ -1,7 +1,9 @@
 /*
  * 明细页：复刻 miao-plugin 的评分结果图（profile-detail）。
  * renderDetail 在加载时注册进 core.reg，由 openDetail / renderAll 调用。
- * 卡片与伤害段拆到 detail-card.js / detail-damage.js，页面适配拆到 detail-fit.js。
+ * 卡片与伤害段拆到 detail-card.js / detail-damage.js，页面适配拆到 detail-fit.js；
+ * renderDetail 只做容器骨架（顶栏 + 600px 画布），左角色卡 / 右评分区两段收进同文件的
+ * buildBasic / buildProfileDetail —— 它们都只吃 av、返回子树，不新建文件、不动 import 图。
  */
 
 import {
@@ -23,7 +25,40 @@ function renderDetail () {
     return
   }
 
-  /* 顶部返回栏：画布之外不跟着缩放；与下方 600px 卡片同宽，故右缘对齐卡片 */
+  /* 顶部返回栏：画布之外不跟着缩放；与下方 600px 卡片同宽，故右缘对齐卡片。
+     返回 + 模拟比对 + 分享，三个钮同行右端，用 gap 隔开（不能 space-between 拉到两端）。 */
+  const bar = buildDetailBar(av)
+
+  /* 600px 画布。元素类名照 miao 的 elemLayout 挂在容器上，CSS 据此选背景图 */
+  const canvas = setBg(el('div', 'pd-canvas elem-' + (av.elem || 'hydro')), av.elemBg)
+  const cont = el('div', 'profile-cont game-gs')
+  const frame = el('div', 'pd-frame')
+  canvas.append(cont)
+  frame.append(canvas)
+  box.append(bar)
+  box.append(frame)
+
+  /* 左角色卡（主图 + 名字/等级/命座 + 面板属性）与右评分区各自收口成子树，挂进画布 */
+  cont.append(buildBasic(av))
+  cont.append(buildProfileDetail(av))
+
+  /* 伤害计算（miao 明细页下侧的「伤害计算」表）：先放一个 loading 骨架占位，数据到了再填 ——
+     renderDetail 是同步的（reg 契约），而伤害要跑一遍评分内核。 */
+  const dmgBox = el('div', 'dmg-wrap')
+  cont.append(dmgBox)
+  loadDamage(av, dmgBox)
+
+  /* 这行报数据时间，不再抄一遍评级/规则名（那两块在 .arti-stat / .arti-class-title 里） */
+  cont.append(el('div', 'pd-scored-at', `${T('scoredAt')} ${av.fetchedAt || '—'}`))
+
+  fitLongText()
+  fitDetailScale()
+  /* 字体/图片回流可能改高度，下一帧再算一次兜底 */
+  requestAnimationFrame(fitDetailScale)
+}
+
+/* 顶栏：返回 + 模拟比对 + 分享。返回和分享同行右端，两个钮要 gap，不能 space-between 拉到两端。 */
+function buildDetailBar (av) {
   const bar = el('div', 'detail-bar')
   const back = el('button', 'btn back', '← ' + T('back'))
   back.addEventListener('click', backToRoster)
@@ -31,7 +66,7 @@ function renderDetail () {
      灰色小字挨着金色按钮还会分走按钮的分量。 */
   bar.append(back)
 
-  /* 右端一组：模拟比对 + 分享。两个钮要 gap，不能用 space-between 拉到栏的两端。 */
+  /* 右端一组：模拟比对 + 分享。 */
   const actions = el('div', 'detail-actions')
 
   /* 进模拟比对页：点哪个角色就把哪个角色带过去（reg 反调，避免 detail→sim 直接 import 成环） */
@@ -48,18 +83,11 @@ function renderDetail () {
   actions.append(share)
 
   bar.append(actions)
+  return bar
+}
 
-  box.append(bar)
-
-  /* 600px 画布。元素类名照 miao 的 elemLayout 挂在容器上，CSS 据此选背景图 */
-  const canvas = setBg(el('div', 'pd-canvas elem-' + (av.elem || 'hydro')), av.elemBg)
-  const cont = el('div', 'profile-cont game-gs')
-  const frame = el('div', 'pd-frame')
-  canvas.append(cont)
-  frame.append(canvas)
-  box.append(frame)
-
-  /* ===== .basic ===== */
+/* 左侧角色卡：主图 + 名字/等级/命座 + 面板属性表。 */
+function buildBasic (av) {
   const basic = el('div', 'basic')
   basic.append(setBg(el('div', 'main-pic'), av.splash))
 
@@ -125,9 +153,11 @@ function renderDetail () {
   basic.append(cons)
 
   /* 喵喵规则免责句不再浮在角色卡右下角：它和「评分规则」一起放在评分区最下面的说明行。 */
-  cont.append(basic)
+  return basic
+}
 
-  /* ===== .profile-detail ===== */
+/* 右侧评分区：左评分卡 + 词条网格 + 部件格 + 说明行 + 武器/圣遗物卡。 */
+function buildProfileDetail (av) {
   const pd = el('div', 'profile-detail')
 
   /* 左评分卡：只留「总分 / 评级」两个英雄数字（垂直居中、撑满整卡高度，与右侧词条网格齐平）。
@@ -246,21 +276,7 @@ function renderDetail () {
   for (const a of av.artifacts) artis.append(renderArtiCard(a, av.charWeight))
   pd.append(artis)
 
-  cont.append(pd)
-
-  /* 伤害计算（miao 明细页下侧的「伤害计算」表）：先放一个 loading 骨架占位，数据到了再填 ——
-     renderDetail 是同步的（reg 契约），而伤害要跑一遍评分内核。 */
-  const dmgBox = el('div', 'dmg-wrap')
-  cont.append(dmgBox)
-  loadDamage(av, dmgBox)
-
-  /* 这行报数据时间，不再抄一遍评级/规则名（那两块在 .arti-stat / .arti-class-title 里） */
-  cont.append(el('div', 'pd-scored-at', `${T('scoredAt')} ${av.fetchedAt || '—'}`))
-
-  fitLongText()
-  fitDetailScale()
-  /* 字体/图片回流可能改高度，下一帧再算一次兜底 */
-  requestAnimationFrame(fitDetailScale)
+  return pd
 }
 
 /*

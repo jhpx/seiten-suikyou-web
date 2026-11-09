@@ -8,8 +8,9 @@
  * 渲染器在加载时注册进 core.reg（renderRoster / renderRosterGrid），由编排函数统一调用。
  */
 
-import { $, state, T, el, setBg, rankOf, weaponFallback, imgError, openDetail, reg } from '../core.js'
-import { sortAvatars, filteredAvatars } from './sort.js'
+import { $, state, T, el, setBg, rankOf, weaponFallback, imgError, openDetail, reg } from '../../core.js'
+import { sortAvatars } from './sort.js'
+import { filteredAvatars } from './filter-options.js'
 
 function renderAccountHeader (acct) {
   const box = el('div', 'acct-header')
@@ -44,10 +45,12 @@ function renderAccountHeader (acct) {
  * 分数不再单独占一条通栏黑带（黑带 + 白条上下叠会把卡片切成四段，太重），
  * 但它自己那块半透明黑底不能省 —— 星级橙底/紫底上奶白字不垫底看不清（见 style.css 的 .cc-score）。
  */
-function renderCharCard (av) {
-  const rank = rankOf(av.score.markClass)
-  const card = el('div', 'char-card')
-
+/*
+ * 两种卡片共用的画像区：星级底图 / 立绘 / 元素图标 / 等级 / 分数 / 评级，六层按这个顺序叠。
+ * 原来在 renderCharCard 和 renderArtiCard 里各写了一遍，阶段 B 抽成一处 ——
+ * 元素、类名、属性、append 顺序一个字都没改，两种卡只是下半块不同。
+ */
+function renderCardTop (av, rank) {
   const bg = setBg(el('div', 'cc-bg'), av.rarityBg)
 
   const face = el('img', 'cc-face')
@@ -68,6 +71,13 @@ function renderCharCard (av) {
 
   const top = el('div', 'cc-top')
   top.append(bg, face, elem, lv, score, badge)
+  return top
+}
+
+function renderCharCard (av) {
+  const rank = rankOf(av.score.markClass)
+  const card = el('div', 'char-card')
+  const top = renderCardTop(av, rank)
 
   /* 武器块：白底。没武器（或 miao 不认识这把）也要出这一块，整排高度才整齐。
      左边图标一整栏、右边名字 + 等级·精炼两行 —— 短名字也不会在底部空出一块。 */
@@ -122,26 +132,7 @@ function setIcon (src) {
 function renderArtiCard (av) {
   const rank = rankOf(av.score.markClass)
   const card = el('div', 'char-card')
-
-  const bg = setBg(el('div', 'cc-bg'), av.rarityBg)
-
-  const face = el('img', 'cc-face')
-  face.src = av.imgs?.face || av.splash
-  face.alt = ''
-  face.loading = 'lazy'
-  face.onerror = () => imgError(face)
-
-  const elem = el('img', 'cc-elem')
-  elem.src = av.elemIcon
-  elem.alt = av.elemText || ''
-  elem.onerror = () => imgError(elem)
-
-  const lv = el('div', 'cc-lv', `Lv.${av.level ?? '?'}`)
-  const score = el('div', 'cc-score', av.score.mark)
-  const badge = el('span', 'cc-rank mark-' + rank, rank)
-
-  const top = el('div', 'cc-top')
-  top.append(bg, face, elem, lv, score, badge)
+  const top = renderCardTop(av, rank)
 
   /* 只认**激活的套装**（2 件起）：单件不激活套装效果，列出来只是噪音 ——
      它会多占一行「××× ×1」、图标区也多画一个图标（4 件套 + 1 散件是最常见的穿法，
