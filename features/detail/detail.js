@@ -141,16 +141,20 @@ function buildBasic (av) {
   }
   basic.append(detail)
 
-  /* 命座 6 格：未点亮的置灰（.off） */
-  const cons = el('div', 'char-cons')
-  for (let i = 1; i <= 6; i++) {
-    const icon = el('div', 'talent-icon' + (i <= (av.cons ?? 0) ? '' : 'off'))
-    icon.append(setBg(el('div', 'talent-icon-img'), av.imgs?.[`cons${i}`]))
-    const item = el('div', 'cons-item')
-    item.append(icon)
-    cons.append(item)
+  /* 命座 6 格：未点亮的置灰（.off）。
+     上游没给命座图（奇偶·男/女那两只人偶）时接口不输出 cons1，这里就整块不画 ——
+     画出来是六个空灰格，比没有更怪。判据只看第一格：上游的命座图要么六张都有、要么一张没有。 */
+  if (av.imgs?.cons1) {
+    const cons = el('div', 'char-cons')
+    for (let i = 1; i <= 6; i++) {
+      const icon = el('div', 'talent-icon' + (i <= (av.cons ?? 0) ? '' : 'off'))
+      icon.append(setBg(el('div', 'talent-icon-img'), av.imgs?.[`cons${i}`]))
+      const item = el('div', 'cons-item')
+      item.append(icon)
+      cons.append(item)
+    }
+    basic.append(cons)
   }
-  basic.append(cons)
 
   /* 喵喵规则免责句不再浮在角色卡右下角：它和「评分规则」一起放在评分区最下面的说明行。 */
   return basic
