@@ -23,7 +23,7 @@
  * 排序面板由 sort.js 提供（renderFilterBar 直接拼进来）。
  */
 
-import { $, state, T, el, imgError, refreshRosterGrid, reg } from '../../core.js'
+import { $, state, T, el, imgError, refreshRosterGrid, swapRosterFoot, reg } from '../../core.js'
 import { closeMenus, closeModal, openDialog } from '../dialog.js'
 import { rosterElems, rosterRanks, rosterSets, rosterStars, dropStaleFilter } from './filter-options.js'
 import { sortPanel } from './sort.js'
@@ -239,7 +239,9 @@ function viewSwitch () {
     const i = Math.max(0, VIEWS.findIndex(v => v.key === state.rosterMode))
     state.rosterMode = VIEWS[(i + 1) % VIEWS.length].key
     paint()
-    refreshRosterGrid()
+    /* 只换卡片下半块（武器块 ↔ 圣遗物套装块），上半块（含立绘）原样保留，不重载整页卡片图。
+       筛选/排序才走 refreshRosterGrid（名单或顺序真变了，必须全量重建）。 */
+    swapRosterFoot()
   })
 
   paint()

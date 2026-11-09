@@ -12,6 +12,10 @@ import { $, state, T, el, setBg, rankOf, weaponFallback, imgError, openDetail, r
 import { sortAvatars } from './sort.js'
 import { filteredAvatars } from './filter-options.js'
 
+/* 卡片元素 ↔ avatar 的映射：切「武器/圣遗物」视图时靠它把每张卡的下半块就地换掉，
+   不用重建整张卡，上半块（含立绘 <img>）原样保留，浏览器不重新请求/解码。 */
+const cardAvatar = new WeakMap()
+
 function renderAccountHeader (acct) {
   const box = el('div', 'acct-header')
   if (!acct) return box
@@ -46,9 +50,9 @@ function renderAccountHeader (acct) {
  * 但它自己那块半透明黑底不能省 —— 星级橙底/紫底上奶白字不垫底看不清（见 style.css 的 .cc-score）。
  */
 /*
- * 两种卡片共用的画像区：星级底图 / 立绘 / 元素图标 / 等级 / 分数 / 评级，六层按这个顺序叠。
- * 原来在 renderCharCard 和 renderArtiCard 里各写了一遍，阶段 B 抽成一处 ——
- * 元素、类名、属性、append 顺序一个字都没改，两种卡只是下半块不同。
+ * 两种视图共用的画像区：星级底图 / 立绘 / 元素图标 / 等级 / 分数 / 评级，六层按这个顺序叠。
+ * 阶段 B 把这段从两种卡里抽成 renderCardTop 共用；现在整张卡 = 上半块(renderCardTop) + 下半块(buildFoot)，
+ * 下半块按 state.rosterMode 在「武器块 / 圣遗物套装块」间切换，切视图时 swapRosterFoot 只换这一小块。
  */
 function renderCardTop (av, rank) {
   const bg = setBg(el('div', 'cc-bg'), av.rarityBg)
@@ -74,52 +78,66 @@ function renderCardTop (av, rank) {
   return top
 }
 
-function renderCharCard (av) {
-  const rank = rankOf(av.score.markClass)
-  const card = el('div', 'char-card')
-  const top = renderCardTop(av, rank)
+/*
+ * 卡片下半块：武器块（weapon 视图）或圣遗物套装块（artis 视图）。
+ *
+ * 两种视图**只差这一块**——上半块（renderCardTop：星级底图 / 立绘 / 元素 / 等级 / 评分 / 评级）
+ * 完全一样。所以切视图时只换这块（见 swapRosterFoot），上半块（含立绘 <img>）原样保留、不重建，
+ * 浏览器就不会重新请求/解码，切换就不卡了。脚注块统一挂 .cc-foot 类，方便精准替换。 */
+function buildFoot (av) {
+  if (state.rosterMode === 'artis') {
+    /* 只认激活的套装（2 件起）：单件不激活套装效果，列出来只是噪音。
+       接口给的是全量件数（含 count:1），过滤放在显示层，筛选项那边同一个口径。
+       最多两行：4件 或 2+2；一个都没带时出「无圣遗物」占位，整排高度才整齐。 */
+    const sets = (av.sets || []).filter(s => s.count >= 2).sort((a, b) => b.count - a.count)
+    const sp = el('div', 'cc-sets cc-foot')
+    if (!sets.length) {
+      sp.append(el('div', 'cc-sets-empty', T('noArtis')))
+    } else {
+      const box = el('div', 'cc-sets-list')
+      for (const s of sets) {
+        const row = el('div', 'cc-set-row')
+        /* 图标是这一行的第一个格子：同一行垂直居中 → 天然和这行字对齐 */
+        row.append(setIcon(s.icon), el('span', '', s.name), el('b', 'cc-set-n', `×${s.count}`))
+        box.append(row)
+      }
+      sp.append(box)
+    }
+    return sp
+  }
 
   /* 武器块：白底。没武器（或 miao 不认识这把）也要出这一块，整排高度才整齐。
-     左边图标一整栏、右边名字 + 等级·精炼两行 —— 短名字也不会在底部空出一块。 */
+     左边图标一整栏、右边名字 + 等级·精炼两行 —— 短名字也不会在底部空出一块。
+     等级 · 精炼跟在名字下面，中间那个「·」由 CSS 补。 */
   const wName = av.weapon?.name || weaponFallback(av.weapon)
   const wText = el('div', 'cc-wtext')
   wText.append(el('strong', '', wName))
-
-  /* 等级 · 精炼跟在名字下面，中间那个「·」由 CSS 补 */
   const meta = el('div', 'cc-wmeta')
   if (av.weapon?.level) meta.append(el('b', '', `Lv.${av.weapon.level}`))
   if (av.weapon?.affix) meta.append(el('b', 'refine', `${T('refine')}${av.weapon.affix}`))
   wText.append(meta)
-
-  const wp = el('div', 'cc-weapon')
+  const wp = el('div', 'cc-weapon cc-foot')
   wp.append(setBg(el('div', 'cc-wicon'), av.weapon?.thumb), wText)
+  return wp
+}
 
-  card.append(top, wp)
+/*
+ * 一张角色卡 = 上半块（画像，两种视图共用）+ 下半块（buildFoot，随视图切换）。
+ * 卡片元素 ↔ avatar 记进 cardAvatar（见文件头），切视图时靠它把下半块就地换掉，不用重建整张卡。 */
+function renderCard (av) {
+  const rank = rankOf(av.score.markClass)
+  const card = el('div', 'char-card')
+  card.append(renderCardTop(av, rank), buildFoot(av))
   card.addEventListener('click', () => openDetail(av.avatarId))
+  cardAvatar.set(card, av)
   return card
 }
 
 /*
- * 圣遗物视图的一张卡 —— 画像区与武器卡完全一样（同一套 grid、同一张 rarityBg），
- * 只把底部白块从「武器」换成「圣遗物套装构成」。
- *
- * 套装构成 = 花图标 + 名字 + 件数（「绝缘之旗印 ×4」），不搞缩写 —— 缩写（「绝4」）
- * 认不出来是哪套，而这批名字最长 7 字（华馆梦醒形骸记），10px 下一行放得下。
- * 只列 2 件以上的套装（单件不激活效果，见下面 renderArtiCard 里的过滤），
- * 所以最多两行：4件 或 2+2。一个套装都没带（或没带满 2 件的）时出「无圣遗物」占位，高度才整齐。
- */
-
-/*
- * 套装图标：**一套一个图标，放在它自己那一行的最左边**（图标 + 名字 + 件数同一行）。
- * 两套就是两行、每行各一个图标，所以「第几个图标 = 第几行字」是结构保证的，
- * 不靠算偏移 —— 名字折成两行时图标也跟着那一行居中。
- *
- * 用**花**（1 号位）当代表图：每套都出全五件，部位图不缺；而五件里花（和羽）的
- * 造型差别最大 —— 沙/杯/冠在不同套之间轮廓很接近，缩到 17cqw 分不出来。
- * thumbs/<setId>/1.webp 是已经裁掉透明边、等比缩到 96px 的预处理件
- * （生成方式见 tools/gen_flower.py）：卡片、筛选框、刷取建议拿到的是同一张图，
- * 主体大小天然一致，前端只管摆放。
- */
+ * 套装图标：一套一个图标放在它自己那行最左边（图标 + 名字 + 件数同一行），两套就是两行、
+ * 每行各一个图标，所以「第几个图标 = 第几行字」由结构保证，不靠算偏移。
+ * 用花（1 号位）当代表图：每套都出全五件、部位图不缺，且花（和羽）造型差别最大，
+ * 沙/杯/冠缩到 17cqw 分不出来。图是 tools/gen_flower.py 预处理过的（裁透明边、缩 96px）。 */
 function setIcon (src) {
   const slot = el('div', 'ci-slot')
   const i = el('img')
@@ -128,34 +146,6 @@ function setIcon (src) {
   i.onerror = () => imgError(i)
   slot.append(i)
   return slot
-}
-function renderArtiCard (av) {
-  const rank = rankOf(av.score.markClass)
-  const card = el('div', 'char-card')
-  const top = renderCardTop(av, rank)
-
-  /* 只认**激活的套装**（2 件起）：单件不激活套装效果，列出来只是噪音 ——
-     它会多占一行「××× ×1」、图标区也多画一个图标（4 件套 + 1 散件是最常见的穿法，
-     等于每张卡都显示成「两套」）。接口给的是全量件数（含 count: 1，
-     见 docs/API.md），过滤放在显示层，筛选项那边也是同一个口径。 */
-  const sets = (av.sets || []).filter(s => s.count >= 2).sort((a, b) => b.count - a.count)
-  const sp = el('div', 'cc-sets')
-  if (!sets.length) {
-    sp.append(el('div', 'cc-sets-empty', T('noArtis')))
-  } else {
-    const box = el('div', 'cc-sets-list')
-    for (const s of sets) {
-      const row = el('div', 'cc-set-row')
-      /* 图标是这一行的第一个格子：同一行垂直居中 → 天然和这行字对齐 */
-      row.append(setIcon(s.icon), el('span', '', s.name), el('b', 'cc-set-n', `×${s.count}`))
-      box.append(row)
-    }
-    sp.append(box)
-  }
-
-  card.append(top, sp)
-  card.addEventListener('click', () => openDetail(av.avatarId))
-  return card
 }
 
 function renderRoster () {
@@ -209,10 +199,43 @@ function renderRosterGrid (slot) {
   const grid = el('div', 'char-grid')
   /* 两种视图只差卡片下半块：武器（默认）/ 圣遗物套装。
      画像区、网格、筛选、排序全共用 —— 视图切换不重置任何筛选条件。 */
-  const draw = state.rosterMode === 'artis' ? renderArtiCard : renderCharCard
-  for (const av of sorted) grid.append(draw(av))
+  for (const av of sorted) grid.append(renderCard(av))
   slot.append(grid)
+
+  /* 限高 + 滚动机理由 fitRosterGrid 统一处理（切视图后下半块高度会变，也得重算一次）。 */
+  fitRosterGrid(slot)
+}
+
+/* 量出第一张卡高，给 .rf-grid 设「限 4 行」的 max-height（见 char-card.css 的 .rf-grid）。
+   卡片高度是 cqw 自适应的，纯 CSS 写不出精确的 4 行高，这里 JS 量；offsetHeight 是未缩放布局高，
+   坐标系与 max-height 一致，不用除以 fitShell 的倍率。 */
+function fitRosterGrid (slot) {
+  const grid = slot.querySelector('.char-grid')
+  const first = grid?.querySelector('.char-card')
+  if (!first) return
+  const cardH = first.offsetHeight
+  const gap = parseFloat(getComputedStyle(grid).rowGap) || 10
+  slot.style.maxHeight = (4 * cardH + 3 * gap) + 'px'
+}
+
+/* 切「武器 / 圣遗物」视图：avatar 名单和排序都没变，只有卡片下半块不同，
+   所以只把每张卡的下半块（.cc-foot）就地替换掉，上半块（含立绘 <img>）原样保留 ——
+   立绘不重建，浏览器就不会重新请求/解码，切换就不卡了。上半块不动也意味着整张卡的
+   click 监听不动。下半块高度可能变（武器块 vs 套装块 min-height 不同），换完顺手重算一下限高。 */
+function swapRosterFoot () {
+  const slot = document.querySelector('#view-roster .rf-grid')
+  if (!slot) return
+  const grid = slot.querySelector('.char-grid')
+  if (!grid) return
+  for (const card of grid.querySelectorAll('.char-card')) {
+    const av = cardAvatar.get(card)
+    if (!av) continue
+    card.querySelector('.cc-foot')?.remove()
+    card.append(buildFoot(av))
+  }
+  fitRosterGrid(slot)
 }
 
 reg.renderRoster = renderRoster
 reg.renderRosterGrid = renderRosterGrid
+reg.swapRosterFoot = swapRosterFoot

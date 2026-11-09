@@ -32,6 +32,32 @@
   gap: 10px;
 }
 
+/* ───────────────────────── 首页：网格滚动外框 ─────────────────────────
+ *
+ * .rf-grid 是包在 .char-grid 外面的那一层（roster.js 的 slot）。角色多时整页被卡片
+ * 撑得老长，所以给它「限 4 行 + 内部滚动」：最多露出 4 行（= 20 张），多出部分在框里
+ * 纵向滚动，而不是把整页往下推。
+ *
+ * ⚠️ max-height 不在 CSS 里写死 —— 卡片高度是 cqw 自适应的（.cc-top 的 aspect-ratio
+ *    + 底部白块 min-height），纯 CSS 凑不出精确的「5 行」高度；具体数值由 roster.js
+ *    量出第一张卡的真实高度再赋值（和 fitShell / fitLongText 同一套「JS 测量再调」思路）。
+ *
+ * overflow-y: auto 把它变成纵向滚动容器；-webkit-overflow-scrolling: touch 给 iOS 惯性滚动；
+ * overscroll-behavior: contain 挡住滚动链 —— 框内滚到底不会把整页也带着滚。
+ * ⚠️ 这里用 auto 不用 hidden/clip：hidden 不能滚，clip 是 .shell 专用的（见 base.css 那套理由），
+ *    这个框需要能滚，所以只能 auto。 */
+.rf-grid {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  /* 桌面端细滚动条，别用系统那根粗的；移动端走原生触摸滚动，这条不生效也无害 */
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.rf-grid::-webkit-scrollbar { width: 8px; }
+.rf-grid::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+.rf-grid::-webkit-scrollbar-track { background: transparent; }
+
 .char-card {
   container-type: inline-size;
   position: relative;

@@ -266,6 +266,13 @@ export function refreshRosterGrid () {
   if (slot) reg.renderRosterGrid?.(slot)
 }
 
+/* 切「武器 / 圣遗物」视图：名单和排序都没变，只换卡片下半块（见 roster.js 的 swapRosterFoot），
+   立绘不重建，避免整页卡片图重新加载。 */
+export function swapRosterFoot () {
+  const slot = document.querySelector('#view-roster .rf-grid')
+  if (slot) reg.swapRosterFoot?.(slot)
+}
+
 export function renderAll () {
   reg.renderRoster?.()
   reg.renderDetail?.()
