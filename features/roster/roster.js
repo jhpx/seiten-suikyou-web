@@ -31,6 +31,16 @@ function renderAccountHeader (acct) {
     meta.append(d)
   }
   box.append(meta)
+
+  /* 「导出报告」入口：把当前账号排成一张报告单，点一下直接出图下载。
+     按钮文案就是报告单的标题（reportTitle）—— 同一个东西不必在文案表里写两遍。
+     放在账号信息后面 —— 它是「拿这份数据去做点事」，紧跟在数据来源旁边最顺。
+     走 reg 拿入口函数，和 advice / 模拟页一样，页面之间不直接 import。 */
+  const entry = el('button', 'btn acct-report-btn', T('reportTitle'))
+  entry.type = 'button'
+  entry.addEventListener('click', () => reg.exportReport?.())
+  box.append(entry)
+
   return box
 }
 

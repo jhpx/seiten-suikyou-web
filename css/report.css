@@ -1,0 +1,200 @@
+/* ============================================================================
+ * report.css · 评定报告单
+ *
+ * 把当前账号的评分榜排成一张「纸质评定报告单」，导出成图片自己发。
+ *
+ * 版式和宣传海报里那张报告单是同一套逻辑（米白纸底 / 宋体标题 / 右上角斜盖印章 /
+ * 虚线表格行），但这里按 600 设计稿宽度写，不是 1080 —— 全站只有一套版式。
+ *
+ * ⚠️ 这份样式**没有对应的视图**：报告单不再是一页，首页「导出报告」按钮一点，
+ *   报告单被排到视口外一块固定 600 宽的「纸」上，再栅格化成图片下载。
+ *   所以下面除了单子本体（.rp-*），只剩一块离屏的纸（.rp-offscreen）。
+ *
+ * 加载顺序：第 13 / 18 个（在 sim.css 之后、rubric.css 之前）。
+ * index.html 里的 <link> 顺序就是层叠顺序，后面的文件覆盖前面同特异性的规则。
+ *
+ * ⚠️ 档位徽章的颜色**不**走 .mark-*（那套是深底上的文字色，压在米白纸上会糊）。
+ *   这里自己定一套纸底实色徽章，和海报那张一致。
+ * ============================================================================ */
+
+/* ── 离屏的「纸」 ─────────────────────────────────────── */
+
+/* 报告单排版的地方：固定 600 宽 = .app 的内容带（--app-width 616 - 左右各 8），
+   单子里的表格是按 600 写的固定栅格，换个宽就散了。
+   挪到视口外（left:-9999px）而不是 visibility/opacity 隐藏 —— 那两个是**继承属性**，
+   会被算进克隆节点的计算样式，截出来是一张白纸。
+   position: fixed 让它脱离 .shell-in 的整页缩放（bootstrap.js 的 fitShell），
+   量到的 offsetWidth 就是设计宽。 */
+.rp-offscreen {
+  position: fixed; left: -9999px; top: 0;
+  width: 600px;
+}
+
+/* ── 报告单本体：一张纸 ────────────────────────────────── */
+
+.rp-sheet {
+  position: relative;
+  background:
+    radial-gradient(520px 140px at 16% 0%, rgba(255, 255, 255, .5), transparent 62%),
+    linear-gradient(168deg, #fbf7ec 0%, #f4eede 48%, #eee5d2 100%);
+  border-radius: 6px;
+  padding: 16px 16px 12px;
+  color: #1d222c;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .55);
+  /* 纸纹：两层错开的细网点 */
+  background-image:
+    radial-gradient(rgba(120, 100, 60, .055) 1px, transparent 1.1px),
+    radial-gradient(rgba(120, 100, 60, .04) 1px, transparent 1.1px),
+    radial-gradient(520px 140px at 16% 0%, rgba(255, 255, 255, .5), transparent 62%),
+    linear-gradient(168deg, #fbf7ec 0%, #f4eede 48%, #eee5d2 100%);
+  background-size: 7px 7px, 11px 11px, auto, auto;
+  background-position: 0 0, 4px 5px, 0 0, 0 0;
+}
+/* 中缝折痕：一道极淡的竖影 */
+.rp-sheet::after {
+  content: ''; position: absolute; inset: 0; border-radius: 6px; pointer-events: none;
+  background: linear-gradient(92deg, transparent 48%, rgba(90, 70, 40, .06) 49.6%, rgba(90, 70, 40, .06) 50.4%, transparent 52%);
+}
+
+/* ── 抬头 ─────────────────────────────────────────────── */
+
+.rp-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+}
+.rp-title {
+  font-family: "Source Han Serif CN", "Songti SC", SimSun, serif;
+  font-size: 25px; font-weight: 700; letter-spacing: .22em; color: #1d222c;
+  line-height: 1.2;
+}
+.rp-sub {
+  font-size: 11px; color: #6d6455; letter-spacing: .08em; margin-top: 6px;
+}
+
+/* 印章：右上角斜盖。不压任何数据 —— 表格在它下面另起一块。 */
+.rp-stamp {
+  flex: none;
+  width: 72px; height: 72px;
+  border: 3px solid rgba(178, 42, 40, .72);
+  border-radius: 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px;
+  transform: rotate(-12deg);
+  color: rgba(178, 42, 40, .78);
+  background: rgba(178, 42, 40, .045);
+  font-family: "Source Han Serif CN", "Songti SC", SimSun, serif;
+  font-weight: 700;
+}
+.rp-stamp-big { font-size: 20px; letter-spacing: .04em; line-height: 1; }
+.rp-stamp-mid { font-size: 8px; letter-spacing: .12em; line-height: 1.25; text-align: center; }
+.rp-stamp-mid span { display: block; }
+.rp-stamp-tick { font-size: 7px; letter-spacing: .06em; opacity: .85; margin-top: 1px; }
+
+/* 账号行：这份单子是谁的 */
+.rp-owner {
+  display: flex; align-items: baseline; gap: 8px;
+  margin-top: 10px; padding-bottom: 8px;
+  border-bottom: 2px solid #b8963f;
+}
+.rp-owner-name { font-size: 15px; font-weight: 700; color: #232a36; }
+.rp-owner-uid { font-size: 11px; color: #857a63; }
+
+/* ── 信息条 ───────────────────────────────────────────── */
+
+.rp-meta {
+  display: flex; flex-wrap: wrap; gap: 6px 20px;
+  margin: 9px 0 4px; padding: 7px 10px;
+  background: rgba(184, 150, 63, .12); border-radius: 4px;
+}
+.rp-meta-item { display: flex; align-items: baseline; gap: 4px; }
+.rp-meta-item b { font-size: 12px; color: #232a36; font-weight: 700; }
+.rp-meta-item span { font-size: 10px; color: #6d6455; }
+
+/* ── 表格 ─────────────────────────────────────────────── */
+
+/* 五列：名次 / 角色 / 元素 / 圣遗物评级 / 圣遗物总分。
+   评级和总分原先挤在最后一格（92px）里共用一个「等级 / 总分」表头，
+   现在拆开各占一列 —— 徽章居中、数字右对齐，一眼就能对上号。
+   后两列表头写的是明细页那对长文案（最长是 en 的 "Artifact Score"），
+   所以列宽给到 64 / 72，整行表头统一 9px、不留字距；元素列 34→38
+   是给 en 的 "Element" 留的（原先 44px 会往外溢 10px）。 */
+.rp-row {
+  display: grid; grid-template-columns: 26px 1fr 38px 64px 72px;
+  align-items: center; gap: 8px;
+  padding: 5px 2px;
+  border-bottom: 1px dashed rgba(70, 60, 35, .2);
+}
+.rp-row-head {
+  border-bottom: 1px solid #b8963f;
+  padding-bottom: 6px; margin-bottom: 1px;
+  /* 表头五列里有长文案（圣遗物评级 / Artifact Score），统一 9px、不留字距，
+     最长的英文才装得进后面那两列；名次 / 元素这两列在英文版也不再往外溢。 */
+  font-size: 9px; letter-spacing: 0; color: #7a6a3e; font-weight: 700;
+}
+/* 名次 / 元素这两格的类自带 13px / 10px（数据行要那么大），会盖掉继承的 9px，
+   这里显式压回去，否则 en 的 "Rank" / "Element" 会从窄列里溢出去。 */
+.rp-row-head > div { white-space: nowrap; font-size: 9px; }
+
+.rp-no {
+  font-family: "Source Han Serif CN", "Songti SC", SimSun, serif;
+  font-size: 13px; color: #9a8b6a; font-weight: 700; text-align: center;
+}
+.rp-row-head .rp-no { font-family: inherit; }
+
+.rp-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.rp-face {
+  width: 28px; height: 28px; border-radius: 6px; flex: none; object-fit: cover;
+  border: 1px solid #c8b47e; background: #ddd;
+}
+.rp-who-txt { min-width: 0; }
+.rp-nm {
+  font-size: 13px; font-weight: 700; color: #232a36; letter-spacing: .04em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rp-wp {
+  font-size: 9px; color: #857a63; margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.rp-elem {
+  font-size: 10px; text-align: center; padding: 3px 0; border-radius: 3px;
+  color: #fff; font-weight: 700; letter-spacing: .04em;
+}
+.rp-row-head .rp-elem { background: none !important; color: #7a6a3e; padding: 0; }
+
+/* 两列表头各跟自己那列的内容对齐：评级列徽章居中，总分列数字右对齐 */
+.rp-th-grade { text-align: center; }
+.rp-th-score { text-align: right; }
+.rp-grade-cell { display: flex; justify-content: center; }
+
+/* 纸底档位徽章：实色块，字压得住。颜色取向跟全站 .mark-* 一致，但压深一档好让米白纸上的字清楚 */
+.rp-grade {
+  font-family: "Source Han Serif CN", "Songti SC", SimSun, serif;
+  font-size: 11px; font-weight: 700; letter-spacing: .03em;
+  padding: 2px 6px; border-radius: 3px; flex: none;
+  color: #2b2008;
+}
+.rp-grade.mark-MAX { background: linear-gradient(150deg, #f6b3a3, #d9584a); color: #3a0f0a; }
+.rp-grade.mark-ACE { background: linear-gradient(150deg, #f0d99a, #c69b3c); color: #2b2008; }
+.rp-grade.mark-SSS { background: linear-gradient(150deg, #f5e29a, #d8b13e); color: #33270a; }
+.rp-grade.mark-SS  { background: linear-gradient(150deg, #f0b6e6, #cf7bbd); color: #3d1030; }
+.rp-grade.mark-S   { background: linear-gradient(150deg, #a8e2c2, #63b98c); color: #0d3321; }
+.rp-grade.mark-A   { background: linear-gradient(150deg, #a9d6f7, #5fa5dd); color: #0d2c44; }
+.rp-grade.mark-B   { background: linear-gradient(150deg, #d3d9e8, #98a3bd); color: #232a38; }
+.rp-grade.mark-C, .rp-grade.mark-D { background: linear-gradient(150deg, #ded6c2, #b4a888); color: #3a3325; }
+
+.rp-score {
+  font-family: "Source Han Serif CN", "Songti SC", SimSun, serif;
+  font-size: 15px; font-weight: 700; color: #1d222c; letter-spacing: .02em;
+  white-space: nowrap; text-align: right;
+}
+
+/* ── 页脚 ─────────────────────────────────────────────── */
+
+/* 页脚：评分依据 + 免责说明，两行小字 */
+.rp-foot {
+  display: flex; flex-direction: column; gap: 2px;
+  margin-top: 10px; padding-top: 8px;
+  border-top: 1px solid rgba(60, 50, 30, .22);
+}
+.rp-foot > span { font-size: 9px; color: #6d6455; line-height: 1.5; }
+.rp-note-sub { color: #857a63 !important; }

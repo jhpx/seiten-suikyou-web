@@ -3,20 +3,12 @@
  * 卡片内图片全是同源相对路径（web/assets/...，后端 serveStatic 提供），无跨域污染，modern-screenshot 直接内联。
  * 截图库用本地 vendored 的 web/vendor/modern-screenshot.js（单文件 ESM、零 CDN 依赖）。
  *
- * ⚠️ 文件名**必须是 .js，不能是 .mjs**：线上前端托管在 GitHub Pages，它对 .mjs 回的
- *   Content-Type 是 `application/octet-stream`，而浏览器对模块脚本的 MIME 是硬校验 ——
- *   动态 import 直接抛 "Expected a JavaScript module script"。本地 serveStatic 会给
- *   `text/javascript`，所以「127 能下、线上域名不能下」。改名即可，别再换回 .mjs。
+ * 栅格化和下载这两步在 features/shot.js（全站共用），这里只留明细页特有的部分：
+ * 等伤害表定型、量画布尺寸、起文件名。
  */
 
-import { el, state } from '../../core.js'
-
-let lib = null
-/* 动态 import 才加载截图库（约 37KB），只取一次缓存住 */
-async function loadLib () {
-  if (!lib) lib = await import('../../vendor/modern-screenshot.js')
-  return lib
-}
+import { state } from '../../core.js'
+import { showBusy, nodeToBlob, downloadBlob } from '../shot.js'
 
 /* 出图倍率：600px 设计稿 × 1.25 = 750px 宽。
  *
@@ -30,18 +22,6 @@ async function loadLib () {
  * 卡里最小的字是 9px 词条，1.25 倍后 11.25px 仍然清楚；手机上看这张图只有 380pt 宽，
  * 750px 够用，1200px 全是白等。 */
 const SHOT_SCALE = 1.25
-
-/* 生成期间盖一层「只转圈、不写字」的蒙版 —— 出图要等几秒，不给反馈用户只会以为按钮坏了。
- *   · 挂在 body 上（和弹窗一样在 .shell 外）：不参与整页缩放，也不会被截进图里；
- *   · 顺手挡住点击：生成途中切页面、再点一次分享，下载都会落空；
- *   · 淡入延迟 120ms 写在 style.css 的 .shot-mask 上：桌面端常常 100ms 就完事，
- *     一闪而过的黑影比没有更糟。 */
-function showBusy () {
-  const mask = el('div', 'shot-mask')
-  mask.append(el('div', 'shot-spin'))
-  document.body.append(mask)
-  return () => mask.remove()
-}
 
 /* 等伤害表定型再截（最多 4s），避免截到「伤害计算中…」；超时也不阻塞 */
 async function waitDamage (timeout = 4000) {
@@ -73,39 +53,16 @@ export async function downloadDetailCard () {
   try {
     await waitDamage()
 
-    /* 出图尺寸必须**显式传**，不能让库自己去量。
-     *
-     * modern-screenshot 没收到 width/height 时会用 getBoundingClientRect() 量节点，
-     * 而手机上是 .shell-in 的整页 scale()（见 bootstrap.js 的 fitShell）在缩放：
-     * 390 宽屏上 rect 只有 600 × 0.633 ≈ 380 宽、1128 高。库按这个尺寸建画布、
-     * 再把整张 600px 设计稿塞进去，于是只截到卡片左上角 63% —— 就是「只有半边」。
-     * 之前那版「截之前临时撤掉整页缩放」治不了根：撤 transform 会改变 .shell 高度，
-     * 触发 ResizeObserver → fitShell 立刻又把 scale 写回去，等 domToBlob 真读尺寸时
-     * 往往已经复原了（实测过的就是这个竞态）。
-     *
-     * offsetWidth/offsetHeight 是布局尺寸，不受祖先 transform 影响，恒等于 600 × 实际高度。
-     */
-    const width = canvas.offsetWidth
-    const height = canvas.offsetHeight
-
     canvas.style.transform = 'none'
     canvas.style.transformOrigin = 'top left'
 
-    const { domToBlob } = await loadLib()
-    const blob = await domToBlob(canvas, { width, height, scale: SHOT_SCALE })   // 600 → 750px
+    const blob = await nodeToBlob(canvas, SHOT_SCALE)
     if (!blob) return false
 
     const av = state.view?.avatars?.find(a => a.avatarId === state.selectedAvatarId)
-    const name = (av?.name || 'card').replace(/[\\/:*?"<>|]/g, '_')  // 清掉文件名非法字符
+    const name = av?.name || 'card'
     const uid = av?.uid ?? 'uid'
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.download = `genshin-${uid}-${name}.png`
-    link.href = url
-    document.body.append(link)
-    link.click()
-    link.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)  // 下载已同步触发，1s 后回收
+    downloadBlob(blob, `genshin-${uid}-${name}.png`)
     return true
   } finally {
     canvas.style.transform = prevTransform

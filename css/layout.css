@@ -50,6 +50,11 @@
   padding: 14px;
   margin-bottom: 14px;
 }
+/* 账号名/签名/等级在左，「导出报告」入口在右 —— 做成一行 flex，
+   窄屏时整页等比缩小，版面不变（见 bootstrap.js 的 fitShell）。 */
+.acct-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.acct-header > div:first-child { min-width: 0; }
+.acct-report-btn { height: 30px; padding: 0 12px; font-size: 12px; flex: none; }
 .acct-nick { font-size: 17px; font-weight: 700; }
 .acct-sig { font-size: 11px; color: var(--ink-3); margin: 4px 0 8px; }
 .acct-meta { display: flex; gap: 18px; margin-top: 8px; }

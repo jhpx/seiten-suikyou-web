@@ -42,6 +42,22 @@ export const $ = (id) => document.getElementById(id)
 export const UID_RE = /^(?:[1-9]\d{8}|18\d{8})$/
 export const isValidUid = (v) => UID_RE.test(String(v ?? '').trim())
 
+/*
+ * UID 首位就是区服。口径抄后端 src/common/util.ts 的注释（那边已用 Enka 响应的 region
+ * 字段实测核对：1/2→CN、6→NA、7→EU、8→ASIA、9→TW；5 开头是国服渠道服）。
+ * 10 位的 18 开头是亚服 4.4 之后的新号段，和 9 位的 8 同为亚服。
+ *
+ * 返回的是顶栏区服胶囊用的那套代号（china / usa / euro / asia / cht / bilibili）：
+ * 它是专有代号，五语言界面都照原样显示，不用再翻译一遍。认不出来返回 null，
+ * 报告单上宁可留个「—」，也别猜一个区服写上去。
+ */
+const UID_REGION = { 1: 'china', 2: 'china', 5: 'bilibili', 6: 'usa', 7: 'euro', 8: 'asia', 9: 'cht' }
+export function regionOfUid (uid) {
+  const s = String(uid ?? '')
+  if (s.startsWith('18')) return 'asia'
+  return UID_REGION[s[0]] ?? null
+}
+
 /* 根据浏览器语言推断默认 locale：只在「URL 没带 ?locale=、localStorage 也没存过」时才用。
  * 别名表跟后端 src/common/names.ts 的 ALIASES 对齐（zh-cn→chs、zh-tw/zh-hk→cht、jp→ja、kr→ko）。
  * 认不出的语言退回 chs，后面 bootstrap 还会用 /api/meta 的 locales 再校验一遍。 */
@@ -226,7 +242,8 @@ export function showView (name) {
      UID 框 / 刷新 / 语言在这儿一个都用不上，留着只是把 600px 画布往下顶，
      还把页面上唯一的退出入口「← 返回」压成次要信息。切回首页再放出来 ——
      语言切换只在首页做，明细页不带这一排。
-     ⚠️ 模拟页也收顶栏：它是明细页的下一步，同样用不上那一排。 */
+     ⚠️ 模拟页也收顶栏：它是明细页的下一步，同样用不上那一排。
+     ⚠️ 评定报告没有视图：首页按钮一点直接出图下载（见 features/report/report-shot.js）。 */
   document.body.classList.toggle('on-detail', onDetail || onSim)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }

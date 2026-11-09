@@ -201,6 +201,35 @@
 /* 变化列：涨红跌绿（A 股口径，项目里所有涨跌都这个约定） */
 #view-sim .sim-dmgfull-cont .dmg-up { color: #ff6b6b; font-weight: 700; }
 #view-sim .sim-dmgfull-cont .dmg-down { color: #4ecca3; font-weight: 700; }
+/*
+ * Buff 列表（明细页那张表的「可比版」）：版式直接吃 .dmg-cont.dmg-msg 的两列
+ * （来源 | 描述），这里只补「相对当前配装有没有变」的三种状态：
+ *   新增（is-new）/ 失效（is-gone）/ 描述变了（.sim-val-old → .sim-val-new）。
+ *
+ * ⚠️ 旧→新的三个类在 sim.css 里的原规则是 `#view-sim .item .sim-val-old`，
+ *   要求 .item 祖先；buff 表不在装备卡里，所以这里单独写一份，别指望继承。
+ */
+#view-sim .sim-buff { margin: 10px 0 0; }
+#view-sim .sim-buff .tr.is-new { background: rgba(var(--sim-tint-rgb), .08); }
+#view-sim .sim-buff .tr.is-gone .th,
+#view-sim .sim-buff .tr.is-gone .td { color: var(--ink-3); }
+#view-sim .sim-buff .sim-buff-tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  /* 12 / 18 是照着描述正文（15px）的视觉重量定的：再小整页一缩就只剩几个像素高 */
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+#view-sim .sim-buff .sim-buff-tag.is-new { color: var(--sim-tint); border: 1px solid rgba(var(--sim-tint-rgb), .55); }
+#view-sim .sim-buff .sim-buff-tag.is-gone { color: var(--ink-3); border: 1px solid var(--line); }
+#view-sim .sim-buff .sim-val-old { color: var(--ink-3); }
+#view-sim .sim-buff .sim-val-new { color: var(--sim-tint); }
+#view-sim .sim-buff .sim-arrow { margin: 0 4px; color: var(--ink-3); font-style: normal; }
 /* 没算出结果时的占位行 */
 .sim-dmg-empty {
   padding: 14px;

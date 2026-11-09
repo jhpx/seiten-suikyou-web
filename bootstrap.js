@@ -15,6 +15,9 @@ import './features/roster/filter.js'
 import './features/roster/sort.js'
 import './features/detail/detail.js'
 import './features/sim/sim.js'
+/* 报告单模块：report-shot.js 负责「离屏排一张 → 出图 → 下载」，
+   它 import 报告单的渲染（report.js），所以这里引一个就够。 */
+import './features/report/report-shot.js'
 import { loadMeta, applyStaticUi, changeLocale } from './features/i18n.js'
 import { persistUid, renderUidHistory } from './features/history.js'
 import { loadRegions } from './features/region.js'

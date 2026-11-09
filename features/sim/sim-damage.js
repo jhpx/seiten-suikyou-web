@@ -76,6 +76,77 @@ export function drawDamageCompare () {
   foot.append(el('span', '', T('dmgEnemy', { lv: left.enemyLv, name: left.enemyName })))
   cont.append(foot)
   box.append(cont)
+
+  /* Buff 列表跟在伤害对比后面（明细页也是「表在上、buff 在下」） */
+  const buff = buffCompare(left.buffs, right.buffs)
+  if (buff) box.append(buff)
+}
+
+/*
+ * Buff 列表的「可比版」—— 明细页那张只写「现在生效什么」，这里要回答
+ * 「改了武器 / 圣遗物之后，buff 多了什么、少了什么、哪个数变了」。
+ *
+ *   · 两边都有、描述也一致            → 普通行
+ *   · 两边都有、描述变了（精炼改数值）  → 描述写成「旧 → 新」
+ *   · 只在调整后                     → 标「新增」
+ *   · 只在当前                       → 标「失效」，补在列表末尾
+ *
+ * 配对先按「来源 + 描述」精确配，再按「来源」配：同一个来源本来就可能出现多次
+ * （神里两条被动都叫「神里被动」），逐条按顺序配才不会把两条串了。
+ */
+function buffCompare (cur, adj) {
+  const left = (cur || []).map(b => ({ title: b.title, desc: b.desc }))
+  const rows = []
+
+  /* ① 精确命中 = 没动过 */
+  for (const b of adj || []) {
+    const i = left.findIndex(x => x.title === b.title && x.desc === b.desc)
+    if (i >= 0) left.splice(i, 1)
+    rows.push({ title: b.title, desc: b.desc, kind: i >= 0 ? 'same' : 'todo' })
+  }
+
+  /* ② 同来源但描述不同 = 数值变了（换精炼、套装同系列换星级这类） */
+  for (const r of rows) {
+    if (r.kind !== 'todo') continue
+    const i = left.findIndex(x => x.title === r.title)
+    if (i >= 0) {
+      r.oldDesc = left[i].desc
+      left.splice(i, 1)
+      r.kind = 'changed'
+    } else {
+      r.kind = 'new'
+    }
+  }
+
+  /* ③ 剩下的：当前有、调整后没有 = 失效 */
+  for (const b of left) rows.push({ title: b.title, desc: b.desc, kind: 'gone' })
+
+  if (!rows.length) return null
+
+  const cont = el('div', 'dmg-cont dmg-msg sim-buff')
+  const title = el('div', 'cont-title')
+  title.append(document.createTextNode(T('dmgBuff')))
+  title.append(el('span', '', T('dmgBuffTip')))
+  cont.append(title)
+
+  const table = el('div', 'cont-table')
+  for (const r of rows) {
+    const tr = el('div', 'tr' + (r.kind === 'same' ? '' : ' is-' + r.kind))
+    tr.append(el('div', 'th', r.title))
+    const td = el('div', 'td')
+    if (r.kind === 'new') td.append(el('span', 'sim-buff-tag is-new', T('simBuffNew')))
+    if (r.kind === 'gone') td.append(el('span', 'sim-buff-tag is-gone', T('simBuffGone')))
+    if (r.kind === 'changed') {
+      /* 只换掉变了的那段（数值），整句仍读得通 */
+      td.append(el('span', 'sim-val-old', r.oldDesc), el('i', 'sim-arrow', '→'), el('span', 'sim-val-new', r.desc))
+    } else {
+      td.append(document.createTextNode(r.desc))
+    }
+    tr.append(td)
+    table.append(tr)
+  }
+  cont.append(table)
+  return cont
 }
 
 /* 两个「3,946」这样的字符串相减；任一边非纯数字返回 null（宁可「—」也别 NaN）。 */

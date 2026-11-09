@@ -9,9 +9,9 @@
 web/
 ├── index.html            #   外壳（顶栏 / 视图容器 / 页脚），只引入 bootstrap.js
 ├── bootstrap.js          #   入口：引齐 feature 模块（副作用注册渲染器）+ 控制器 + 启动
-├── core.js               #   基座：state / 取文案 T() / DOM 小工具 / 调后端 api / 视图切换与编排
+├── core.js               #   基座：state / 取文案 T() / DOM 小工具 / UID 校验与区服推断 / 调后端 api / 视图切换与编排
 ├── env.js                #   可选部署配置（API_BASE 指定后端地址，缺省走同源 /api）
-├── css/                  #   按模块拆分的样式（17 个文件，<link> 顺序 = 层叠顺序）
+├── css/                  #   按模块拆分的样式（18 个文件，<link> 顺序 = 层叠顺序）
 │   ├── base.css          #   设计令牌 / reset / 整页等比缩放外壳
 │   ├── form.css          #   输入控件（输入框、下拉、focus）
 │   ├── button.css        #   按钮全族（含返回 / 分享 / 进模拟）
@@ -24,6 +24,7 @@ web/
 │   ├── char-card.css     #   角色卡片网格（武器 / 套装两态）
 │   ├── page-states.css   #   明细页外壳 / 占位 / 加载蒙版 / 页脚
 │   ├── sim.css           #   模拟比对页（含对装备卡的覆盖）
+│   ├── report.css        #   评定报告单（离屏排版 → 出图）
 │   ├── rubric.css        #   评分规则下拉
 │   ├── detail-base.css   #   明细页画布 / 立绘 / 属性表 / 命座
 │   ├── score-card.css    #   圣遗物总分卡与评分区底色
@@ -32,6 +33,7 @@ web/
 ├── assets/               #   图片素材（约 101MB，随子仓库提交，必须跟着前端发布）
 └── features/             #   JS 模块：根 = 全站共用，子目录 = 页面专属
     ├── dialog.js         #   共用：弹窗 / 下拉壳 + 两个全局监听（入口副作用引入）
+    ├── shot.js           #   共用：DOM 节点 → PNG → 下载（明细页 / 报告单都走它）
     ├── region.js         #   共用：顶栏区服在线状态（读一次 /api/health）
     ├── i18n.js           #   共用：loadMeta / 切语言 / 静态文案
     ├── history.js        #   共用：UID 历史（localStorage）
@@ -53,6 +55,9 @@ web/
         ├── detail-damage.js      #   伤害表加载与渲染
         ├── detail-fit.js         #   页面适配（fitLongText / fitSelectText / fitDetailScale）
         └── detail-screenshot.js  #   截图下载（按需动态导入截图依赖）
+    └── report/           #   报告单 2 个模块（没有视图：首页按钮一点直接出图）
+        ├── report.js             #   渲染一张 .rp-sheet（纯渲染）
+        └── report-shot.js        #   离屏排版 → 出图 → 下载（reg.exportReport）
 ```
 
 页面目录里的模块回根取 `../../core.js`，取根上的共用模块写 `../dialog.js`。
@@ -62,7 +67,7 @@ web/
 
 `index.html` 里 `<link>` 的先后顺序就是层叠顺序：后面的文件覆盖前面同特异性的规则。
 新增或调整样式模块时，先看 `AGENTS.md` 的「样式模块与加载顺序」，再同步 `index.html` 与母仓库的顺序断言。
-三个视图同页并存、17 个 `<link>` 一次性全部加载，所以 CSS 不按页面分目录；哪个页面用到哪些样式，查 `AGENTS.md` 的「视图 ↔ 样式模块映射」。
+两个视图同页并存、18 个 `<link>` 一次性全部加载，所以 CSS 不按页面分目录；哪个页面用到哪些样式，查 `AGENTS.md` 的「视图 ↔ 样式模块映射」。
 
 ## 本地预览
 
