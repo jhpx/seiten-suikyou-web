@@ -6,8 +6,27 @@
 <title>星天水镜 · 圣遗物评分</title>
 <!-- 页面自身的引用一律写**相对路径**：GitHub Pages 的项目站挂在 /<repo>/ 下面，
      写成 /style.css 会指到域名根上去，直接 404。 -->
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="miao.css">
+<!-- 样式按「基础层 → 通用组件 → 页面模块 → 明细页评分卡」拆分。
+     ⚠️ 下面的顺序就是层叠顺序：后加载的文件会覆盖前面同特异性的规则，
+        调整顺序会改变显示效果。每个模块的职责和来源写在 css/ 文件头。 -->
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/form.css">
+<link rel="stylesheet" href="css/button.css">
+<link rel="stylesheet" href="css/topbar.css">
+<link rel="stylesheet" href="css/region.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/advice.css">
+<link rel="stylesheet" href="css/dialog.css">
+<link rel="stylesheet" href="css/filter.css">
+<link rel="stylesheet" href="css/char-card.css">
+<link rel="stylesheet" href="css/page-states.css">
+<link rel="stylesheet" href="css/sim.css">
+<link rel="stylesheet" href="css/report.css">
+<link rel="stylesheet" href="css/rubric.css">
+<link rel="stylesheet" href="css/detail-base.css">
+<link rel="stylesheet" href="css/score-card.css">
+<link rel="stylesheet" href="css/item-card.css">
+<link rel="stylesheet" href="css/damage.css">
 </head>
 <body>
 
@@ -51,6 +70,7 @@
   <div id="view-detail" class="view"></div>
   <!-- 模拟比对页：与明细页同级的第三个视图，由 core.showView('sim') 切换 -->
   <div id="view-sim" class="view"></div>
+  <!-- 评定报告没有视图：首页「导出报告」按钮一点直接出图下载（features/report/report-shot.js） -->
 </main>
 
 <footer class="foot">

@@ -1,0 +1,63 @@
+/* ============================================================================
+ * layout.css · 页面容器与账号头
+ *
+ * .banner 提示条、.app 主容器、.view 视图切换动画、.acct-* 账号头。
+ *
+ * 来源：style.css:365-414（由原 style.css / miao.css 按行区间拆出，规则内容未改写）
+ * 加载顺序：第 6 / 17 个。index.html 里的 <link> 顺序就是层叠顺序，
+ * 后面的文件覆盖前面同特异性的规则；调整顺序前请先看 docs 里的顺序契约。
+ * ============================================================================ */
+/* ───────────────────────── 提示条 ───────────────────────── */
+
+.banner {
+  /* 和顶栏/主容器同一条内容带：通栏的话桌面上一句报错会横跨整屏 */
+  width: 100%;
+  max-width: var(--app-width);
+  margin: 8px auto 0;
+  /* 左右 12 是**盒内文字**的内缩，不是和卡片对齐用的布局留白 —— 条子自身外边缘已经是 600 */
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 12px;
+}
+.banner.err { border-color: #e85656; color: #ffb3b3; }
+.banner.ok { border-color: #4caf7d; color: #aef0c9; }
+
+/* ───────────────────────── 主容器：600 内容带 ───────────────────────── */
+
+.app {
+  flex: 1;
+  width: 100%;
+  max-width: var(--app-width);
+  margin: 0 auto;
+  padding: 12px 8px 24px;
+}
+
+.view { display: none; }
+.view.active { display: block; animation: fadeIn .18s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* 首页没有标题了：原来那行「角色大全」删掉了（2026-10-07），账号头直接顶上。 */
+
+/* ───────────────────────── 首页：账号头 ───────────────────────── */
+
+.acct-header {
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+/* 账号名/签名/等级在左，「导出报告」入口在右 —— 做成一行 flex，
+   窄屏时整页等比缩小，版面不变（见 bootstrap.js 的 fitShell）。 */
+.acct-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.acct-header > div:first-child { min-width: 0; }
+.acct-report-btn { height: 30px; padding: 0 12px; font-size: 12px; flex: none; }
+.acct-nick { font-size: 17px; font-weight: 700; }
+.acct-sig { font-size: 11px; color: var(--ink-3); margin: 4px 0 8px; }
+.acct-meta { display: flex; gap: 18px; margin-top: 8px; }
+.acct-meta div { display: flex; flex-direction: column; }
+.acct-meta b { font-size: 15px; }
+.acct-meta span { font-size: 11px; color: var(--ink-3); }

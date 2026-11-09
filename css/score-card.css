@@ -1,0 +1,353 @@
+/* ============================================================================
+ * score-card.css · 圣遗物总分卡
+ *
+ * .arti-mark-cont 评分卡、词条网格、有效词条 / 五件部件行，以及文末「评分区底色」——整张卡所有 background 的唯一出处，必须与本文件一起维护。
+ *
+ * 来源：miao.css:387-731（由原 style.css / miao.css 按行区间拆出，规则内容未改写）
+ * 加载顺序：第 15 / 17 个。index.html 里的 <link> 顺序就是层叠顺序，
+ * 后面的文件覆盖前面同特异性的规则；调整顺序前请先看 docs 里的顺序契约。
+ * ============================================================================ */
+/* ───────────────────────── 圣遗物总分卡 (.arti-mark-cont) ───────────────────────── */
+
+/* clip-path 只裁**下缘**（负值＝向外扩，所以左右和上方 2px 投影保留）：
+   左卡的 `0 0 1px #ccc` 高光 + `2px 2px 4px` 投影会在底边外侧多出 5px，
+   和右侧网格平切的底边对不上，看着像左边多出一截。裁到 107px 底边后，
+   两侧底缘落在同一行；底部 1px 亮线由 .arti-class-title 自己补（见下）。 */
+.arti-mark-cont { display: flex; clip-path: inset(-8px -8px 0 -8px); }
+.arti-stat {
+  width: 185px;
+  flex: none;
+  box-shadow: 0 0 1px 0 #ccc, 2px 2px 4px 0 rgba(50, 50, 50, .8);
+  display: flex;
+  flex-direction: column;
+}
+.arti-stat-ret {
+  width: 100%;
+  /* 双数字垂直居中，撑满评分卡高度（现在评分卡只与右侧词条网格齐平，
+     下面的统计行、说明行都是独立的一行，不再算进这张卡的高度） */
+  flex: 1;
+  padding: 4px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* 双数字：圣遗物总分 + 评级（两列等宽、中加细分隔线，数值 26px 醒目；标签在上） */
+.arti-stat-ret .ret-main {
+  display: flex;
+}
+.arti-stat-ret .ret-main > div {
+  flex: 1 1 0;
+  text-align: center;
+  color: #fff;   /* 评分白；评级由 mark-* 覆盖 */
+  padding: 0 4px;
+}
+.arti-stat-ret .ret-main > div + div {
+  border-left: 1px solid rgba(255, 255, 255, .14);
+}
+.arti-stat-ret .ret-main strong {
+  display: block;
+  font-size:26px;
+  line-height: 30px;
+  font-weight: bold;
+}
+.arti-stat span { font-size: 12px; line-height: 20px; color: #bbb; }
+/* 评分规则那一行：这是「分数怎么来的」的唯一出处。单规则角色直接显示「评分规则：xxx」；
+   多规则角色会换成标签 + 下拉（.has-select），下拉字号在 style.css 里。
+   它现在是最下面「说明行」的左半栏：185px 和上面的评分卡、统计行左栏同一列。
+   ⚠️ 高度 26px 与右半栏的免责句、以及上面统计行完全一致，两条横线的底边才齐。 */
+.arti-class-title {
+  width: 185px;
+  flex: none;
+  height: 26px; line-height: 26px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  text-align: left;
+  padding-left: 8px;
+  text-shadow: 0 0 2px #000;
+  /* 底色不在这里写 —— 见文末「评分区底色」那一节，整张卡的底色只有一个出处。 */
+  /* 底缘那 1px 亮线要和右侧统计格（inset 0 -1px 0 rgba(255,255,255,.26)）完全一致，
+     否则同一行里左边是纯深色、右边带一条灰线，看着底边就是齐不了。 */
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .26);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 第 10 个副词条已并进上面的统一 3 列网格（10 词条 = 4 行 × 3 列 = 12 格），
+   不再单独做溢出格 —— 旧的 .arti-overflow 样式已删。 */
+
+/* 右侧：有效词条汇总。上游写死 390px，这里用 flex:1 吃掉 185px 评分卡之外的剩余宽度。 */
+.arti-info { flex: 1; min-width: 0; }
+.arti-info .arti-all-attr { height: auto; overflow: visible; }
+.arti-info .arti-all-attr .arti-attr {
+  position: relative;
+  /* 这个 ul 身上还挂着 .detail，会被上面 `.detail { position:absolute; right:20px }`
+     命中 —— 相对定位下 right:20px 等于整体左移 20px，第一列的词条角标就被
+     分数卡盖掉一截。上游同样用 right/top 归零来解，照抄。 */
+  right: 0;
+  top: 0;
+  /* 统一 3 列网格：每格等宽（横向平分）。词条按实际种类数排，不够 3 的倍数补空格；
+     8/9 种 = 3 行，10 种 = 4 行。统计格已挪走，这一块只放词条。
+     格间 1px 暗缝靠容器深色底透出来（底色见文末「评分区底色」）。
+     ⚠️ 必须 minmax(0, 1fr)：裸 1fr 等于 minmax(auto, 1fr)，格内文字的 min-content 会把列撑宽
+     （实测 150/150/136 溢出容器、第三列被画布裁掉），就不是「横向平分」了。 */
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  width: 100%;
+  margin: 0; padding: 0;
+  list-style: none;
+}
+/*
+ * 有效词条那一行沿用「 .artis / .arti-info 」成对选择器 —— 上游每一条都是成对的，
+ * 我们之前只搬了 .artis 那一半，结果右边这块既没有黄/灰配色，也没有斑马纹。
+ */
+.arti-info ul.detail li {
+  position: relative;
+  padding: 0 3px;
+  font-size: 14px;
+  width: 100%;
+  display: table-row;
+  line-height: 26px;
+  height: 26px;
+  white-space: nowrap;
+}
+.arti-info ul.detail li span { color: #fff; }
+.arti-info ul.detail li.great span.title { color: #ffe699; }
+.arti-info ul.detail li.nouse span { color: #888; }
+/* 统一单元格：每格等宽、两端对齐（文本左·数值右），同款底色 —— 格间 1px 暗缝已是分隔 */
+.arti-info .arti-all-attr .arti-attr li {
+  display: flex;
+  align-items: center;
+  line-height: 26px;
+  height: 26px;
+  font-size: 14px;
+  padding: 0 3px;
+  white-space: nowrap;
+}
+/* ── 最下面一行：左「评分规则」+ 右「喵喵规则免责句」──────────────
+   这两句都是「分数怎么来的」的说明，合成一条独立行沉到底；紧贴词条网格的
+   那条统计行（.arti-parts-row）因此在它上面。分栏宽度和上面两行完全一致。
+   两块各用各的底色（见文末「评分区底色」）：左条压到最黑、右条只压一层，
+   深浅不同是有意的 —— 左边是「选哪套规则」（可交互），右边是一句免责声明。
+   免责句仍是半透明白字 + 金色的「喵喵版规则」+ 顶边那条黑分隔线。
+   ⚠️ 顶边用 inset box-shadow 而不是 border-top：border 会多占 1px，
+      同一行里左栏 26px、右栏 27px，底边就差一级台阶。 */
+.arti-note-row {
+  display: flex;
+  margin-top: 1px;
+}
+.arti-notice {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  line-height: 26px;
+  font-size: 12px;
+  /* 这一行不跟左卡拼信息，整句自己居中 */
+  text-align: center;
+  padding: 0 6px;
+  color: rgba(255, 255, 255, .85);
+  box-shadow:
+    inset 0 1px 0 rgba(0, 0, 0, .7),
+    inset 0 -1px 0 rgba(255, 255, 255, .26);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.arti-notice strong { color: #ffd866; }
+
+/* ── 紧贴词条网格的一行：左「有效词条」+ 右「五件部件」──────────────
+   左栏 185px 与 .arti-stat 同宽，右栏 flex:1 与 .arti-info 同宽；
+   下面那条说明行也是同样的分栏，三行纵向起点完全一致。
+   ⚠️ 用 flex 分栏而不是写死 390px：画布缩放时两栏始终跟上面两栏同起点。 */
+.arti-parts-row {
+  display: flex;
+  margin-top: 1px;
+}
+.arti-parts-row .parts-total,
+.arti-parts-row .parts-grid li {
+  height: 26px;
+  line-height: 26px;
+  font-size: 13px;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .26);
+}
+/* 左栏 185px，和上面的评分卡、下面的说明行左栏同一列 —— 三行左边界对齐。
+   ⚠️ 底色见文末「评分区底色」，这里只管版式；别在别处另写一个 background，
+      否则改色时两处打架，看着「改了没生效」。 */
+.arti-parts-row .parts-total {
+  width: 185px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  white-space: nowrap;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, .26),
+    inset 0 -1px 0 rgba(255, 255, 255, .26);
+}
+.arti-parts-row .parts-total span.title {
+  color: #fff;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.arti-parts-row .parts-total span.val {
+  flex: 0 0 auto;
+  color: #fff;
+  font-weight: 400;
+}
+.arti-parts-row .parts-grid {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* 部件格要装下「10.6 / 10.6」这种带小数、斜杠前后还各空一格的两段数，
+   格宽只有 77px：图标 18px + 间距 3px + 最宽数字（理论满档 10.6/10.6 实测 55.2px）
+   = 76.2px，还剩 0.8px，是能容下的极限；gap 再往上加就会撞格线。
+   现实数据里最宽的「8.8 / 10.0」是 48.8px，还留着 5px 余量。
+   不加左右 padding：内容本来就 flex 居中、两侧留白对称，padding 只会和 gap 抢那点宽度。
+   这 2px 让给图标间距更划算（1px 时图标和数字是贴着的一坨，分不开）。 */
+.arti-parts-row .parts-grid li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  white-space: nowrap;
+  color: #fff;
+}
+/* 部位图：18px 小方图，就是这件圣遗物自己的原图缩下来，不另存缩略图 */
+.arti-parts-row .parts-grid li .img {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 3px;
+  background-size: cover;
+  background-position: center;
+}
+/* 统计行和说明行的字统一白色：之前金色数字 + 压灰数字 + 金色免责句混在一块，
+   看着像三种不同含义的强调，其实只是同一组数字，颜色不该抢信息。 */
+.arti-parts-row .parts-grid li .val {
+  font-size: 11px;
+  color: #fff;
+}
+/* .title 不设定位：角标按上游口径锚在 li 上（li 才是 relative） */
+.arti-info .arti-all-attr .arti-attr li span.title {
+  padding-left: 36px;
+  width: 60%;
+  text-align: left;
+}
+/* 词条名一行装不下（English «Energy Recharge» 比中文「充能」长一倍多；中文 2 字一直装得下）
+   → 不动文案，整张表统一小一号：名字排两行 + 数值一起缩，li 仍是 26px。
+   ⚠️ 为什么不只缩那一格：同一张表里字号一大一小，看着像排版出错。
+   所以 fitLongText 的判据是「只要有一格装不下，整张表都加 .compact」，能一行排下的自然还在一行。
+   ⚠️ 为什么数值也要缩：这一格只有 124px 宽 —— 角标 30 + 名字 + 数值。只缩名字的话
+   「Recharge」这种单词（10.5px 下 47px）会被数值挤成三行，被 26px 的行裁掉。
+   类名打在 li 上（fitLongText 里判 title 溢出），角标和数值才好跟着一起缩。 */
+.arti-info .arti-all-attr .arti-attr li.compact {
+  /* 两行的名字要顶格排满 26px，所以三个元素都按行盒垂直居中，别再顶着基线上 */
+  align-items: center;
+}
+.arti-info .arti-all-attr .arti-attr li.compact span.title {
+  padding-left: 31px;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  display: grid;
+  align-content: center;
+  white-space: normal;
+  font-size: 10px;
+  /* 两行必须**矮于** 26px：填满 26px 时第一行会溢出 1px 到上一行，被上一行斑马纹底色盖掉半截
+     （实测 line1 顶 620 / li 顶 621）。10px 字 + 12px 行高 = 24px，居中后上下各余 1px。 */
+  line-height: 12px;
+  overflow-wrap: anywhere;
+}
+.arti-info .arti-all-attr .arti-attr li.compact span.title i.eff {
+  left: 4px;
+  top: 5px;
+  width: 26px; height: 16px;
+  line-height: 16px;
+  font-size: 11px;
+}
+.arti-info .arti-all-attr .arti-attr li.compact span.val {
+  flex: 0 0 auto;
+  width: auto;
+  font-size: 10px;
+  padding-right: 2px;
+}
+/* 词条格左上那颗小角标（这条词条的有效率，如「100%」）：28×18 的圆角块，锚在格子内。
+   它和 .compact 那套降档是一对 —— 降档时角标单独缩一档，见下面 li.compact 那段。 */
+.arti-info .arti-all-attr .arti-attr li span.title i.eff {
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  width: 28px; height: 18px;
+  line-height: 18px;
+  font-size: 12px;
+  font-style: normal;
+  text-align: center;
+  /* 角标是「100%」这种定宽小块：整表降档时 .compact 会给标题 overflow-wrap:anywhere，
+     不锁 nowrap 就会把 100% 拆成两行（100 / %），一整格看着像坏了 */
+  white-space: nowrap;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, .5);
+}
+.arti-info .arti-all-attr .arti-attr li span.val {
+  padding-right: 5px;
+  width: 40%;
+  font-size: 13px;
+  text-align: right;
+  color: #fff;
+}
+/* 无效词条（nouse）的数值也压灰。
+   ⚠️ 上游那条 `.arti-info ul.detail li.nouse span { color:#888 }` 管不到这里 ——
+   它只有 (0,2,3) 的分量，被上面 `.arti-all-attr .arti-attr li span.val` 的 (0,3,2) 盖掉了，
+   结果 nouse 格只有名字是灰的、加成数值还是白的，看着像「有效词条」。这里补一条更具体的。 */
+.arti-info .arti-all-attr .arti-attr li.nouse span.val {
+  color: #888;
+}
+
+/* ════════════════════════ 评分区底色（整张卡唯一出处）════════════════════════
+ *
+ * 这一节是评分卡**所有**底色的唯一出处。上面的布局规则里一律不写 background，
+ * 就是为了让「深浅」这件事能在一个地方一眼比完 —— 之前散在各元素里，
+ * 改一处以为生效了，实际生效的是另一处，来回改了好几轮都对不上。
+ *
+ * ⚠️ 先说清物理前提：这张卡**没有实心底**。所有格子都是半透明 rgba 压在
+ *    「角色立绘 .main-pic + 元素背景 .pd-canvas（如 bg-cryo.webp 青蓝渐变）」上。
+ *    所以同一个透明度，在不同角色（火/冰/雷/草…）身上观感不一样：
+ *      · 太浅（.4 及以下）→ 元素色透上来，看着**偏蓝/偏元素色**
+ *      · 够深（.7 以上）  → **偏黑**，白字对比也够
+ *    调色时别只盯数值，要拿真实角色页看（探针 + 截图，别肉眼估）。
+ *
+ * 三行从上到下、由浅到深（视觉上「轻 → 压住」）：
+ *   第一行  总分卡 / 词条格        → .4     最浅，透出元素色打底
+ *   第二行  有效词条 / 五件部件    → .72    明确压黑，缝 .85 分格
+ *   第三行  评分规则（左）         → .78    最底一行，比第二行再黑一档
+ *           免责句（右）           → .55    只压一层；与左条深浅不同是有意的
+ */
+
+/* —— 第一行：总分卡 + 词条网格 —— */
+.arti-stat { background: rgba(0, 0, 0, .4); }
+/* 词条网格容器要够深才透得出 1px 缝（格子比它浅） */
+.arti-info .arti-all-attr .arti-attr { background: rgba(0, 0, 0, .7); }
+/* 词条格掺一点灰而不是纯黑：纯黑叠在青蓝底上会发闷，掺灰更接近中性 */
+.arti-info .arti-all-attr .arti-attr li { background: rgba(50, 50, 50, .4); }
+
+/* —— 第二行：有效词条 + 五件部件 —— */
+.arti-parts-row .parts-total,
+.arti-parts-row .parts-grid li { background: rgba(0, 0, 0, .72); }
+/* 部件网格容器比格子再深一档，露出 1px 暗缝把五格分开 */
+.arti-parts-row .parts-grid { background: rgba(0, 0, 0, .85); }
+
+/* —— 第三行左：评分规则条 —— */
+/* 多规则角色的下拉框 .arti-rubric-select 是 transparent，会透出这层色，跟着一起黑 */
+.arti-note-row .arti-class-title { background: rgba(0, 0, 0, .78); }
+
+/* —— 第三行右：免责句 —— */
+.arti-note-row .arti-notice { background: rgba(0, 0, 0, .55); }

@@ -23,7 +23,9 @@
  * 排序面板由 sort.js 提供（renderFilterBar 直接拼进来）。
  */
 
-import { $, state, T, el, imgError, closeMenus, closeModal, openDialog, refreshRosterGrid, rosterElems, rosterRanks, rosterSets, rosterStars, dropStaleFilter, reg } from '../core.js'
+import { $, state, T, el, imgError, refreshRosterGrid, swapRosterFoot, reg } from '../../core.js'
+import { closeMenus, closeModal, openDialog } from '../dialog.js'
+import { rosterElems, rosterRanks, rosterSets, rosterStars, dropStaleFilter } from './filter-options.js'
 import { sortPanel } from './sort.js'
 
 /* 元素选项：图标 + 名字，都从名单里已有角色身上借（URL 一律由接口返回） */
@@ -69,7 +71,7 @@ function funnelIcon () {
 }
 
 /* ───────────────────────── 筛选弹窗 ─────────────────────────
- * 壳子（遮罩 / 头 / 底 / Esc / 取消）走 core 的 openDialog，这里只管内容：
+ * 壳子（遮罩 / 头 / 底 / Esc / 取消）走 dialog.js 的 openDialog，这里只管内容：
  * 三组 chips + 「勾的是草稿、确定才写回」。
  * 草稿是必须的：否则每勾一下整页闪一次，而「取消」也就没意义了。 */
 
@@ -237,7 +239,9 @@ function viewSwitch () {
     const i = Math.max(0, VIEWS.findIndex(v => v.key === state.rosterMode))
     state.rosterMode = VIEWS[(i + 1) % VIEWS.length].key
     paint()
-    refreshRosterGrid()
+    /* 只换卡片下半块（武器块 ↔ 圣遗物套装块），上半块（含立绘）原样保留，不重载整页卡片图。
+       筛选/排序才走 refreshRosterGrid（名单或顺序真变了，必须全量重建）。 */
+    swapRosterFoot()
   })
 
   paint()

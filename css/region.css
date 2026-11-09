@@ -1,0 +1,76 @@
+/* ============================================================================
+ * region.css · 顶栏区服在线状态胶囊
+ *
+ * .src-* 各区分服（enka 官方 / microgg 镜像）在线状态胶囊：状态图标 + 代号。
+ * 与 features/region.js 配对。规则内容未改写，从 topbar.css 的「区服在线状态」段迁出。
+ *
+ * 加载顺序：第 5 / 17 个。index.html 里的 <link> 顺序就是层叠顺序，
+ * 后面的文件覆盖前面同特异性的规则；调整顺序前请先看 docs 里的顺序契约。
+ * ============================================================================ */
+/* 各区分服在线状态行：顶栏查询栏下方一条细线，铺开每个区服的「状态图标 + 代号」胶囊。
+   身份色里有绿(cht)/红(china)/粉(bilibili)，单靠一个彩色圆点分不清在线断线，
+   所以状态用两层编码：① 形状图标 ✓/✕/○ ② 红绿胶囊底色（断线再加深描边 + 柔光）。
+   文字始终完整显示身份色，不加删除线 —— 划线会让区服名看着像被废弃的内容。
+   文字身份色（--c，抄 status.enka.network）只作用于 .src-name，图标另取状态色 --dot。 */
+.src-line {
+  width: 100%;
+  max-width: var(--app-width);
+  /* 和顶栏其它间距一样留 8px：原来 margin-top 是 0，状态胶囊上沿正好贴着刷新按钮下沿，
+     再被按钮那圈向下的金色柔光一糊，看着就像两层叠在一起。 */
+  margin: 8px auto 0;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+}
+.src-regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-items: center;
+}
+.src-region {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px 2px 6px;
+  border-radius: 9px;
+  border: 1px solid var(--state-line);
+  background: var(--state-bg);
+  font-size: 11px;
+  letter-spacing: .03em;
+  cursor: default;
+}
+.src-region::before {
+  content: '○';
+  font-size: 10px;
+  line-height: 1;
+  color: var(--dot, var(--ink-3));
+}
+.src-name { color: var(--c, var(--ink-3)); }
+/* 在线：✓ 绿底；断线：✕ 红底；未知：○ 灰底 */
+.src-region.is-up {
+  --dot: #5fd08a; --state-bg: rgba(95, 208, 138, .09); --state-line: rgba(95, 208, 138, .28);
+}
+.src-region.is-up::before { content: '✓'; }
+/* 断线要一眼跳出来：底更红、边更亮、✕ 更大、再补一圈柔光；文字保持完整 */
+.src-region.is-down {
+  --dot: #ff6b6b; --state-bg: rgba(224, 106, 106, .22); --state-line: rgba(224, 106, 106, .62);
+  box-shadow: 0 0 7px rgba(224, 106, 106, .18);
+}
+.src-region.is-down::before { content: '✕'; font-size: 11px; }
+.src-region.is-unknown {
+  --dot: var(--ink-3); --state-bg: rgba(111, 122, 142, .10); --state-line: var(--line);
+}
+/* 两个分组标签对称：enka（官方 6 区）/ microgg（镜像 2 服）。
+   只有第二组前面画竖线，第一组贴着左边起头。 */
+.src-group-label {
+  font-size: 10px;
+  letter-spacing: .04em;
+  color: var(--ink-3);
+  padding-right: 2px;
+}
+.src-group-label:not(:first-child) {
+  margin-left: 6px;
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+}

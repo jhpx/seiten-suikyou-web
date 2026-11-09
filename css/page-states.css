@@ -1,0 +1,102 @@
+/* ============================================================================
+ * page-states.css · 明细页外壳与通用状态
+ *
+ * 明细页隐藏顶栏的规则、返回栏、.placeholder 占位、.loading/.spin、截图蒙版与 .foot 页脚。
+ *
+ * 来源：style.css:1191-1284（由原 style.css / miao.css 按行区间拆出，规则内容未改写）
+ * 加载顺序：第 11 / 17 个。index.html 里的 <link> 顺序就是层叠顺序，
+ * 后面的文件覆盖前面同特异性的规则；调整顺序前请先看 docs 里的顺序契约。
+ * ============================================================================ */
+/* ───────────────────────── 明细页 ───────────────────────── */
+
+/* 明细页收掉整条顶栏：UID 框/刷新/语言在这里全用不上（切语言回首页做），
+   留着既把 600px 画布往下顶，又让「← 返回」这一屏唯一的退出入口显得次要。
+   body 上挂 class 而不是给 #top 写 hidden —— 首页/明细页来回切只动一个类名，
+   不用在两处各维护一次显隐。 */
+body.on-detail .top { display: none; }
+/* 顶栏没了，main 顶到屏幕最上沿，12px 有点贴边，多给 4px 呼吸 */
+body.on-detail .app { padding-top: 16px; }
+/* 明细页卡片最底下已经有一句「数据时间」了，页脚这句不再重复。
+   只藏文字、不藏 .foot 盒子：那圈 padding 还留着，明细页底边高度和以前一样，
+   来回切页时下面的留白不会跳。JS 该写还写（列表页要用），靠类名决定显不显示。 */
+body.on-detail #footmeta { display: none; }
+
+/* 返回栏现在只有一个按钮（角色名已删），gap 跟着去掉 */
+.detail-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+/* 明细页：返回栏用 min(600px,100%) 跟画布严格同框（画布实际宽 = min(600, 内容区)，同源）。
+   别用 align-self:center —— flex 子比容器宽时 margin:0 auto 会退化成 flex-start，整条栏左偏。 */
+#view-detail.view.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+#view-detail .detail-bar {
+  width: min(600px, 100%);
+  margin: 0 auto 12px;
+}
+#view-detail .placeholder { align-self: stretch; }
+
+/* ───────────────────────── 通用状态 ───────────────────────── */
+
+.placeholder {
+  background: var(--bg-3);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--ink-2);
+}
+.placeholder .dim { color: var(--ink-3); font-size: 12px; }
+
+.loading {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 80px 0; color: var(--ink-3);
+}
+.spin {
+  width: 28px; height: 28px; border-radius: 50%;
+  /* 转圈也用金 —— --accent 蓝在这里是最后一处（顶栏那两处已改），留着它就还是有个孤立的蓝 */
+  border: 3px solid var(--line); border-top-color: var(--gold-lt);
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 截图生成的等待蒙版：只有转圈，不写任何字。
+   挂在 body 上（在 .shell 外），不参与整页缩放，也不会被截进图里 —— 详见 detail-screenshot.js 的 showBusy()。
+   ⚠️ 延迟 120ms 再淡入：桌面端常常 100ms 就出图，一闪而过的黑影比没有更糟；
+      手机端要几秒，这段延迟基本感觉不到。
+   暗底沿用筛选弹窗的 rgba(8,7,6,.62)，金圈沿用 .spin —— 不新开一套观感。 */
+.shot-mask {
+  position: fixed; inset: 0; z-index: 300;   /* 顶栏 100、提示条 260，蒙版压在最上面 */
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 7, 6, .68);
+  animation: shotFade .18s ease .12s both;
+}
+/* 两段金色（上 + 右）才看得出在转：只留一段时圈太细，静态看就是个缺口。
+   卡片里有大片亮色立绘，单靠金圈会糊进去，所以加一圈柔和的外发光把它托出来。 */
+.shot-spin {
+  width: 54px; height: 54px; border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, .18);
+  border-top-color: var(--gold-lt); border-right-color: var(--gold-lt);
+  animation: spin .7s linear infinite;
+  filter: drop-shadow(0 0 12px rgba(255, 230, 153, .55));
+}
+@keyframes shotFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ───────────────────────── 页脚 ─────────────────────────
+ *
+ * 就一行：这份数据的抓取时间。内核出处、角色数、语言一概不放这儿。
+ * body 是 flex column、.app 撑掉剩下的高度，所以它自然贴在页面底部。
+ */
+.foot {
+  width: 100%;
+  max-width: var(--app-width);
+  margin: 0 auto;
+  padding: 4px 8px 32px;
+}
+.foot > span { font-size: 12px; line-height: 1.6; }
+.foot > .dim { color: var(--ink-3); }

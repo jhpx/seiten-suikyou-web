@@ -1,0 +1,119 @@
+/* ============================================================================
+ * dialog.css · 通用弹窗 / 下拉壳
+ *
+ * 与 features/dialog.js 配对：筛选 / 排序 / 模拟页共用的弹窗壳（遮罩 + 头 + 可滚内容 +
+ * 底 + 按钮）与下拉壳（容器 / 按钮 / 菜单）。规则内容未改写，从 filter.css 的「弹窗壳 /
+ * 下拉壳」两段迁出（filter.css 只留筛选条与弹窗 / 下拉内的内容：chips / 排序行 / 选项）。
+ *
+ * ⚠️ 这些壳被三个页面共用，不是首页专属；改它们会同时影响筛选 / 排序 / 模拟页弹窗。
+ * 加载顺序：第 8 / 17 个。index.html 里的 <link> 顺序就是层叠顺序，
+ * 后面的文件覆盖前面同特异性的规则；调整顺序前请先看 docs 里的顺序契约。
+ * ============================================================================ */
+/* ───────────────────────── 弹窗壳 ─────────────────────────
+ * 两处都是「点开一个大框、在里面勾完再确定」，壳子只写一份：
+ * 遮罩 + 头（标题 + ×）+ 可滚内容区 + 底（可选清空 / 计数 / 取消 / 确定）。 */
+.rf-mask {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  background: rgba(8, 7, 6, .62);
+}
+.rf-modal {
+  display: flex; flex-direction: column;
+  width: min(520px, 100%);
+  max-height: min(80vh, 100%);
+  background: var(--bg-3);
+  border: 1px solid var(--gold-line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .6);
+}
+.rf-modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.rf-modal-title { font-size: 14px; font-weight: 600; letter-spacing: .06em; }
+.rf-modal-x {
+  width: 28px; height: 28px; padding: 0;
+  background: none; border: 0; border-radius: 6px;
+  color: var(--ink-3); font-size: 18px; line-height: 1; cursor: pointer;
+}
+.rf-modal-x:hover { color: var(--gold-lt); background: rgba(211, 188, 142, .12); }
+/* 内容区自己滚（选项多 / 窄屏不够高时），头和底钉住不动 */
+.rf-modal-body { overflow-y: auto; padding: 12px 14px; }
+.rf-modal-foot {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+}
+.rf-modal-actions { display: flex; gap: 8px; margin-left: auto; }
+/* 取消 / 确定：跟筛选条控件同高（34px）。确定是金底深字 —— 它是这一步的主动作，
+   不能和「取消」一样轻 */
+.rf-btn {
+  height: 34px; padding: 0 14px;
+  background: var(--ctrl-bg);
+  border: 1px solid var(--gold-line);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  font-size: 12px; letter-spacing: .04em; cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, color .16s ease;
+}
+.rf-btn:hover { border-color: rgba(211, 188, 142, .5); color: var(--gold-lt); }
+.rf-btn.primary { background: var(--gold); border-color: var(--gold); color: #1a1510; font-weight: 600; }
+.rf-btn.primary:hover { background: var(--gold-lt); border-color: var(--gold-lt); color: #1a1510; }
+.rf-fpanel-clear {
+  padding: 3px 10px;
+  background: none; border: 1px solid var(--line); border-radius: 6px;
+  color: var(--ink-2); font-size: 11px; letter-spacing: .04em; cursor: pointer;
+}
+.rf-fpanel-clear:hover { border-color: rgba(211, 188, 142, .5); color: var(--gold-lt); }
+.rf-fpanel-count { color: rgba(240, 236, 225, .45); font-size: 11px; }
+
+/* ───────────────────────── 下拉壳 ─────────────────────────
+ * 下拉容器 + 按钮 + 菜单：面板绝对定位挂在容器下面。选项（.rf-opt*）是各 feature 自己的内容，
+ * 留在 filter.css；这里只给壳。advice.css 的 .advice-menu 直接复用 .rf-menu / .rf-opt。 */
+/* 下拉容器：面板绝对定位挂在它下面，得有个定位参照 */
+.rf-dd { position: relative; min-width: 0; }
+.rf-dd-btn {
+  display: flex; align-items: center; gap: 4px;
+  height: 34px; padding: 0 10px;
+  background: var(--ctrl-bg);
+  border: 1px solid var(--gold-line);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+  font-size: 12px; letter-spacing: .04em;
+  cursor: pointer;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease, color .16s ease;
+}
+/* 组名和值共用这一个 span：长了省略号截，按钮宽度就不跟着文案乱跳 */
+.rf-dd-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 实心三角当方向指示用，9px 会糊成一个小点，11px 才和 12px 的按钮文字配得上 */
+.rf-caret { font-size: 11px; line-height: 1; opacity: .7; }
+/* 条件排序/没排序时 caret 是空的，留着会白占一个 gap 的右内边距 */
+.rf-caret:empty { display: none; }
+.rf-dd-btn:hover { border-color: rgba(211, 188, 142, .5); }
+/* 展开态 = 金描边 + 金晕；选中态再加淡金底。和顶栏按钮 hover 是同一支金 */
+.rf-dd.open .rf-dd-btn {
+  border-color: var(--gold-line-hi);
+  color: var(--gold-lt);
+  box-shadow: 0 0 0 3px rgba(211, 188, 142, .13);
+}
+.rf-dd-btn.active { border-color: var(--gold-line-hi); background: rgba(211, 188, 142, .16); color: var(--gold-lt); }
+
+/* 面板底用不透明色（--bg-4）：半透明的话下面的角色网格会透上来，选项读不清 */
+.rf-menu {
+  display: none;
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20;
+  min-width: 100%;
+  /* 288px = 9 个选项（等级 MAX…D 共 9 档，最长的那个面板）刚好放满不滚动 */
+  max-height: 288px; overflow-y: auto;
+  padding: 4px;
+  background: var(--bg-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .55);
+}
+.rf-dd.open .rf-menu { display: block; }
+/* 末尾那组（权重 / 排序）改成右对齐：英文的「Elemental Mastery」比按钮本身宽，
+   左对齐会一路顶出去被 body 的 overflow-x 裁掉 */
+.rf-dd-end .rf-menu { left: auto; right: 0; }

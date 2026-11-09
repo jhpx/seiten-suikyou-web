@@ -1,0 +1,152 @@
+/* ============================================================================
+ * filter.css · 筛选条与弹窗内容（弹窗 / 下拉壳见 dialog.css）
+ *
+ * .rf-* 筛选条、多选面板的选项 chip 与排序行、下拉菜单的选项 .rf-opt*；
+ * 弹窗壳（.rf-mask / .rf-modal* / .rf-btn / .rf-fpanel-*）与下拉壳（.rf-dd / .rf-menu 等）
+ * 已迁到 dialog.css，本文件只留首页筛选条与弹窗 / 下拉内的内容。
+ *
+ * 来源：style.css:664-902（由原 style.css / miao.css 按行区间拆出，规则内容未改写）
+ * 加载顺序：第 9 / 17 个。index.html 里的 <link> 顺序就是层叠顺序，
+ * 后面的文件覆盖前面同特异性的规则；调整顺序前请先看 docs 里的顺序契约。
+ * ============================================================================ */
+/* ───────────────────────── 首页：筛选条 ─────────────────────────
+ *
+ * 一行三段：排序（左）｜武器/圣遗物切换（中）｜漏斗筛选（右）。
+ * 顺序即频率：排序定第一印象放最左；筛选是末态动作（点完就看结果）沉到最右。
+ * 视觉沿用顶栏控件那套（--ctrl-bg 深色玻璃 + --gold-line 金描边），
+ * 一个新色都不引 —— 筛选条和顶栏在同一屏上，另起一套必然搭不上。
+ * 34px 高：比顶栏控件（36）矮 2px，它是内容区的次级控件，不该和顶栏主角一样高。
+ *
+ * 筛选是聚合**弹窗**（漏斗图标触发），不再摊三个下拉 —— 三个维度都要多选
+ * （同时看火和水），一个大框里一次勾完再确定；选项收起来而不平铺，是给网格省垂直空间。
+ * 窄屏（一行放不下时）靠 flex-wrap 折行，中间的视图切换 margin auto 两边分，
+ * 折了行它自己那一行也是居中的。
+ */
+.roster-filter {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  margin-bottom: 12px;
+}
+/* 视图切换：**一颗循环按钮**（点一下换下一个视图），不是左右分段的 segmented ——
+   分段壳天生只画得下两半，加第三个视图就得重排版；循环按钮只报「当前是哪个」。
+   位置在筛选条最左，右边两颗（排序/筛选）靠 margin-left:auto 一起顶到右侧。
+   框子故意跟右边两颗不一样：**实心金底 + 全圆角胶囊**（右边是深色玻璃 + 方角）——
+   右边两颗是「点开弹窗去选」的操作，这一颗是「点一下就换状态」的状态钮，不是一类东西。 */
+.rf-switch-btn {
+  display: inline-flex; align-items: center;
+  height: 30px; padding: 0 14px;
+  background: var(--gold);
+  border: 1px solid var(--gold);
+  border-radius: 999px;
+  color: #1a1510;
+  font-size: 12px; font-weight: 600; letter-spacing: .04em;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease;
+}
+.rf-switch-btn:hover { background: var(--gold-lt); border-color: var(--gold-lt); }
+/* 排序那颗：把它和漏斗一起顶到最右（margin-left:auto 吃掉中间剩余空间）。
+   两颗是同类的「弹窗触发器」，挨在一起，中间只留筛选条本身的 6px gap */
+.rf-sort { margin-left: auto; }
+/* 漏斗按钮：图标 + 角标。比别的下拉按钮窄（不摊文案），宽度跟着图标走。
+   这里要 position:relative —— 角标是相对它定位的，而漏斗按钮本身不再是 .rf-dd
+   （它开的是弹窗，不是挂在按钮下面的小面板） */
+.rf-filter { position: relative; margin-left: 0; }
+/* 漏斗按钮本身也是 .rf-dd-btn，直接吃弹窗壳的 10px 内边距（见 dialog.css），
+   不在这儿单独压窄 —— 之前写的 padding:0 9px 被同文件的壳规则盖掉成了死代码，
+   拆文件后反而生效、把按钮从 36px 压成 34px。按钮比文案下拉窄是因为没字，不是因为特殊内边距。 */
+.rf-funnel-btn svg { width: 14px; height: 14px; flex: 0 0 auto; }
+/* 选中数角标：右下角一颗小圆点，金底深字。平时隐藏（visibility 而不是 display，
+   免得面板每次重画都改布局） */
+.rf-funnel-badge {
+  visibility: hidden;
+  position: absolute; right: -4px; bottom: -4px;
+  min-width: 14px; height: 14px; padding: 0 3px;
+  border-radius: 7px;
+  background: var(--gold);
+  color: #1a1510;
+  font-size: 10px; font-weight: 700; line-height: 14px; text-align: center;
+}
+.rf-funnel-badge.on { visibility: visible; }
+/* ── 弹窗 / 下拉壳已迁到 dialog.css ──
+ * .rf-mask / .rf-modal* / .rf-modal-foot / .rf-modal-actions / .rf-btn / .rf-fpanel-*
+ * 与 .rf-dd / .rf-dd-btn / .rf-dd-text / .rf-caret / .rf-menu 都在 dialog.css；
+ * 下面只留弹窗 / 下拉内的内容（chips / 排序行 / 选项）。 */
+.rf-fgroup + .rf-fgroup { margin-top: 14px; }
+.rf-fgroup-title {
+  padding: 0 2px 6px;
+  color: rgba(240, 236, 225, .45);
+  font-size: 11px; letter-spacing: .08em;
+}
+/* chips 排网格（不是随便折行）：每格 96px 起 —— 元素 7 个两行满、等级 9 档、
+   权重 4 项都各自对齐，行与行的列边界是直的，扫视不用跟着折行位置找 */
+.rf-fchips { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+/* 紧凑列：内容短（单字符档位、18px 图标），96px 一列太稀 —— 收窄到 40px、间距也收一点，
+   让套装/等级这组一行就能排下，不空荡 */
+.rf-fchips-tight { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 5px; }
+/* 元素专用：图标+短名要宽一点，且 auto-fit 把末尾空列收掉、整排铺满 ——
+   几个元素就均分整行宽度。min 取 56px：比紧凑列 40 宽、又不会像 72 那样把第 7 个元素挤到第二行；
+   英文元素名 Pyro/Hydro 也放得下（图标18+间距5+文字~30+内边距18 ≈ 71，56 时文字区略紧但单行不折） */
+.rf-fchips-elem { grid-template-columns: repeat(auto-fit, minmax(56px, 1fr)); gap: 5px; }
+/* 弹窗里的 chip 比小面板那颗高 8px（34 vs 26）：框大了、指针行程也长，
+   26px 在这个尺寸下看着像误触区 */
+.rf-chip {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  height: 34px; padding: 0 9px;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink-2);
+  font-size: 12px; letter-spacing: .04em;
+  cursor: pointer;
+  transition: border-color .14s ease, color .14s ease, background .14s ease;
+}
+.rf-chip:hover { border-color: rgba(211, 188, 142, .5); color: var(--gold-lt); }
+.rf-chip.active {
+  background: rgba(211, 188, 142, .16);
+  border-color: var(--gold-line-hi);
+  color: var(--gold-lt);
+}
+/* 元素那一颗（图标 + 名字）自己也要 flex 居中：img 是行内元素，默认按**基线**对齐 ——
+   图标底边压在文字基线上，图标整体就比字的中心低半截（名字越长越明显）。
+   chip 外层的 align-items:center 只管得住 chip 这一层，管不住这个 span 内部。
+   line-height:1 是配套的：行盒一旦比图标高，flex 居中算的是行盒中心，视觉上又偏了 */
+.rf-opt-elem {
+  display: inline-flex; align-items: center; gap: 5px;
+  line-height: 1;
+}
+.rf-chip img { width: 18px; height: 18px; object-fit: contain; }
+/* 弹窗底 / 按钮壳见 dialog.css */
+/* 排序现在也走弹窗（和筛选同一个 .rf-modal 壳），这些行只是弹窗里的**内容** ——
+   不再挂在 .rf-menu 上，宽度跟着弹窗走（520px），行高从 32px 放宽到 38px：
+   框大了、指针行程也长了，矮行在小面板里是省空间，在大框里显得局促。 */
+.rf-sort-row { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 4px; }
+.rf-sort-row + .rf-sort-row { border-top: 1px solid rgba(255, 255, 255, .05); }
+.rf-sort-pos {
+  flex: 0 0 auto; width: 18px; height: 18px; line-height: 18px; text-align: center;
+  border-radius: 50%; background: rgba(211, 188, 142, .18); color: var(--gold-lt);
+  font-size: 11px; font-weight: 600;
+}
+.rf-sort-name { flex: 1 1 auto; min-width: 0; color: var(--ink-2); font-size: 13px; letter-spacing: .04em; white-space: nowrap; }
+/* 小方钮在大框里跟着放大（28 vs 24），24px 在 38px 的行里偏小 */
+.rf-sort-mini {
+  flex: 0 0 auto; width: 28px; height: 28px; padding: 0;
+  background: none; border: 1px solid var(--line); border-radius: 6px;
+  color: var(--ink-2); font-size: 12px; line-height: 1; cursor: pointer;
+  transition: border-color .14s ease, color .14s ease, background .14s ease;
+}
+.rf-sort-mini:hover:not(:disabled) { border-color: rgba(211, 188, 142, .5); color: var(--gold-lt); background: rgba(211, 188, 142, .12); }
+.rf-sort-mini:disabled { opacity: .3; cursor: default; }
+.rf-sort-add { color: var(--gold-lt); border-color: rgba(211, 188, 142, .4); }
+.rf-sort-hint { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); color: rgba(240, 236, 225, .45); font-size: 11px; line-height: 1.4; }
+
+/* ── 下拉壳已迁到 dialog.css ── .rf-dd / .rf-dd-btn / .rf-menu 等见 dialog.css；下面只留选项内容。 */
+.rf-opt {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%; height: 30px; padding: 0 10px;
+  background: none; border: 0; border-radius: 7px;
+  color: var(--ink-2);
+  font-size: 12px; letter-spacing: .04em; text-align: left; white-space: nowrap;
+  cursor: pointer;
+}
+.rf-opt:hover { background: rgba(211, 188, 142, .12); color: var(--cream); }
+.rf-opt.active { background: rgba(211, 188, 142, .10); color: var(--gold-lt); }
+.rf-opt-elem img { width: 18px; height: 18px; object-fit: contain; }

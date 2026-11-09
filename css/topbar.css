@@ -1,0 +1,74 @@
+/* ============================================================================
+ * topbar.css · 顶栏骨架
+ *
+ * .top / .brand / .query 顶栏骨架与底边金线。区服在线状态胶囊（.src-*）已迁到 region.css。
+ *
+ * 来源：style.css:98-161 + style.css:263-330（由原 style.css / miao.css 按行区间拆出，规则内容未改写）
+ * 加载顺序：第 4 / 17 个。index.html 里的 <link> 顺序就是层叠顺序，
+ * 后面的文件覆盖前面同特异性的规则；调整顺序前请先看 docs 里的顺序契约。
+ * ============================================================================ */
+/* ───────────────────────── 顶栏 ───────────────────────── */
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 12, 16, .92);
+  backdrop-filter: blur(12px);
+  /* 左右内边距从 .top 挪到里面的 .brand / .query 上：顶栏背景和底边金线跟着整页走
+     （它在 .shell 里，宽度就是 --app-width），限宽的只是内容 —— 内容和下面 .app / .foot
+     一样收在 --app-width 里居中，于是顶栏内容的左右边缘和账号头、网格、页脚严格对齐。 */
+  padding: 10px 0;
+  /* 底边那条线由原来的实心灰蓝 border 换成下面的金线；
+     sticky + z-index 已经建了包含块，::after 才定得住 */
+}
+/* 顶栏内容宽度取 --app-width（和 .app 同一个数），左右 padding 也是同一个 8px，
+   于是顶栏内容的左右边缘和下面账号头、网格、页脚严格对齐。 */
+.brand, .query {
+  width: 100%;
+  max-width: var(--app-width);
+  margin: 0 auto;
+  padding: 0 8px;
+}
+/* 底边金线：两头淡、中间实。和明细页卡片描边、评级胶囊是同一支金色，
+   比一条从左边灌到右边的实线更像游戏里的分隔条。 */
+.top::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    transparent, var(--gold-line) 16%, var(--gold-line) 84%, transparent);
+}
+
+.brand { display: flex; align-items: center; gap: 9px; margin: 0 auto 10px; }
+/* ✦ 那颗方章原来是紫蓝渐变 —— 全站唯一的紫蓝色块，下面全是金/米白/星级底，看着像别处抠来的。
+   改成金色浮雕：外渐变 + 内侧顶边高光 + 一圈暖投影，深棕字压在金上（白字在这块金上只有约 1.6:1）。 */
+.brand .mark {
+  width: 30px; height: 30px; border-radius: 9px;
+  background: linear-gradient(150deg, #f7e6bb, #d9bd83 55%, #b6934f);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: #33291a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 2px 10px rgba(211, 188, 142, .28);
+}
+.brand h1 { margin: 0; font-size: 17px; letter-spacing: 2px; color: var(--cream); }
+.brand p { margin: 0; font-size: 11px; color: var(--ink-3); letter-spacing: .04em; }
+
+.query {
+  display: grid;
+  /* 三列：UID（最多 10.5em，可压）｜刷新（紧跟 UID）｜语言（右侧那列里靠右）。
+     以前是 minmax(0,1fr) auto auto —— 第一列把剩下的空间全吃掉，刷新按钮被推到
+     离 UID 框 857px 远的地方（1200px 视口实测）。现在第一列自己封顶，
+     刷新就贴在 UID 框右边缘外 8px，语言靠右端，中间空出来的那一大片才是留白。
+     下限写 0 不是 1fr：窄屏上第一列必须压得下去，否则整行会被顶出横向滚动条。 */
+  grid-template-columns: minmax(0, 10.5em) auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+/* 查询栏两个布局决策：
+   ① 列宽 10.5em ≈ 147px —— 9 位数字连内边距实测要 89px，这是「宽裕但短」的点；
+     宽屏上到顶不再拖长，窄屏上轨道照样能压到 115.9px（320px 视口实测）。
+   ② 语言下拉推到最右 —— justify-self 一改，grid item 就不再拉伸、按内容宽度收，
+     正好贴在顶栏内容带的右边缘上（实测 l=748，与账号头右边缘 846 齐平）。 */
+/* 区服在线状态胶囊（.src-*）已迁到 region.css，与 features/region.js 配对。 */

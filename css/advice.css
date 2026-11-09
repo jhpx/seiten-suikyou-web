@@ -1,0 +1,256 @@
+/* ============================================================================
+ * advice.css · 刷取建议
+ *
+ * .advice-* 建议面板：标题工具行、成色条、套装折叠行、逐件格。
+ *
+ * 来源：style.css:415-663（由原 style.css / miao.css 按行区间拆出，规则内容未改写）
+ * 加载顺序：第 7 / 17 个。index.html 里的 <link> 顺序就是层叠顺序，
+ * 后面的文件覆盖前面同特异性的规则；调整顺序前请先看 docs 里的顺序契约。
+ * ============================================================================ */
+/* ───────────────────────── 首页：刷圣遗物建议 ─────────────────────────
+ * 档位色不在这里定义：成色条的格子 / 件分都挂 `mark-<档位>`，颜色来自 miao.css 的 .mark-*
+ * （D-B 蓝 / A-S 绿 / SS 紫），条用 `currentColor` 继承。本文件只覆盖 `.mark-D`，
+ * 因为那支灰是给浅底卡片调的，压在深底上看不见。
+ */
+.advice-panel { margin: 22px 0 10px; }
+.advice-panel-head {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 14px 2px 10px;
+  border-top: 1px solid var(--line);
+}
+/* 标题与右侧那组控件同一行、分居两端；口径说明（.advice-panel-scope）是它的兄弟节点，
+   所以另起一行 —— 挤在同一行时，说明文字在 320 宽会把控件顶下去 */
+.advice-panel-top {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
+}
+.advice-panel-title {
+  margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .06em;
+  color: var(--gold-lt);
+}
+/* 面板头右边这组控件：排序 + 口径开关，包一层才不会被 space-between 拆散 */
+.advice-panel-tools { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; margin-left: auto; }
+
+/* 两颗控件同一个模子（26px 高、8px 方角、深玻璃底、金边）。
+   全站不写 hover —— 状态只由「是不是当前值」决定：
+   排序那颗永远显示当前值，所以常驻金边金字（底仍是深玻璃，见下面 .advice-sortfield） */
+.advice-toggle, .advice-sortfield {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center;
+  height: 28px; padding: 0 11px;
+  font: inherit; font-size: 12px; line-height: 1;   /* button 不继承字体族 */
+  border-radius: 8px;
+  color: var(--ink-2);
+  background: var(--ctrl-bg);
+  border: 1px solid var(--gold-line);
+  cursor: pointer;
+}
+.advice-toggle.on {
+  color: var(--gold-lt);
+  border-color: var(--gold-line-hi);
+  background: rgba(211, 188, 142, .16);
+}
+.advice-panel-scope { font-size: 11px; color: var(--ink-3); }
+
+/* 排序：一颗 button + 自绘菜单。不用原生 select —— 它展开的列表由浏览器画，改不动 */
+.advice-sortdd { flex: 0 0 auto; }
+.advice-sortfield { padding: 0 8px 0 10px; border-color: var(--gold-line-hi); }
+.advice-sortfield-key {
+  display: inline-flex; align-items: center;
+  font-size: 10px; letter-spacing: .04em;
+  color: var(--gold-lt); white-space: nowrap;
+}
+/* 竖线当分隔：全角冒号会空出一块，读着断成两截 */
+.advice-sortfield-key::after {
+  content: ''; width: 1px; height: 9px; margin: 0 7px;
+  background: var(--gold-line);
+}
+.advice-sortfield-val { font-size: 12px; letter-spacing: .02em; color: var(--gold-lt); white-space: nowrap; }
+/* ▼ 只表示「能展开」。别在展开时转成 ▲ —— 人物那颗的 ▲ 是「升序」 */
+.advice-sortfield-caret { margin-left: 5px; font-size: 10px; color: var(--gold); opacity: .9; }
+.advice-sortdd.open .advice-sortfield { box-shadow: 0 0 0 3px rgba(211, 188, 142, .1); }
+/* 菜单壳直接复用 .rf-menu / .rf-opt，只把行高压到 28px（4 项 = 120px） */
+.advice-menu .rf-opt { height: 28px; }
+/* 当前项：底色加深到 .16，末尾补 ✓ —— 默认 .10 在深底上几乎看不见 */
+.advice-menu .rf-opt.active { background: rgba(211, 188, 142, .16); }
+.advice-menu .rf-opt.active::after { content: '✓'; margin-left: auto; font-size: 11px; color: var(--gold); }
+.advice-empty { margin: 0; font-size: 13px; color: var(--ink-3); }
+
+.advice-list { display: flex; flex-direction: column; gap: 9px; }
+.advice-set {
+  background: var(--bg-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: border-color .15s;
+}
+.advice-set[open] { border-color: var(--gold-line); }
+.advice-set:hover { border-color: var(--gold-line); }
+
+.advice-head {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 11px;
+  cursor: pointer; list-style: none;
+}
+.advice-head::-webkit-details-marker { display: none; }
+
+/* 名次：定宽右对齐。今天 topN=8 只有个位，留 12px 是为了将来放宽也不用改版式 */
+.advice-rank {
+  flex: 0 0 auto; width: 14px;
+  font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--ink-3); text-align: right;
+}
+
+.advice-icon {
+  flex: 0 0 auto; width: 40px; height: 40px;
+  border-radius: 10px;
+  background-color: var(--bg-4);
+  background-size: 78%; background-position: center; background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+/* 名字用完自己的宽度就停，太长省略。底宽 78px（约六个汉字）：挤的时候先压条，
+ * 别把套名截成「昔日宗…」—— 条短了还能看件数，名字截了就不知道在说哪套 */
+.advice-main { flex: 0 1 auto; min-width: 78px; display: flex; align-items: center; }
+.advice-name {
+  display: flex; align-items: center; gap: 6px;
+  min-width: 0;
+  font-size: 15px; font-weight: 600; line-height: 1.2;
+}
+.advice-name-text {
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.advice-tag {
+  flex: 0 0 auto; font-size: 10px; font-weight: 400;
+  color: var(--ink-3); border: 1px solid var(--line);
+  border-radius: 4px; padding: 0 4px;
+}
+
+/* 成色条：一件一格，颜色由 .mark-<档位> 的 currentColor 给 —— 条长就是件数
+ *
+ * ⚠️ 宽度交给 grid 按**格子数自己撑**（grid-auto-flow: column + grid-auto-columns 定死列宽），
+ * grid 一列一格、列宽固定，条的长度天然= 件数，各浏览器一致。
+ * `min-width: 0` + `overflow: hidden`：十几件的长条会被父级max-width 约束裁掉尾巴，
+ * 这是有意的。 */
+.advice-strip {
+  /* 格宽：390 档 10px；窄屏条只剩三四十 px 可放，格子太宽就只看得见两三格，所以往下收 */
+  --advice-seg: 13px;
+  --advice-gap: 1px;
+  /* .advice-head 是 flex，条作为 item 不许收缩：grid 的列宽是定死的，
+     一旦允许 shrink，浏览器会压小整个 grid 容器把条挤扁 */
+  flex: 0 0 auto;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--advice-seg);
+  gap: var(--advice-gap);
+  justify-content: start;
+  min-width: 0; max-width: 58%; overflow: hidden;
+  height: 7px; opacity: .9;
+}
+.advice-seg { border-radius: 2px; background: currentColor; }
+/* 内核的 mark-D 是给浅底卡片调的灰，压在深底上几乎看不见 —— 只在本面板里提亮一档 */
+.advice-strip .mark-D { color: #9aa4b6; }
+
+/* 人数 / 件数：定最小宽度，条起点就只受套名长短影响，不受「5」和「15」的宽度差影响 */
+.advice-own {
+  flex: 0 0 auto; min-width: 68px; display: flex; align-items: center;
+  font-size: 12px; color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.advice-own b { font-weight: 600; color: var(--ink-2); margin-left: 3px; }
+.advice-own b + .advice-ico { margin-left: 10px; }
+.advice-ico { display: inline-flex; width: 11px; height: 11px; color: var(--ink-3); }
+.advice-ico svg { width: 100%; height: 100%; }
+
+/* 收起时右边的小三角；margin-left: auto 把它顶到行最右，否则会紧贴色条 */
+.advice-head::after {
+  content: '▾'; flex: 0 0 auto; margin-left: auto;
+  font-size: 14px; line-height: 1; color: var(--ink-3);
+  transition: transform .15s;
+}
+.advice-set:not([open]) .advice-head::after { transform: rotate(-90deg); }
+
+/* 一人一行，不再按档分组 —— 每件的分数已经有颜色，分组标题等于把同一件事说两遍 */
+.advice-body { padding: 2px 11px 9px; border-top: 1px solid var(--line); }
+.advice-rows { display: flex; flex-direction: column; }
+
+/* 一行 = 一个角色：人名 + 五个**定宽槽位**（花羽沙杯冠），整行可点。
+ * ⚠️ 必须用网格不能用 flex 排队：缺件也占着自己的列，各行的花才落在同一列；
+ *   flex 里缺一件后面四件整体左移，竖着就没法比了。
+ * 槽位宽写死，600 内容区下一行正好放下（屏幕更窄时整页等比缩小，这里不用再分档）。
+ * 尺寸全在这几个变量里，改一处全行跟着变 —— 2026-10-25 整体放大过一档
+ * （字 10.5→13、图 16→22、槽 54→66），原因是 600 内容区下这些格子原本偏挤。 */
+.advice-line {
+  --advice-name: 68px;    /* 人名一列 */
+  --advice-cav: 66px;    /* 一个部位的槽位 */
+  --advice-ic: 22px;      /* 部位图 */
+  --advice-fs: 13px;      /* 分数 */
+  --advice-pl: 4px;       /* 块内左右留白：图不必贴着块边 */
+  --advice-pr: 4px;
+  --advice-pt: 3px;       /* 块内上下留白：块比图标高一点 */
+  --advice-gap: 3px;      /* 标签内「图 ↔ 分」的间距 */
+  --advice-col: 14px;     /* 块与块之间的间隔 */
+  --advice-fill: rgba(255, 255, 255, .07);    /* 真件与空框共用这块淡底 */
+  display: grid; align-items: center; gap: 2px var(--advice-col);
+  grid-template-columns: var(--advice-name) repeat(5, minmax(0, var(--advice-cav)));
+  margin: 0 -4px; padding: 3px 4px;
+  background: none; border: 0; border-radius: 6px;
+  font: inherit; color: var(--ink-2); text-align: left;
+  cursor: pointer;
+}
+.advice-line:hover { background: var(--bg-4); }
+/* 名字占一列（宽度由网格给，各行起点天然对齐）；54px 装得下 5 个汉字，更长的省略 */
+.advice-char {
+  min-width: 0;
+  font-size: 13px; color: var(--ink-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.advice-line:hover .advice-char { color: var(--ink); }
+
+/* 一件 = 一个标签（淡底 + 部位图 + 分）。`width: 100%` 撑满槽位，
+   位数不同（6.9 / 35.3）也不会一格宽一格窄。
+   不加描边：真实件就是一块淡底的小方块，描边会让「框」比内容抢眼 */
+.advice-piece {
+  position: relative;
+  display: inline-flex; align-items: center;
+  width: 100%; min-width: 0;
+  gap: var(--advice-gap);
+  padding: var(--advice-pt) var(--advice-pr) var(--advice-pt) var(--advice-pl);
+  border-radius: 5px;
+  background: var(--advice-fill);
+}
+/* 缺的部位：占着格子默认什么都不画。`.is-frame` = 这格穿着他身上另一套（凑够 2 件的）——
+   只给和真件一样的淡底，**不画描边**（用户：空框不要边框，参考真件那块底）；
+   散件（别套只有 1 件）没有这个类，纯留白。 */
+.advice-blank { min-width: 0; }
+.advice-blank.is-frame {
+  /* 和真件同高：图标高 + 上下留白 */
+  height: calc(var(--advice-ic) + var(--advice-pt) * 2);
+  border-radius: 5px;
+  background: var(--advice-fill);
+}
+/* 初始词条数（3/4）压在部位图右下角：绝对定位不占宽度（一行五件各多 6px 就塞不下），
+   锚在图标右边缘，换档尺寸（18/16/14）也不用重算。底色取卡片色，压在小图上不糊 */
+.advice-piece .ap-init {
+  position: absolute; left: calc(var(--advice-pl) + var(--advice-ic)); bottom: 0;
+  transform: translateX(-100%);
+  font-size: 9px; font-style: normal; line-height: 1;
+  font-weight: 700; color: var(--ink-2);
+  background: var(--bg-3);
+  border-radius: 2px; padding: 0 1px;
+  pointer-events: none;
+}
+/* 拼凑件：这块是「缺的部位」，不是真装备 —— 图淡一点、分数位是 `---` */
+.advice-piece.is-missing .ap-icon { opacity: .5; }
+.advice-piece.is-missing .ap-mark { color: var(--ink-3); letter-spacing: .06em; }
+/* 部位图是 18px 的彩色小图（窄档 16 / 14），原样贴着发闷 —— 提一点亮度才认得出花和冠 */
+.advice-piece .ap-icon {
+  width: var(--advice-ic); height: var(--advice-ic); object-fit: contain;
+  filter: brightness(1.25) saturate(1.05);
+}
+/* 行高压到 1：块的高度只由图标决定，空框才能照着算（否则窄档文字行高比图标高 1px） */
+.advice-piece .ap-mark { font-size: var(--advice-fs); line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* 内核的 mark-D 是给浅底调的灰，压在深底上看不见 —— 只在本面板提亮一档 */
+.advice-piece .ap-mark.mark-D { color: #9aa4b6; }
+
+/* 槽位列写的是 minmax(0, var(--advice-cav))，放不下时列自己会压缩，不会撑破整行，
+ * 所以这里不需要再按屏宽分档（窄屏唯一的动作是整页缩小，见文件顶部 .shell）。 */

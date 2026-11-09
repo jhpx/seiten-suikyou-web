@@ -8,6 +8,11 @@
  * 后端调用 api、视图切换（showView/backToRoster）、几个「跨模块编排函数」
  * （refreshRosterGrid/renderAll/openDetail/applyView）。编排函数通过 reg 注册表
  * 调用各 feature 模块注册进来的渲染器 —— 这样 core 不依赖任何 feature，零循环依赖。
+ *
+ * 原先挂在这里的两块界面逻辑已按职责搬走，代码原样、只是换了住处：
+ *   弹窗 / 下拉壳与顶层监听 → features/dialog.js
+ *   首页筛选的候选计算     → features/roster/filter-options.js
+ * core 现在不碰任何 DOM 界面壳，也不管「这一组筛选项有哪些值」。
  */
 
 /* 接口根地址从哪儿来：**有 env.js 就用它的，没有就同源 /api**。
@@ -36,6 +41,22 @@ export const $ = (id) => document.getElementById(id)
 /* 原神 UID 合法校验：9 位（首位 1–9）或 10 位（仅 18 开头）。规则与后端 src/common/util.ts 保持一致。 */
 export const UID_RE = /^(?:[1-9]\d{8}|18\d{8})$/
 export const isValidUid = (v) => UID_RE.test(String(v ?? '').trim())
+
+/*
+ * UID 首位就是区服。口径抄后端 src/common/util.ts 的注释（那边已用 Enka 响应的 region
+ * 字段实测核对：1/2→CN、6→NA、7→EU、8→ASIA、9→TW；5 开头是国服渠道服）。
+ * 10 位的 18 开头是亚服 4.4 之后的新号段，和 9 位的 8 同为亚服。
+ *
+ * 返回的是顶栏区服胶囊用的那套代号（china / usa / euro / asia / cht / bilibili）：
+ * 它是专有代号，五语言界面都照原样显示，不用再翻译一遍。认不出来返回 null，
+ * 报告单上宁可留个「—」，也别猜一个区服写上去。
+ */
+const UID_REGION = { 1: 'china', 2: 'china', 5: 'bilibili', 6: 'usa', 7: 'euro', 8: 'asia', 9: 'cht' }
+export function regionOfUid (uid) {
+  const s = String(uid ?? '')
+  if (s.startsWith('18')) return 'asia'
+  return UID_REGION[s[0]] ?? null
+}
 
 /* 根据浏览器语言推断默认 locale：只在「URL 没带 ?locale=、localStorage 也没存过」时才用。
  * 别名表跟后端 src/common/names.ts 的 ALIASES 对齐（zh-cn→chs、zh-tw/zh-hk→cht、jp→ja、kr→ko）。
@@ -221,7 +242,8 @@ export function showView (name) {
      UID 框 / 刷新 / 语言在这儿一个都用不上，留着只是把 600px 画布往下顶，
      还把页面上唯一的退出入口「← 返回」压成次要信息。切回首页再放出来 ——
      语言切换只在首页做，明细页不带这一排。
-     ⚠️ 模拟页也收顶栏：它是明细页的下一步，同样用不上那一排。 */
+     ⚠️ 模拟页也收顶栏：它是明细页的下一步，同样用不上那一排。
+     ⚠️ 评定报告没有视图：首页按钮一点直接出图下载（见 features/report/report-shot.js）。 */
   document.body.classList.toggle('on-detail', onDetail || onSim)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
@@ -229,154 +251,6 @@ export function showView (name) {
 export function backToRoster () {
   state.selectedAvatarId = null
   showView('roster')
-}
-
-/* ───────────────────────── 下拉面板通用 ───────────────────────── */
-
-/* 收面板的唯一入口：点面板外面、按 Esc、选了选项，都走这里 */
-export function closeMenus () {
-  for (const dd of document.querySelectorAll('.rf-dd.open')) dd.classList.remove('open')
-}
-
-/* ───────────────────────── 弹窗通用（筛选 / 排序共用） ─────────────────────────
- * 两处都是「点开一个大框、在里面勾完再确定」，壳子只写一份：
- * 遮罩 + 头（标题 + ×）+ 可滚内容区 + 底（可选清空 / 计数 / 取消 / 确定）。
- *
- * 三条规矩：
- * ① 同时只允许一个弹窗 —— 换 UID 重画、再点按钮，都先把旧的收掉（openDialog 开头做）。
- * ② Esc / 点遮罩 / 取消 = **丢弃**（什么都不写回）；确定才写回。
- * ③ 确定时**先关窗再回调**：回调里重画网格，开着窗重画会让窗后的内容和窗本身一起闪。 */
-
-let openModal = null
-let escHandler = null
-
-export function closeModal () {
-  if (!openModal) return
-  openModal.remove()
-  openModal = null
-  if (escHandler) {
-    removeEventListener('keydown', escHandler)
-    escHandler = null
-  }
-}
-
-/**
- * 开一个弹窗，返回 { body, count, close } —— 内容由调用方自己往 body 里塞。
- * onOk 在关窗之后调用；onClear 给了就在左下角出「清空」钮。
- */
-export function openDialog ({ title, onOk, onClear }) {
-  closeModal()
-
-  const mask = el('div', 'rf-mask')
-  const modal = el('div', 'rf-modal')
-  modal.setAttribute('role', 'dialog')
-  modal.setAttribute('aria-modal', 'true')
-
-  const head = el('div', 'rf-modal-head')
-  head.append(el('span', 'rf-modal-title', title))
-  const x = el('button', 'rf-modal-x')
-  x.type = 'button'
-  x.textContent = '×'
-  x.addEventListener('click', () => closeModal())
-  head.append(x)
-
-  const body = el('div', 'rf-modal-body')
-
-  const foot = el('div', 'rf-modal-foot')
-  const count = el('span', 'rf-fpanel-count')
-  let clear = null
-  if (onClear) {
-    clear = el('button', 'rf-fpanel-clear')
-    clear.type = 'button'
-    clear.textContent = T('filterClear')
-    clear.addEventListener('click', onClear)
-    foot.append(clear)
-  }
-  foot.append(count)
-  const actions = el('div', 'rf-modal-actions')
-  const cancel = el('button', 'rf-btn')
-  cancel.type = 'button'
-  cancel.textContent = T('filterCancel')
-  cancel.addEventListener('click', () => closeModal())
-  const ok = el('button', 'rf-btn primary')
-  ok.type = 'button'
-  ok.textContent = T('filterOk')
-  ok.addEventListener('click', () => { closeModal(); onOk?.() })
-  actions.append(cancel, ok)
-  foot.append(actions)
-
-  modal.append(head, body, foot)
-  mask.append(modal)
-  /* 点在遮罩上（而不是弹窗里）= 取消 */
-  mask.addEventListener('click', e => { if (e.target === mask) closeModal() })
-  document.body.append(mask)
-
-  openModal = mask
-  escHandler = (e) => { if (e.key === 'Escape') closeModal() }
-  addEventListener('keydown', escHandler)
-  ok.focus()
-  return { modal, body, count, clear, close: closeModal }
-}
-
-/* 只在模块加载时装一次 —— 放进 renderFilterBar 会每重绘一次叠一个监听。
-   closest 判「点在不在某个下拉里」：点按钮本身也算在里面，交给按钮自己的 toggle 处理。 */
-addEventListener('click', e => { if (!e.target?.closest('.rf-dd')) closeMenus() })
-addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus() })
-
-/* ───────────────────────── 首页筛选的候选计算 ─────────────────────────
- * 这几个只吃 state + 名单，放在 core 避免 filter↔sort 互相 import 成环。 */
-
-/* 筛选项的排列顺序：游戏内图鉴的元素顺序（火水风雷草冰岩），不按数据出现顺序排。
-   旅行者的 elem 是 multi，不在七元素里 —— 他不会有自己的筛选项，
-   但「不限」时照常出现在网格里。 */
-export const ELEM_ORDER = ['pyro', 'hydro', 'anemo', 'electro', 'dendro', 'cryo', 'geo']
-
-export function rosterElems (view) {
-  const have = new Set(view.avatars.map(a => a.elem))
-  return ELEM_ORDER.filter(e => have.has(e))
-}
-
-/* 等级只列名单里真有人拿到过的档位 —— 摆一排点了也是空的档位没有意义 */
-export function rosterRanks (view) {
-  return RANK_ORDER.filter(r => view.avatars.some(a => a.score.markClass === r))
-}
-
-/* 圣遗物套装：名单里**穿满 2 件**的套装。
- * 为什么要卡 2 件：单件不激活套装效果，算不上「穿这套」。放进筛选项就是个假选项 ——
- * 点下去一个人也筛不出来（筛选那边同样只认 2 件，见 sort.js 的 filteredAvatars）。
- * 身份用权威的 setId（后端按每件圣遗物的 itemId 推出的 enka 套装 id，跨角色/跨刷新都稳定），
- * 不能用 miao 的显示名去重 —— 同一套物理圣遗物 miao 可能吐两个不同的显示名，会把一个套裂成两组。
- * name 是本地化显示名、icon 是花部位图，都随某只带这套的角色借来（URL/文案一律后端给）。
- * 排序按 setId 升序：这就是图鉴编号，跨语言/跨刷新顺序都一样；
- * 缺 setId 的（理论上不该有）排到最后，同 id 再按显示名兜底。 */
-export function rosterSets (view) {
-  const map = new Map()
-  for (const a of view.avatars) {
-    for (const s of a.sets || []) {
-      if ((s.count || 0) < 2) continue
-      const key = String(s.setId ?? s.nameZh)
-      const id = s.setId == null ? Infinity : Number(s.setId)
-      if (!map.has(key)) map.set(key, { id, name: s.name, icon: s.icon })
-    }
-  }
-  return [...map.entries()]
-    .sort((x, y) => (x[1].id - y[1].id) || x[1].name.localeCompare(y[1].name))
-    .map(([setId, v]) => ({ setId, name: v.name, icon: v.icon }))
-}
-
-/* 稀有度（角色星级）：只列名单里真有人是这档的（4★ / 5★）。
- * 值用字符串，和 elem/rank 同口径 —— chip 的 dataset.val 是字符串，
- * 数组里若放数字会和它比不相等（Array.includes 是严格相等），点不亮也筛不准。
- * 排降序：5★ 在前、4★ 在后。 */
-export function rosterStars (view) {
-  return [...new Set(view.avatars.map(a => String(a.star || 5)))].sort((a, b) => b - a)
-}
-
-/* 换了 UID 之后，旧条件可能在这份名单里根本不存在 —— 那时 chips 全不激活、
-   网格却是空的，看着像 bug。不成立的值就地剔除，整组空了就是「不限」。
-   多选版：把每个维度里不在候选中的值过滤掉（原来单值版是直接清空整键）。 */
-export function dropStaleFilter (key, values) {
-  state.filter[key] = state.filter[key].filter(v => values.includes(v))
 }
 
 /* ───────────────────────── URL / 加载态 ───────────────────────── */
@@ -407,6 +281,13 @@ export const reg = {}
 export function refreshRosterGrid () {
   const slot = document.querySelector('#view-roster .rf-grid')
   if (slot) reg.renderRosterGrid?.(slot)
+}
+
+/* 切「武器 / 圣遗物」视图：名单和排序都没变，只换卡片下半块（见 roster.js 的 swapRosterFoot），
+   立绘不重建，避免整页卡片图重新加载。 */
+export function swapRosterFoot () {
+  const slot = document.querySelector('#view-roster .rf-grid')
+  if (slot) reg.swapRosterFoot?.(slot)
 }
 
 export function renderAll () {
