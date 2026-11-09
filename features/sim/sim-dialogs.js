@@ -233,6 +233,7 @@ function openArtiDialog (a) {
     for (const s of subs) {
       const row = el('div', 'sim-subrow')
       const del = el('button', 'sim-subdel', '×')
+      del.type = 'button'
       del.addEventListener('click', () => {
         const i = subs.indexOf(s)
         if (i >= 0) subs.splice(i, 1)
@@ -244,6 +245,7 @@ function openArtiDialog (a) {
     /* 最多 4 条副词条，满了就不画「加一条」（比点了没反应的灰按钮清楚）。 */
     if (subs.length < 4) {
       const add = el('button', 'sim-submore', '+ ' + T('simAddStat'))
+      add.type = 'button'
       add.addEventListener('click', () => {
         const first = (sim.catalog?.subs || [])[0]
         if (!first || subs.length >= 4) return
@@ -254,7 +256,7 @@ function openArtiDialog (a) {
     }
   }
   drawSubs()
-  body.append(field(T('simSubStats'), subsBox))
+  body.append(fieldGroup(T('simSubStats'), subsBox))
 }
 
 /* 副词条类型下拉（标出大小词条）。 */
@@ -281,5 +283,19 @@ function numberInput (value) {
 function field (label, control) {
   const d = el('label', 'sim-field')
   d.append(el('span', '', label), control)
+  return d
+}
+
+/*
+ * 成组字段（副词条那一摞）：**不能用 <label> 包**。
+ * label 的激活行为会把「框里任何一次落在非控件上的点击」转给它的标注控件，而标注控件是
+ * 框内第一个可标注元素 —— 这里是**第一条副词条的下拉框**。于是点行尾 × 时只要擦到边缘
+ * （或者点行间缝隙 / 标签文字），手机就会把这次点击当成点了那个下拉，原生选择器直接弹出来，
+ * 选完就把第一条副词条改掉了（桌面端只表现为下拉闪一下，不容易察觉）。
+ * 组字段没有「唯一对应的那个控件」，所以用 <div>：外观一致，但没有 label 的转发语义。
+ */
+function fieldGroup (label, node) {
+  const d = el('div', 'sim-field')
+  d.append(el('span', '', label), node)
   return d
 }
