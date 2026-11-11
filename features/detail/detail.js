@@ -125,6 +125,8 @@ function buildBasic (av) {
   for (const k of ['a', 'e', 'q']) {
     const t = av.talent?.[k] || {}
     const icon = el('div', 'talent-icon' + (t.plus ? ' talent-plus' : '') + (t.crown ? ' talent-crown' : ''))
+    /* 皇冠用真实元素而不是 ::before：截图库不会内联伪元素的背景图，出图里会丢。 */
+    if (t.crown) icon.append(setBg(el('div', 'talent-crown-mark'), 'assets/character/imgs/crown.png'))
     icon.append(setBg(el('div', 'talent-icon-img'), av.imgs?.[k]))
     icon.append(el('strong', '', String(t.level ?? 0)))
     const item = el('div', 'talent-item')

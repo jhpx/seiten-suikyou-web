@@ -45,10 +45,12 @@ export function showBusy () {
  *   手机上是 .shell-in 的整页 scale()（见 bootstrap.js 的 fitShell）在缩放，
  *   getBoundingClientRect() 量到的是缩放后的尺寸，库会照那个建画布，于是只截到左上角一块。
  *   offsetWidth/offsetHeight 是布局尺寸，不受祖先 transform 影响。
+ *
+ * options 原样透传给 domToBlob（例如 onCloneNode），页面特有的修正不用改这一层。
  */
-export async function nodeToBlob (node, scale = 1) {
+export async function nodeToBlob (node, scale = 1, options = {}) {
   const { domToBlob } = await loadLib()
-  return domToBlob(node, { width: node.offsetWidth, height: node.offsetHeight, scale })
+  return domToBlob(node, { width: node.offsetWidth, height: node.offsetHeight, scale, ...options })
 }
 
 /* Blob → 浏览器下载。文件名里的非法字符（\ / : * ? " < > |）先换成下划线。 */

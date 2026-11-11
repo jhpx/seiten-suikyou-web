@@ -20,8 +20,13 @@ function renderAccountHeader (acct) {
   const box = el('div', 'acct-header')
   if (!acct) return box
 
-  box.append(el('div', 'acct-nick', acct.nickname || `UID ${acct.uid}`))
-  if (acct.signature) box.append(el('div', 'acct-sig', acct.signature))
+  /* 左边一列放「昵称 / 签名」，右边同一行放等级框和导出入口。
+     签名只占昵称下面那一行，不会把等级框顶到第三行；
+     等级框不参与伸缩，签名再长也不会把它们压扁。 */
+  const info = el('div', 'acct-info')
+  info.append(el('div', 'acct-nick', acct.nickname || `UID ${acct.uid}`))
+  if (acct.signature) info.append(el('div', 'acct-sig', acct.signature))
+  box.append(info)
 
   const meta = el('div', 'acct-meta')
   for (const [label, value] of [[T('level'), acct.level], [T('worldLevel'), acct.worldLevel], ['UID', acct.uid]]) {

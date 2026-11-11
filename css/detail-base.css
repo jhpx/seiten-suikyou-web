@@ -188,16 +188,18 @@
   font-weight: bold;
   box-shadow: 0 0 1px 0 #d3bc8e, 1px 1px 2px 0 rgba(0, 0, 0, .5);
 }
-/* 满级（固有 10 级）→ 右上角皇冠 */
-.talent-icon.talent-crown::before {
-  content: "";
+/* 满级（固有 10 级）→ 右上角皇冠。
+   用真实元素而不是 ::before：截图库不内联伪元素的背景图，导出图片里皇冠会消失。 */
+.talent-icon .talent-crown-mark {
   position: absolute;
   left: 50%; top: 0;
   width: 28px; height: 28px;
   margin-left: -14px;
-  background: url("../assets/character/imgs/crown.png") no-repeat;
+  background-repeat: no-repeat;
+  background-position: center;
   background-size: contain;
   z-index: 2;
+  pointer-events: none;
 }
 
 /* ── 面板属性表（8 行，斑马纹 + 权重胶囊 + 基础值/绿字） ── */

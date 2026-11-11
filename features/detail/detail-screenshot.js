@@ -23,6 +23,19 @@ import { showBusy, nodeToBlob, downloadBlob } from '../shot.js'
  * 750px 够用，1200px 全是白等。 */
 const SHOT_SCALE = 1.25
 
+/* 截图库克隆 DOM 时只把 select 的 value 写进属性，原生控件栅格化后仍会画成第一个选项，
+   于是图里的「评分规则 / 流派」和页面上选的不是同一个。克隆完成后给真正选中的
+   option 补上 selected 属性（其余先清掉），出图才和页面一致。 */
+function markSelectedOptions (clone) {
+  for (const sel of clone.querySelectorAll('select')) {
+    const value = sel.getAttribute('value')
+    const options = [...sel.options]
+    for (const o of options) o.removeAttribute('selected')
+    const picked = options.find(o => o.value === value) ?? options[0]
+    picked?.setAttribute('selected', 'selected')
+  }
+}
+
 /* 等两块异步内容都定型再截（最多 4s），避免截到「读取中…」；超时也不阻塞。
    YSIN 那边靠容器上的 ready 标记判断 —— loading 和「无数据」长得很像，猜 DOM 形状会误判。 */
 async function waitDetail (timeout = 4000) {
@@ -59,7 +72,7 @@ export async function downloadDetailCard () {
     canvas.style.transform = 'none'
     canvas.style.transformOrigin = 'top left'
 
-    const blob = await nodeToBlob(canvas, SHOT_SCALE)
+    const blob = await nodeToBlob(canvas, SHOT_SCALE, { onCloneNode: markSelectedOptions })
     if (!blob) return false
 
     const av = state.view?.avatars?.find(a => a.avatarId === state.selectedAvatarId)
