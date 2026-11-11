@@ -13,6 +13,7 @@ import {
 import { downloadDetailCard } from './detail-screenshot.js'
 import { renderWeaponCard, renderArtiCard } from './detail-card.js'
 import { loadDamage } from './detail-damage.js'
+import { loadYsin } from './detail-ysin.js'
 import { fitLongText, fitSelectText, fitDetailScale } from './detail-fit.js'
 
 function renderDetail () {
@@ -41,6 +42,12 @@ function renderDetail () {
   /* 左角色卡（主图 + 名字/等级/命座 + 面板属性）与右评分区各自收口成子树，挂进画布 */
   cont.append(buildBasic(av))
   cont.append(buildProfileDetail(av))
+
+  /* YSIN 独立评分板块：夹在装备卡与伤害计算之间。伤害算得准的话本来就是固定值，
+     变动的是装备，所以这块贴着装备、在伤害表之上。同样先放 loading 占位，数据到了再填。 */
+  const ysinBox = el('div', 'ysin-wrap')
+  cont.append(ysinBox)
+  loadYsin(av, ysinBox)
 
   /* 伤害计算（miao 明细页下侧的「伤害计算」表）：先放一个 loading 骨架占位，数据到了再填 ——
      renderDetail 是同步的（reg 契约），而伤害要跑一遍评分内核。 */

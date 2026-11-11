@@ -1,0 +1,136 @@
+/* ============================================================================
+ * ysin.css · YSIN 独立评分板块
+ *
+ * 明细页里夹在装备卡与伤害计算之间的新板块。视觉结构照现有评分卡：
+ * 左 185px 分数与汇总、右 flex 词条对照；26px 行高、1px 暗缝与卡片底纹沿用
+ * score-card.css / damage.css，读起来和上下两块是同一张卡里的内容。
+ * 颜色刻意用中性蓝，不碰 miao 的金色档位色，也不出现档位字母 ——
+ * 免得被读成「另一套评级」。弱化小字 #a9bccd 对卡底满足 4.5:1 以上。
+ *
+ * 来源：新建（视觉规格见 docs/wireframe/05-ysin.html）
+ * 加载顺序：第 18 个（共 19 个），夹在 item-card.css 与 damage.css 之间。
+ * damage.css 必须保持最后一个（test/server.ts 的首尾断言钉住）。
+ * ============================================================================ */
+.ysin-wrap { margin: 0; }
+
+.ysin-card {
+  margin: 10px 0;
+  border-radius: 10px;
+  background: url("../assets/common/cont/card-bg.png") top left repeat-x;
+  background-size: auto 100%;
+  box-shadow: 0 0 1px 0 #ccc, 2px 2px 4px 0 rgba(50, 50, 50, .8);
+  overflow: hidden;
+  color: #fff;
+  font-size: 14px;
+}
+
+/* 标题条：左边板块名，右边写清「评估的是哪个技能」——两个分数和三个读数都来自它 */
+.ysin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 30px;
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, .42);
+  border-bottom: 1px solid rgba(142, 197, 242, .34);
+}
+.ysin-title { font-size: 15px; font-weight: 600; color: #8ec5f2; white-space: nowrap; }
+.ysin-object {
+  font-size: 12px;
+  color: #c2d4e6;
+  text-align: right;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ysin-body { display: flex; align-items: stretch; gap: 8px; padding: 8px; }
+
+/* ── 左卡 185px：两个 hero 数字 + 三行汇总 + 流派下拉 + 26px 底部细条 ── */
+.ysin-left {
+  width: 185px;
+  flex: none;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 24, 40, .55);
+  border: 1px solid rgba(142, 197, 242, .28);
+  border-radius: 4px;
+  padding: 4px 6px 0;
+}
+.ysin-heroes { display: flex; margin-bottom: 4px; }
+.ysin-heroes > div { flex: 1 1 0; min-width: 0; text-align: center; padding: 2px 0; }
+.ysin-heroes > div + div { border-left: 1px solid rgba(142, 197, 242, .22); }
+.ysin-hero-label { font-size: 12px; line-height: 18px; color: #8ec5f2; }
+.ysin-hero-num { font-size: 26px; line-height: 30px; font-weight: bold; }
+.ysin-summary { border-top: 1px solid rgba(142, 197, 242, .22); padding-top: 3px; }
+.ysin-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 26px;
+  line-height: 26px;
+  font-size: 13px;
+  color: #c2d4e6;
+}
+.ysin-kv-num { color: #fff; }
+.ysin-school { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: #8ec5f2; }
+.ysin-school select {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  border: 1px solid rgba(142, 197, 242, .45);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, .5);
+  color: #fff;
+  font-size: 12px;
+  padding: 0 4px;
+}
+.ysin-foot {
+  height: 26px;
+  line-height: 26px;
+  margin-top: auto;
+  font-size: 12px;
+  color: #a9bccd;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 右卡：4 列词条对照 + 未计入行 + 三格伤害 + 右下规则声明 ── */
+.ysin-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ysin-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr 1fr;
+  gap: 1px;
+  background: rgba(255, 255, 255, .13);
+  border: 1px solid rgba(255, 255, 255, .13);
+  font-size: 12px;
+}
+.ysin-cell {
+  background: rgba(16, 28, 42, .78);
+  line-height: 22px;
+  padding: 1px 6px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ysin-cell.head { background: rgba(0, 0, 0, .45); color: #8ec5f2; text-align: center; }
+.ysin-cell.num { text-align: right; }
+.ysin-cell.dim { color: #a9bccd; }
+.ysin-cell.wide { grid-column: 1 / span 4; display: flex; justify-content: space-between; }
+.ysin-raw { font-size: 11px; color: #a9bccd; margin-left: 3px; }
+.ysin-hint { font-size: 12px; color: #a9bccd; line-height: 18px; }
+.ysin-dmg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(255, 255, 255, .13); }
+.ysin-dmg > div { background: rgba(16, 28, 42, .78); text-align: center; padding: 3px 0; }
+.ysin-dmg-num { font-size: 15px; color: #fff; line-height: 20px; }
+.ysin-notice { text-align: right; font-size: 12px; color: #c2d4e6; padding-top: 2px; }
+.ysin-notice strong { color: #8ec5f2; font-weight: 500; }
+
+/* loading / 失败 / 无数据：与伤害表同款的一行小字 */
+.ysin-status { padding: 14px 20px; font-size: 13px; color: #a9bccd; }
+.ysin-status.err { color: #e8a0a0; }
