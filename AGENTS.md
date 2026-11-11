@@ -21,7 +21,8 @@
 | `features/history.js` | **全站共用**：UID 历史记录，使用 `localStorage` |
 | `features/roster/roster.js` | 首页：账号信息、角色网格和角色卡片 |
 | `features/roster/filter.js` | 首页：筛选入口、视图切换和多选面板 |
-| `features/roster/sort.js` | 首页：多条件排序（只管排序，不过滤名单） |
+| `features/roster/score.js` | 首页：评分口径切换（喵喵 / YSIN）与 YSIN 分数的按需拉取 |
+| `features/roster/sort.js` | 首页：多条件排序（含 YSIN 的词条分 / 数据分，只管排序不过滤名单） |
 | `features/roster/advice.js` | 首页：圣遗物刷取建议面板 |
 | `features/roster/filter-options.js` | 首页：筛选项候选计算（元素 / 等级 / 套装 / 星级）+ 按条件过滤名单 |
 | `features/sim/sim.js` | 模拟页：整页编排 `renderSim` + 入口 `openSim` + `reg.openSim` 注册 |

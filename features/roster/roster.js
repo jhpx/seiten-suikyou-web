@@ -3,14 +3,16 @@
  * 名字里的 roster 是「花名册 / 阵容」：游戏里说 my roster，就是「我账号里这堆角色」。
  * 三个视图按粒度分：roster（全体名单）→ detail（单人明细）→ sim（模拟推演）。
  * 名字比内容窄了点：筛选、排序、刷取建议面板也都长在这个模块里。
- * ⚠️ state.rosterMode 跟名单无关，它管的是卡片下半块显示武器还是圣遗物套装。
- *
  * 渲染器在加载时注册进 core.reg（renderRoster / renderRosterGrid），由编排函数统一调用。
+ *
+ * ⚠️ state.rosterMode 跟名单无关，它管的是卡片下半块显示武器还是圣遗物套装；
+ *    state.scoreMode 管的是画像区两个角显示哪套评分（喵喵 / YSIN），两件事互不相干。
  */
 
-import { $, state, T, el, setBg, rankOf, weaponFallback, imgError, openDetail, reg } from '../../core.js'
-import { sortAvatars } from './sort.js'
+import { $, state, T, el, setBg, rankOf, weaponFallback, imgError, openDetail, reg, refreshRosterGrid } from '../../core.js'
+import { sortAvatars, hasYsinSort } from './sort.js'
 import { filteredAvatars } from './filter-options.js'
+import { ysinScoreOf, ensureScores, scoresReady } from './score.js'
 
 /* 卡片元素 ↔ avatar 的映射：切「武器/圣遗物」视图时靠它把每张卡的下半块就地换掉，
    不用重建整张卡，上半块（含立绘 <img>）原样保留，浏览器不重新请求/解码。 */
@@ -69,7 +71,7 @@ function renderAccountHeader (acct) {
  * 阶段 B 把这段从两种卡里抽成 renderCardTop 共用；现在整张卡 = 上半块(renderCardTop) + 下半块(buildFoot)，
  * 下半块按 state.rosterMode 在「武器块 / 圣遗物套装块」间切换，切视图时 swapRosterFoot 只换这一小块。
  */
-function renderCardTop (av, rank) {
+function renderCardTop (av) {
   const bg = setBg(el('div', 'cc-bg'), av.rarityBg)
 
   const face = el('img', 'cc-face')
@@ -84,13 +86,56 @@ function renderCardTop (av, rank) {
   elem.onerror = () => imgError(elem)
 
   const lv = el('div', 'cc-lv', `Lv.${av.level ?? '?'}`)
-  const score = el('div', 'cc-score', av.score.mark)
-  /* 色走 miao.css 的 .mark-*（档位名就是类名后缀），跟明细页 / 圣遗物卡同一套 */
-  const badge = el('span', 'cc-rank mark-' + rank, rank)
+  /* 评分区的两个角：内容由 paintScores 按当前口径填（喵喵评分 or YSIN 评分） */
+  const score = el('div', 'cc-score')
+  const badge = el('span', 'cc-rank')
 
   const top = el('div', 'cc-top')
   top.append(bg, face, elem, lv, score, badge)
   return top
+}
+
+/*
+ * 评分区的两个角 —— 两种口径各画各的（见 features/roster/score.js 的口径切换）。
+ *   喵喵：左下评分数字、右下评级字母；
+ *   YSIN：左下词条分、右下数据分（只放数，不写标签）。
+ *
+ * 两种口径用的是**同一对节点**，切换只改文字与类名 —— 不重建卡片，立绘不会重新请求/解码。
+ * 数字一律留到最外层才格式化（跟全站口径一致：计算链路不提前舍入）。
+ */
+function paintScores (card, av) {
+  const left = card.querySelector('.cc-score')
+  const right = card.querySelector('.cc-rank')
+  if (!left || !right) return
+
+  if (state.scoreMode === 'ysin') {
+    const s = ysinScoreOf(av.avatarId)
+    /* 三种状态别混：还没拉到（undefined）画省略号，没有适用流派（null）画破折号 */
+    const num = (v) => s === undefined ? '…' : (v == null ? '—' : Number(v).toFixed(1))
+    left.className = 'cc-score cc-ysin'
+    /* YSIN 没有评级 —— 档位色（mark-*）跟着 miao 的评级走，这里得摘掉 */
+    right.className = 'cc-rank cc-ysin'
+    left.textContent = num(s?.subScore)
+    right.textContent = num(s?.gearScore)
+    return
+  }
+
+  const rank = rankOf(av.score.markClass)
+  left.className = 'cc-score'
+  right.className = 'cc-rank mark-' + rank
+  left.textContent = av.score.mark
+  right.textContent = rank
+}
+
+/* 重画所有卡片的评分区（切口径、YSIN 分数到位后调用）。
+   只改两个角 —— 立绘、武器块 / 套装块都不动，所以切换不卡。 */
+function paintRosterScores () {
+  const grid = document.querySelector('#view-roster .char-grid')
+  if (!grid) return
+  for (const card of grid.querySelectorAll('.char-card')) {
+    const av = cardAvatar.get(card)
+    if (av) paintScores(card, av)
+  }
 }
 
 /*
@@ -140,9 +185,10 @@ function buildFoot (av) {
  * 一张角色卡 = 上半块（画像，两种视图共用）+ 下半块（buildFoot，随视图切换）。
  * 卡片元素 ↔ avatar 记进 cardAvatar（见文件头），切视图时靠它把下半块就地换掉，不用重建整张卡。 */
 function renderCard (av) {
-  const rank = rankOf(av.score.markClass)
   const card = el('div', 'char-card')
-  card.append(renderCardTop(av, rank), buildFoot(av))
+  card.append(renderCardTop(av), buildFoot(av))
+  /* 评分区的内容按当前口径填（喵喵评分 / YSIN 评分） */
+  paintScores(card, av)
   card.addEventListener('click', () => openDetail(av.avatarId))
   cardAvatar.set(card, av)
   return card
@@ -203,6 +249,16 @@ function renderRoster () {
   box.append(slot)
   renderRosterGrid(slot)
 
+  /* YSIN 分数什么时候要拉：显示口径是 YSIN 时要，按 YSIN 分数排序时也要 ——
+     同一份数据有缓存，两种情况都只要一份（见 score.js 的 ensureScores）。 */
+  if (state.scoreMode === 'ysin' || hasYsinSort()) {
+    const wasReady = scoresReady()
+    void ensureScores().then(() => {
+      /* 分数到位前排出来的顺序是错的（人人算「没有分」）—— 拿到数再排一次 */
+      if (!wasReady && hasYsinSort()) refreshRosterGrid()
+    })
+  }
+
   /* 刷圣遗物建议放在角色列表**后面**：它是「翻完人再看」的整号结论，
      放上面会把首屏的角色挤走；而筛选/排序是「找人」的操作，得紧贴网格。 */
   const advice = reg.renderAdvice?.()
@@ -260,3 +316,4 @@ function swapRosterFoot () {
 reg.renderRoster = renderRoster
 reg.renderRosterGrid = renderRosterGrid
 reg.swapRosterFoot = swapRosterFoot
+reg.paintRosterScores = paintRosterScores

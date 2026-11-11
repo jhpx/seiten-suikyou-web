@@ -102,6 +102,9 @@ export const state = {
   filter: { elem: [], rank: [], weight: [], set: [], star: [] },
   /* 首页卡片显示模式：weapon = 武器块（默认）/ artis = 圣遗物套装块 */
   rosterMode: 'weapon',
+  /* 首页卡片上的评分口径：miao = 喵喵评分（默认）/ ysin = YSIN 评分。
+     两套评分不换算、不共用评级：喵喵那套给「分数 + 评级」，YSIN 那套给「词条分 + 数据分」。 */
+  scoreMode: 'miao',
   /* 首页排序：key = level(角色等级) / mark(评价等级) / time(数据时间)；dir = asc|desc。
      默认按评价等级降序，和改之前「网格按评分从高到低」的表现一致。 */
   sort: [{ key: 'mark', dir: 'desc' }]

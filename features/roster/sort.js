@@ -13,13 +13,21 @@
 
 import { state, T, el, refreshRosterGrid } from '../../core.js'
 import { closeMenus, openDialog } from '../dialog.js'
+import { ysinScoreOf, ensureScores, scoresReady } from './score.js'
 
-/* 排序字段：顺序固定，但谁能进排序链、排第几由用户点。只存 i18n 键。 */
+/* 排序字段：顺序固定，但谁能进排序链、排第几由用户点。只存 i18n 键。
+   后两个是 YSIN 那把尺子（词条分 / 数据分）—— 分数是按需拉的，选了再去要（见 onOk）。 */
 const SORT_FIELDS = [
   { key: 'level', labelKey: 'sortLevel' },
   { key: 'mark', labelKey: 'sortScore' },
-  { key: 'time', labelKey: 'sortTime' }
+  { key: 'time', labelKey: 'sortTime' },
+  { key: 'ysinSub', labelKey: 'sortYsinSub' },
+  { key: 'ysinGear', labelKey: 'sortYsinGear' }
 ]
+/* 这两个字段的排序值来自 YSIN 分数，别的字段不是 */
+const isYsinField = (key) => key === 'ysinSub' || key === 'ysinGear'
+/* 当前排序链里有没有 YSIN 分数 —— 有的话，分数没到位前排出来的顺序是错的 */
+const hasYsinSort = () => state.sort.some(s => isYsinField(s.key))
 const sortFieldLabel = (key) => {
   const f = SORT_FIELDS.find(x => x.key === key)
   return f ? T(f.labelKey) : key
@@ -62,7 +70,16 @@ function openSortDialog (paintBtn) {
   const draft = state.sort.map(s => ({ ...s }))
   const dlg = openDialog({
     title: T('sortBy'),
-    onOk: () => { state.sort = draft; paintBtn(); refreshRosterGrid() },
+    onOk: () => {
+      state.sort = draft
+      paintBtn()
+      refreshRosterGrid()
+      /* 选了 YSIN 分数排序，而这份数据还没拉过：先去要一份，回来再排一次。
+         没这一步的话，所有角色都没有分，排序等于没排（看着像随机序）。 */
+      if (draft.some(s => isYsinField(s.key)) && !scoresReady()) {
+        void ensureScores().then(() => refreshRosterGrid())
+      }
+    },
     onClear: () => { draft.length = 0; paintBody() }
   })
   const body = dlg.body
@@ -127,12 +144,21 @@ function sortAvatars (list) {
     if (key === 'level') return a.level ?? 0
     if (key === 'mark') return a.score?.markValue ?? 0
     if (key === 'time') return a.fetchedAt || ''
+    /* YSIN 那两个分数：没有适用流派的角色是「没有分」，不是「零分」 —— 用 null 区分 */
+    if (key === 'ysinSub') return ysinScoreOf(a.avatarId)?.subScore ?? null
+    if (key === 'ysinGear') return ysinScoreOf(a.avatarId)?.gearScore ?? null
     return 0
   }
   return [...list].sort((a, b) => {
     for (const { key, dir } of state.sort) {
-      const d = dir === 'asc' ? 1 : -1
       const va = val(a, key), vb = val(b, key)
+      /* 「没有分」的角色一律排最后 —— 升序降序都一样，不能当 0 混进去。
+         两边都没有分时不算这一条，继续比下一条。 */
+      if (va === null || vb === null) {
+        if (va === null && vb === null) continue
+        return va === null ? 1 : -1
+      }
+      const d = dir === 'asc' ? 1 : -1
       if (va < vb) return -d
       if (va > vb) return d
     }
@@ -140,4 +166,4 @@ function sortAvatars (list) {
   })
 }
 
-export { sortAvatars, sortPanel }
+export { sortAvatars, sortPanel, hasYsinSort }

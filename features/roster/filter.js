@@ -27,6 +27,7 @@ import { $, state, T, el, imgError, refreshRosterGrid, swapRosterFoot, reg } fro
 import { closeMenus, closeModal, openDialog } from '../dialog.js'
 import { rosterElems, rosterRanks, rosterSets, rosterStars, dropStaleFilter } from './filter-options.js'
 import { sortPanel } from './sort.js'
+import { scoreSwitch } from './score.js'
 
 /* 元素选项：图标 + 名字，都从名单里已有角色身上借（URL 一律由接口返回） */
 function elemOption (view, e) {
@@ -253,9 +254,11 @@ function renderFilterBar (view) {
   closeModal()
   const bar = el('div', 'roster-filter')
 
-  /* 顺序 = 视图切换（左）｜排序 + 筛选（右，两颗挨在一起）。
-     左边这颗是「状态」（当前看什么），右边两颗是「操作」（弹窗去选），按性质分边站。 */
+  /* 顺序 = 两颗状态钮（左）｜排序 + 筛选（右，两颗挨在一起）。
+     左边两颗是「状态」（当前看什么、当前按哪把尺子评），右边两颗是「操作」（弹窗去选），按性质分边站。
+     评分口径那颗紧挨着「武器 / 圣遗物」：两者都是点一下就换状态的状态钮。 */
   bar.append(viewSwitch())
+  bar.append(scoreSwitch())
   bar.append(sortPanel())
   bar.append(filterPanel(view))
 
