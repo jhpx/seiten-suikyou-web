@@ -1,9 +1,9 @@
 /*
- * 顶栏区服在线状态胶囊：进页面读一次 /api/health 的缓存，把每个区服铺成
+ * 顶栏区服在线状态胶囊：进页面读一次 /api/region 的缓存，把每个区服铺成
  * 「状态图标 + 代号」。与 css/region.css 配对（样式见该文件）。
  *
- * 后端每 5 分钟同步一次 status.enka.network，缓存在 /api/health；
- * 前端不挂定时器、点刷新也不查。
+ * 后端每 5 分钟同步一次 status.enka.network，缓存在 /api/region（数据源状态，
+ * 与「后端是否存活」的 /api/health 分开）；前端不挂定时器、点刷新也不查。
  * 身份色里本来就有绿(cht)/红(china)/粉(bilibili)，跟状态色会撞，所以状态用两层编码：
  * 形状图标（✓ 在线 / ✕ 断线 / ○ 未知）+ 红绿胶囊底色，都在 CSS 里；文字只留区服代号。
  * 身份色由后端从状态页 <b style="color:#…"> 抄好随 r.color 发来，前端不再备一套。
@@ -50,7 +50,7 @@ function renderRegions (regions, microggServers) {
 /* 进页面读一次后端缓存；读不到就放一个纯图标的灰胶囊，不显示任何文字 */
 export async function loadRegions () {
   try {
-    const h = await api('health')
+    const h = await api('region')
     renderRegions(h.regions, h.microggServers)
   } catch {
     const box = $('src-regions')

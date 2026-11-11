@@ -377,7 +377,7 @@
 }
 .char-cons .talent-icon.off { filter: grayscale(100%); opacity: .4; }
 
-/* 免责句已从这儿的绝对定位脚注挪到评分区的 .arti-notice 通知行（见下面）。 */
+/* 免责句已挪到评分板块内容末尾的 .block-notice（见下面那一节）。 */
 
 /* ───────────────────────── 通用卡片底 (.cont) ───────────────────────── */
 
@@ -392,3 +392,238 @@
   background-size: auto 100%;
   box-shadow: 0 0 1px 0 #ccc, 2px 2px 4px 0 rgba(50, 50, 50, .8);
 }
+
+/* ───────────────────── 评分板块（喵喵 / YSIN 共用）─────────────────────
+ *
+ * 两套评分都是「两段式」：一条相对深的标题栏（板块名 + 管整块算法的规则/流派控件）
+ * → 一整片全透内容。免责句只是内容末尾靠右的一行小字，没有独立背景、没有尾带，
+ * 不再切成「标题行 / 内容区 / 尾行」三段。深标题栏是唯一的重色，内容全部透出
+ * 元素背景，一眼数得出是两个板块，又不会变成三明治。
+ *
+ * 聚合靠的是「小块贴成一片」：内容区所有小格之间只留 1px 缝，全部方角、不描亮边。
+ * 缝窄到发丝级，就算透出一点画布底色也切不开整块，不需要靠压黑来遮。
+ * 早先试过给整块描 2px 暖金框，看着像贴了个相框，已撤掉；也试过只把
+ * 间距从 6px 收到 4px，10px 级的宽缝等于没改 —— 关键是「窄」，不是「暗」。
+ * ⚠️ 千万别给 .ysin-body / .ysin-right / .artis 铺深色底来填缝：里面的格子全是
+ *    半透明 rgba，整块会叠在这层底上被压死（实测伤害格亮度掉了 91）。
+ *
+ * 底色仍是单层半透明：元素背景要透出来，跟上半张角色卡保持同一种通透感。
+ * ⚠️ 别换回 card-bg 实底：试过，整块死黑，把元素背景的游戏感盖没了。
+ * ⚠️ 也别写成 `rgba(...), url(...)` 多背景：纯色只能放在最后一层，写在前面
+ *    整条声明会被浏览器丢掉，等于没有底色（这就是早先「还是散」的根因）。
+ * ⚠️ 不写 overflow:hidden：装备卡的角标会越出自己的盒子，一裁就缺角。
+ */
+.score-block {
+  /* 两块共用全页暖金（评级、伤害计算标题同源）：区分靠板块名和控制器，不靠字色。
+     YSIN 早先单独用蓝字，和整页不搭。 */
+  --block-accent: #d3bc8e;
+  position: relative;
+  margin: 10px 0;
+  /* 大板块是「容器」，留 10px 圆角让它一眼是个面板；里面的圣遗物/武器卡是贴成
+     一片的方角小格。容器圆 + 内部方，边界语言只在容器这一处出现，不会两套打架。 */
+  border-radius: 10px;
+  background: rgba(6, 16, 28, .3);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .32);
+  color: #fff;
+  font-size: 14px;
+}
+
+/* ── 标题栏：板块名 + 控制器 + 可选右侧说明 ── */
+.score-block-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 6px 12px;
+  /* 顶边圆角和容器对齐（容器 10px），这样深标题栏是「面板顶上那一条」，不是浮块 */
+  border-radius: 10px 10px 0 0;
+  /* 唯一的重色带：内容全透，靠这一条把「两个板块」分出来 */
+  background: rgba(0, 0, 0, .52);
+}
+/* 竖条比小圆点更像章节标记，两块共用全页暖金 */
+.score-block-head .dot {
+  width: 3px; height: 16px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--block-accent);
+}
+.score-block-head .name {
+  flex: none;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--block-accent);
+  white-space: nowrap;
+}
+/* 控制器：规则 / 流派下拉就坐在这里，一眼看出它管着整块内容怎么算 */
+.block-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, .45);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.block-control .ctl-label {
+  flex: none;
+  color: rgba(255, 255, 255, .62);
+}
+.block-control .ctl-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--block-accent);
+  font-weight: 600;
+}
+.block-control select {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 200px;
+  height: 22px;
+  padding: 0 2px 1px;
+  border: 0;
+  background-color: transparent;
+  color: var(--block-accent);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.block-control select option { background: #1a1f2b; color: #e7e0d0; }
+/* 旧规则下拉自带一张米色小三角，这里统一换成暖金的 V 形，两块控件才同类 */
+.block-control .arti-rubric-select { background-image: none; }
+.block-control.has-select::after {
+  content: "";
+  flex: none;
+  width: 6px; height: 6px;
+  margin: -3px 0 0 2px;
+  border-right: 1.5px solid var(--block-accent);
+  border-bottom: 1.5px solid var(--block-accent);
+  transform: rotate(45deg);
+}
+/* 右侧说明：YSIN 写评估对象；喵喵的规则名已在控制器里，留空不重复 */
+.score-block-head .meta {
+  margin-left: auto;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: rgba(255, 255, 255, .74);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 标题栏下面直接接全透内容，中间不留会透出画布底色的亮缝 */
+.score-block-body { position: relative; padding: 0; }
+
+/* ── 六张装备卡：从「六张浮空小卡」改成「一块面上的六格」────────────────
+ * 原来每张卡 185px + 四边 5px margin，卡间 10px 宽缝露出青蓝元素背景，
+ * 整块看着就是散的。现在卡间只留 1px；缝本身不铺底、不描黑边，靠「窄」聚合。
+ * 宽度反算：内容区 575px，三列 + 两道 1px 缝 → (575 − 2) / 3 = 191px，
+ * 末列右缘仍严丝合缝贴住板块右缘，不需要 600px 设计稿的负 margin 出血。
+ * ⚠️ width / margin 的选择器要写 (0,4,0)：item-card.css 在本文件之后加载，
+ *    它那条 .artis .item.arti 是 (0,3,0)，只写 .artis .item 会被盖回去。
+ * ⚠️ 只在明细页板块内生效：模拟页 sim-cards.js 也建 .artis，那边仍是 185px 基准，
+ *    item-card.css 与 detail-fit.js 里按 185 / 160px 写的注释说的是那个基准，别顺手改。 */
+.score-block.miao .artis {
+  width: 100%;
+  margin: 0;
+  gap: 1px;
+  /* 卡片区（最下方那片，3×2 网格，上排即武器卡 + 前两张圣遗物卡）与上方「有效词条」行
+     之间加一条 1px 亮缝：这就是用户要的「有效词条下方那条缝」。
+     ⚠️ 不能用 inset box-shadow：它画在背景之上、子元素之下，会被紧贴顶部的卡片盖掉、看不到。
+     改用 border-top——边框在子元素之外，卡片盖不到，这条线才真正显示出来。 */
+  border-top: 1px solid rgba(255, 255, 255, .35);
+}
+.score-block.miao .artis .item {
+  /* 卡片要保留（这是圣遗物/武器卡，不能删）；只把圆角抹平、去掉投影，
+     让卡片是方的、贴成一片、不浮起。卡面底图留给 item-card.css 生效 */
+  border-radius: 0;
+  box-shadow: none;
+}
+/* 头部渐变条只抹圆角，底色保留 */
+.score-block.miao .artis .head {
+  border-radius: 0;
+}
+/* 武器卡底部描述框：抹圆角 + 去掉整块深色底。
+   那块 rgba(0,0,0,.4) 铺满 190×100，看上去像卡片下半截压了一层阴影；圣遗物卡底部是
+   逐行（26px）交替的半透明行，不会糊成一整块，所以这里也把整块底去掉，让卡面自身
+   的底图透上来，和圣遗物那边的观感一致。 */
+.score-block.miao .artis .weapon .weapon-desc-cont {
+  border-radius: 0;
+  background: transparent;
+  /* 简介超长时在框内纵向滚动；短简介不会出滚动条 */
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  align-items: flex-start;
+}
+/* 细滚动条：Windows 默认那条 15px 宽，会把 191px 的卡挤掉一大截。
+   ⚠️ 标准属性 scrollbar-width / scrollbar-color 在 Chrome 121+ 会**盖掉** ::-webkit-scrollbar
+      的自定义绘制（只留槽位、不画条），所以两者必须分开：Chromium 走 ::-webkit-*，
+      Firefox（不支持 ::-webkit-scrollbar 选择器）才走标准属性。 */
+.score-block.miao .artis .weapon .weapon-desc-cont::-webkit-scrollbar { width: 4px; }
+.score-block.miao .artis .weapon .weapon-desc-cont::-webkit-scrollbar-track { background: transparent; }
+.score-block.miao .artis .weapon .weapon-desc-cont::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, .38);
+  border-radius: 2px;
+}
+.score-block.miao .artis .weapon .weapon-desc-cont::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, .55);
+}
+@supports not selector(::-webkit-scrollbar) {
+  .score-block.miao .artis .weapon .weapon-desc-cont {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, .38) transparent;
+  }
+}
+/* 覆盖 item-card 的 table-cell + 写死 100px：高度交给内容。
+   短简介靠上下 auto 外边距仍在框里垂直居中；超长时 auto 外边距自动归零、从顶部排，滚得动。
+   ⚠️ 不能用 align-items:center 居中——内容超过容器时顶部会被切掉且滚不回来。 */
+.score-block.miao .artis .weapon .weapon-desc {
+  display: block;
+  flex: 0 0 100%;
+  box-sizing: border-box;
+  height: auto;
+  margin: auto 0;
+  /* 去掉深色底后字直接压在卡面底图上（实测底色亮度 50→85，对比度 6.3:1→3.5:1），
+     补一层极轻的暗描边兜住可读性 —— 是描边不是色块，不会再糊出「阴影」 */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
+}
+/* 圣遗物卡底部的词条列表 ul.detail 也带圆角（武器卡没有这个元素，所以之前武器方了圣遗物还圆）；
+   抹平，让圣遗物卡整体也是方角 */
+.score-block.miao .artis .item.arti ul.detail {
+  border-radius: 0;
+}
+/* 武器卡原本 overflow:visible 让立绘探出卡外；明细页里收成 hidden，立绘被卡边裁住、
+   不再压到邻卡（卡面已恢复，探出反而像溢出） */
+.score-block.miao .artis .item.weapon { overflow: hidden; }
+/* 立绘原本 right:-10px 探出，收回卡内 */
+.score-block.miao .artis .weapon .img { right: 0; }
+.score-block.miao .artis .item.arti,
+.score-block.miao .artis .item.weapon {
+  width: calc((100% - 2px) / 3);
+  margin: 0;
+  flex: none;
+}
+
+/* ── 免责句：内容区最后一行小字 ─────────────────────────────────────────
+ * 不做成独立尾行：没有背景、没有圆角、没有分隔线，和上面的格子一起透出元素背景。
+ * 只靠小字号 + 右对齐 + 暖金强调词，读起来是内容的注脚，不是第三条带。 */
+.block-notice {
+  padding: 5px 10px 6px;
+  font-size: 12px;
+  line-height: 18px;
+  color: rgba(255, 255, 255, .66);
+  text-align: right;
+}
+.block-notice strong { color: var(--block-accent); font-weight: 600; }

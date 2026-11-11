@@ -39,9 +39,23 @@ function renderDetail () {
   box.append(bar)
   box.append(frame)
 
-  /* 左角色卡（主图 + 名字/等级/命座 + 面板属性）与右评分区各自收口成子树，挂进画布 */
+  /* 面板（角色卡 + 属性表）保持原样，独占一块 */
   cont.append(buildBasic(av))
-  cont.append(buildProfileDetail(av))
+
+  /* 喵喵评分：只有「深标题栏 + 全透内容」两段。规则控件坐标题栏（换规则会重算
+     整块分数、档位、逐件分），评分统计 + 装备卡 + 免责句都在内容里，不再单列尾行。
+     外壳规格在 detail-base.css 的「评分板块」一节，两块共用。 */
+  const miaoBlock = el('div', 'score-block miao')
+  const miaoHead = el('div', 'score-block-head')
+  miaoHead.append(el('span', 'dot'), el('span', 'name', T('miaoSection')))
+  const miaoBody = el('div', 'score-block-body')
+  miaoBody.append(buildProfileDetail(av, miaoHead))
+  /* 免责句就是内容区最后一行小字，不再有一条独立的深色尾带 */
+  const miaoNotice = el('div', 'block-notice')
+  richText(miaoNotice, T('artisNotice'))
+  miaoBody.append(miaoNotice)
+  miaoBlock.append(miaoHead, miaoBody)
+  cont.append(miaoBlock)
 
   /* YSIN 独立评分板块：夹在装备卡与伤害计算之间。伤害算得准的话本来就是固定值，
      变动的是装备，所以这块贴着装备、在伤害表之上。同样先放 loading 占位，数据到了再填。 */
@@ -55,7 +69,7 @@ function renderDetail () {
   cont.append(dmgBox)
   loadDamage(av, dmgBox)
 
-  /* 这行报数据时间，不再抄一遍评级/规则名（那两块在 .arti-stat / .arti-class-title 里） */
+  /* 这行报数据时间，不再抄一遍评级/规则名（评分卡与板块标题栏里已经有了） */
   cont.append(el('div', 'pd-scored-at', `${T('scoredAt')} ${av.fetchedAt || '—'}`))
 
   fitLongText()
@@ -163,12 +177,13 @@ function buildBasic (av) {
     basic.append(cons)
   }
 
-  /* 喵喵规则免责句不再浮在角色卡右下角：它和「评分规则」一起放在评分区最下面的说明行。 */
+  /* 喵喵规则免责句不再浮在角色卡右下角：它现在是评分板块内容末尾的一行小字。 */
   return basic
 }
 
-/* 右侧评分区：左评分卡 + 词条网格 + 部件格 + 说明行 + 武器/圣遗物卡。 */
-function buildProfileDetail (av) {
+/* 右侧评分区：左评分卡 + 词条网格 + 部件格 + 武器/圣遗物卡。
+   head 是所属板块的标题栏，规则控件挂在那里；免责句由调用方接在内容末尾。 */
+function buildProfileDetail (av, head) {
   const pd = el('div', 'profile-detail')
 
   /* 左评分卡：只留「总分 / 评级」两个英雄数字（垂直居中、撑满整卡高度，与右侧词条网格齐平）。
@@ -187,15 +202,13 @@ function buildProfileDetail (av) {
   }
   ret.append(retMain)
   statBox.append(ret)
-  /* 评分规则那条细条：多套规则的角色，把它就地变成规则下拉（复用这一格，不另起大块）；
-     单套仍是静态规则名。它现在和免责句一起放在最下面的「说明行」，
-     所以先建好、不急着塞进左卡。规则列表要异步拉，等说明行挂上后再调 loadRubric。 */
-  const titleBar = el('div', 'arti-class-title')
-  /* 显示后端拼好的 rubricLabel（当前语言的「角色名-规则名」）；classTitle 是 miao 的中文原文，
-     只在后端认不出这条规则时才会等于它 */
+  /* 评分规则控件挂在板块标题栏：单套规则显示静态规则名，多套规则时 loadRubric
+     把这个胶囊就地换成下拉。显示后端拼好的 rubricLabel（当前语言的「角色名-规则名」）；
+     classTitle 是 miao 的中文原文，只在后端认不出这条规则时才会等于它。 */
+  const ruleCtl = el('div', 'block-control')
   const ruleName = av.score.rubricLabel || av.score.classTitle
-  /* 冒号也按语言来（英文半角、中日韩全角），所以整句交给一个键，不在前端拼 */
-  if (ruleName) titleBar.textContent = T('ruleLine', { name: ruleName })
+  ruleCtl.append(el('span', 'ctl-label', T('rule')), el('span', 'ctl-value', ruleName || '—'))
+  head.append(ruleCtl)
 
   const infoBox = el('div', 'arti-info')
   /* ⚠️ 后端 allAttr 固定是 10 个槽位（Array.from({length:10})），没词条的位置是 {}，
@@ -215,10 +228,6 @@ function buildProfileDetail (av) {
   while (allUl.children.length % 3 !== 0) allUl.append(el('li'))
   allWrap.append(allUl)
   infoBox.append(allWrap)
-  /* 免责句和评分规则是一组说明文字，一起沉到最下面的说明行，这里先建好 */
-  const notice = el('div', 'arti-notice')
-  richText(notice, T('artisNotice'))
-
   const markCont = el('div', 'arti-mark-cont')
   markCont.append(statBox, infoBox)
   pd.append(markCont)
@@ -270,14 +279,8 @@ function buildProfileDetail (av) {
   partsRow.append(partGrid)
   pd.append(partsRow)
 
-  /* 说明行：左「评分规则」+ 右「喵喵规则免责句」。
-     原来这两句紧贴词条网格、统计行在最下面；现在统计行提到紧贴网格，
-     说明文字整体沉到底 —— 数字一行、说明一行，读起来不用来回跳。
-     ⚠️ 两行都是 185px + flex:1 的分栏，起点和上面 markCont 完全一致。 */
-  const noteRow = el('div', 'arti-note-row')
-  noteRow.append(titleBar, notice)
-  pd.append(noteRow)
-  loadRubric(av, titleBar)
+  /* 规则列表异步拉，回来前标题栏先显示静态规则名；有多套规则才换成下拉 */
+  loadRubric(av, ruleCtl)
 
   /* 武器卡：图标（右上溢出）+ 名 + 精N·Lv.N + 主副属性 + 精炼描述。
      只要装备了就出这张卡（state 非 'none'）—— 元数据不认识这把时名字/属性/描述都是空的，
@@ -294,13 +297,12 @@ function buildProfileDetail (av) {
  * 评分规则下拉 —— 用户觉得评分不合自己理解时，换成 miao 给这个角色内置的另一套规则。
  * 选中后覆盖主评分并落库（后端），所以走「重拉整包视图」：评分/档位/逐件分/首页卡片一起更新。
  *
- * 复用「评分规则」那条小细条（.arti-class-title，185px × 25px）：就地换成「评分规则」标签 + 下拉，
- * 不再另起一块大条（用户嫌大）。自动模式下，下拉选项直接写成「自动：<匹配到的规则名>」。
- * 单套规则不换 —— 选不选一样，静态「评分规则：X-通用」已经够。
+ * 控件就在板块标题栏的 .block-control 里：单套规则显示静态规则名，多套规则把这个胶囊
+ * 就地换成「评分规则」标签 + 下拉。自动模式下选项写成「自动：<匹配到的规则名>」。
  * renderDetail 是同步的（reg 契约），列表得异步拉；回来前可能已切走或页面已重画，
- * 填之前核对还在同一角色、且这一格还挂在文档上。
+ * 填之前核对还在同一角色、且控件还挂在文档上。
  */
-async function loadRubric (av, bar) {
+async function loadRubric (av, ctl) {
   let data
   try {
     /* locale 必须带上：规则名（角色名+规则名）是后端按语言拼的，漏了就一直拿默认语言（中文） */
@@ -310,13 +312,13 @@ async function loadRubric (av, bar) {
     console.error('[rubric] 拉规则列表失败:', e)
     return
   }
-  if (state.selectedAvatarId !== av.avatarId || !bar.isConnected) return
+  if (state.selectedAvatarId !== av.avatarId || !ctl.isConnected) return
   if (!data.rubrics || data.rubrics.length <= 1) return
 
-  bar.classList.add('has-select')
-  bar.textContent = ''
+  ctl.classList.add('has-select')
+  ctl.textContent = ''
   /* 明示「评分规则」标签（复用 rule 键），后面跟下拉 */
-  const label = el('span', 'arti-rubric-label', T('rule'))
+  const label = el('span', 'ctl-label', T('rule'))
   const sel = el('select', 'arti-rubric-select')
   sel.setAttribute('aria-label', T('rule'))
   /* 当前是「自动」时，把匹配到的规则名直接写进选项文案，一眼看出自动匹配到哪条 */
@@ -333,9 +335,9 @@ async function loadRubric (av, bar) {
     sel.append(o)
   }
   sel.value = data.current ?? ''
-  bar.append(label, sel)
-  /* 细条只有 185px（左边还要放「评分规则」标签），各语言里日文最长 ——
-     差十来个像素就被原生 select 从半个字切开（原生 select 不打省略号）。量一下再定字号。 */
+  ctl.append(label, sel)
+  /* 标题栏里的下拉最多 200px，各语言里日文最长 ——
+     原生 select 不打省略号，会被从半个字切开。量一下再定字号。 */
   fitSelectText(sel)
 
   /* 失败回滚到「页面渲染时生效的那个」—— 成功后整页重画，这个闭包随之作废，只有失败路径用得上 */

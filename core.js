@@ -111,7 +111,7 @@ export const T = (key, vars) => {
 }
 
 /*
- * 把文案里的 <strong> 段渲染成金色高亮（miao 的 arti-notice 就带这个标记）。
+ * 把文案里的 <strong> 段渲染成高亮（两个评分板块内容末尾的免责句都带这个标记，颜色跟全页暖金）。
  * 只认这一种标签、且手工拼节点 —— 不走 innerHTML，省得给文案开注入的口子。
  */
 export function richText (parent, text) {

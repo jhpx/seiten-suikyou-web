@@ -1,11 +1,16 @@
 /* ============================================================================
- * ysin.css · YSIN 独立评分板块
+ * ysin.css · YSIN 评分板块内部
  *
- * 明细页里夹在装备卡与伤害计算之间的新板块。视觉结构照现有评分卡：
- * 左 185px 分数与汇总、右 flex 词条对照；26px 行高、1px 暗缝与卡片底纹沿用
- * score-card.css / damage.css，读起来和上下两块是同一张卡里的内容。
- * 颜色刻意用中性蓝，不碰 miao 的金色档位色，也不出现档位字母 ——
- * 免得被读成「另一套评级」。弱化小字 #a9bccd 对卡底满足 4.5:1 以上。
+ * 板块外壳、标题栏控制器与页脚在 detail-base.css 的「评分板块」一节（喵喵 / YSIN 共用），
+ * 这里只管板块内部：左 185px 分数与汇总、右四列词条对照 + 三格伤害。
+ * 流派下拉已移到标题栏、免责句已移到页脚，本文件不再有这两处。
+ *
+ * 底色、行高、缝隙全部对齐 miao 的评分卡（score-card.css / item-card.css），
+ * 两块读起来才是同一张图里的两把尺子：
+ *   格子 rgba(50,50,50,.4)、表头 rgba(0,0,0,.4)、26px 行高、1px 暗缝、中性白字。
+ * 标签色跟着全页走（--block-accent 暖金），不再单独用蓝字 —— 两块读起来是
+ * 同一套语言，靠板块名和控制器区分是哪把尺子。小字统一 rgba(255,255,255,.72)，
+ * 压在卡底上仍有 4.5:1 以上的对比度。
  *
  * 来源：新建（视觉规格见 docs/wireframe/05-ysin.html）
  * 加载顺序：第 18 个（共 19 个），夹在 item-card.css 与 damage.css 之间。
@@ -13,59 +18,34 @@
  * ============================================================================ */
 .ysin-wrap { margin: 0; }
 
-.ysin-card {
-  margin: 10px 0;
-  border-radius: 10px;
-  background: url("../assets/common/cont/card-bg.png") top left repeat-x;
-  background-size: auto 100%;
-  box-shadow: 0 0 1px 0 #ccc, 2px 2px 4px 0 rgba(50, 50, 50, .8);
-  overflow: hidden;
-  color: #fff;
-  font-size: 14px;
+/* 内部两栏：左 185px 与 miao 的 .arti-stat 同起点、同宽 —— 这是「平级」最直观的一处。
+   两栏之间、以及右栏上下两组之间只留 1px 缝。缝里就透板块自己的半透底，不铺深底：
+   ⚠️ 这里的格子全是半透明 rgba，容器一铺黑底，整块会叠上去变成死黑（实测 −91 亮度）。
+   贴合感来自缝只有 1px，不是来自把缝涂黑。 */
+.ysin-body {
+  display: flex; align-items: stretch;
+  gap: 1px; padding: 0;
 }
 
-/* 标题条：左边板块名，右边写清「评估的是哪个技能」——两个分数和三个读数都来自它 */
-.ysin-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 30px;
-  padding: 5px 12px;
-  background: rgba(0, 0, 0, .42);
-  border-bottom: 1px solid rgba(142, 197, 242, .34);
-}
-.ysin-title { font-size: 15px; font-weight: 600; color: #8ec5f2; white-space: nowrap; }
-.ysin-object {
-  font-size: 12px;
-  color: #c2d4e6;
-  text-align: right;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.ysin-body { display: flex; align-items: stretch; gap: 8px; padding: 8px; }
-
-/* ── 左卡 185px：两个 hero 数字 + 三行汇总 + 流派下拉 + 26px 底部细条 ── */
+/* ── 左栏 185px：两个 hero 数字 + 三行汇总 + 26px 底部细条 ── */
 .ysin-left {
   width: 185px;
   flex: none;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: rgba(10, 24, 40, .55);
-  border: 1px solid rgba(142, 197, 242, .28);
-  border-radius: 4px;
+  /* 流派下拉移到标题栏后，三组内容均匀分布，中间不会空出一大块 */
+  justify-content: space-between;
+  background: rgba(0, 0, 0, .4);
+  /* 和 miao 的评分卡、装备卡统一：不要亮高光和外投影，分栏只靠 .ysin-body 的 1px 缝 */
   padding: 4px 6px 0;
 }
-.ysin-heroes { display: flex; margin-bottom: 4px; }
+.ysin-heroes { display: flex; margin-bottom: 0; }
 .ysin-heroes > div { flex: 1 1 0; min-width: 0; text-align: center; padding: 2px 0; }
-.ysin-heroes > div + div { border-left: 1px solid rgba(142, 197, 242, .22); }
-.ysin-hero-label { font-size: 12px; line-height: 18px; color: #8ec5f2; }
-.ysin-hero-num { font-size: 26px; line-height: 30px; font-weight: bold; }
-.ysin-summary { border-top: 1px solid rgba(142, 197, 242, .22); padding-top: 3px; }
+.ysin-heroes > div + div { border-left: 1px solid rgba(255, 255, 255, .14); }
+.ysin-hero-label { font-size: 12px; line-height: 18px; color: var(--block-accent); }
+.ysin-hero-num { font-size: 26px; line-height: 30px; font-weight: bold; color: #fff; }
+.ysin-summary { border-top: 1px solid rgba(255, 255, 255, .14); padding-top: 3px; }
 .ysin-kv {
   display: flex;
   justify-content: space-between;
@@ -73,64 +53,89 @@
   height: 26px;
   line-height: 26px;
   font-size: 13px;
-  color: #c2d4e6;
+  color: rgba(255, 255, 255, .78);
 }
+/* 汇总三行照 miao 的 ul.detail li、伤害表 .dmg-cont .tr 的同一套规矩：
+   **奇偶行不同底色**，行与行靠色差分开，不靠描线。
+   ⚠️ 别改成给每行加 border-top：左栏底是 40% 黑压在元素背景上（亮度 ~105），
+      深线在浅底上会变成一条条硬杠；另两处都是纯色差，这里跟齐才有同一套语言。 */
+.ysin-kv:nth-child(odd) { background: rgba(50, 50, 50, .4); }
+.ysin-kv:nth-child(even) { background: rgba(0, 0, 0, .4); }
 .ysin-kv-num { color: #fff; }
-.ysin-school { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: #8ec5f2; }
-.ysin-school select {
-  flex: 1;
-  min-width: 0;
-  height: 26px;
-  border: 1px solid rgba(142, 197, 242, .45);
-  border-radius: 3px;
-  background: rgba(0, 0, 0, .5);
-  color: #fff;
-  font-size: 12px;
-  padding: 0 4px;
-}
 .ysin-foot {
-  height: 26px;
-  line-height: 26px;
-  margin-top: auto;
+  min-height: 26px;
+  padding: 2px 6px 3px;
   font-size: 12px;
-  color: #a9bccd;
+  color: rgba(255, 255, 255, .62);
   text-align: center;
+}
+/* 「基准配装」独占一行，跟着全页暖金，和右栏「默认整套」那格同一套标签语言 */
+.ysin-foot-label {
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--block-accent);
+  font-weight: 600;
+}
+/* 配装本体独占一行：内联前缀会把「4件」两字折到第二行，拆开就不会了。
+   长名字仍按原来的口径省略号收尾，不撑宽 185px 的左栏。 */
+.ysin-foot-gear {
+  line-height: 15px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: rgba(255, 255, 255, .72);
 }
 
-/* ── 右卡：4 列词条对照 + 未计入行 + 三格伤害 + 右下规则声明 ── */
-.ysin-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+/* ── 右栏：4 列词条对照 + 未计入行 + 三格伤害 + 右下规则声明 ── */
+.ysin-right {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  gap: 1px;
+}
 .ysin-grid {
   display: grid;
   grid-template-columns: 1.1fr 1fr 1fr 1fr;
   gap: 1px;
-  background: rgba(255, 255, 255, .13);
-  border: 1px solid rgba(255, 255, 255, .13);
+  background: rgba(0, 0, 0, .7);
   font-size: 12px;
 }
 .ysin-cell {
-  background: rgba(16, 28, 42, .78);
-  line-height: 22px;
-  padding: 1px 6px;
+  background: rgba(50, 50, 50, .4);
+  line-height: 26px;
+  padding: 0 6px;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #fff;
 }
-.ysin-cell.head { background: rgba(0, 0, 0, .45); color: #8ec5f2; text-align: center; }
+/* 格子显形：照伤害表（.dmg-cont .tr > div）的画法，每格描一圈 1px 亮边。
+   ⚠️ 为什么光靠 1px 暗缝不行：格子底是半透明 rgba(50,50,50,.4)，而缝的底色
+      rgba(0,0,0,.7) 是**垫在格子下面**的 —— 黑色从半透明格子透上来，实测缝 (26,47,53)
+      和格子 (35,48,51) 的亮度只差 3，肉眼基本看不出线。box-shadow 画在格子外沿，
+      1px 缝被两侧的描边填满，才得到一条连续的亮网格线。 */
+.ysin-cell,
+.ysin-dmg > div {
+  box-shadow: 0 0 1px 0 rgba(255, 255, 255, .55);
+}
+.ysin-cell.head { background: rgba(0, 0, 0, .4); color: var(--block-accent); text-align: center; }
+/* 右栏也照 miao 的 ul.detail li / 伤害表 .dmg-cont .tr 的奇偶行配色：
+   奇数行 rgba(50,50,50,.4)、偶数行 rgba(0,0,0,.4)（后者就是 .ysin-cell 的默认色）。
+   网格是 4 列一格，所以「每 8 个算一组偶数行」—— 用 8n 而不是写死 nth-child(5)，
+   是因为词条行数随角色变（3~5 行），写死一挪就错位。 */
+.ysin-cell:nth-child(8n+5),
+.ysin-cell:nth-child(8n+6),
+.ysin-cell:nth-child(8n+7),
+.ysin-cell:nth-child(8n+8) { background: rgba(0, 0, 0, .4); }
 .ysin-cell.num { text-align: right; }
-.ysin-cell.dim { color: #a9bccd; }
+.ysin-cell.dim { color: rgba(255, 255, 255, .62); }
 .ysin-cell.wide { grid-column: 1 / span 4; display: flex; justify-content: space-between; }
-.ysin-raw { font-size: 11px; color: #a9bccd; margin-left: 3px; }
-.ysin-hint { font-size: 12px; color: #a9bccd; line-height: 18px; }
-.ysin-dmg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(255, 255, 255, .13); }
-.ysin-dmg > div { background: rgba(16, 28, 42, .78); text-align: center; padding: 3px 0; }
+.ysin-raw { font-size: 11px; color: rgba(255, 255, 255, .62); margin-left: 3px; }
+/* 右栏那行「同一技能的期望伤害…」是废话，已删；.ysin-hint 现在只用于三格伤害的标签 */
+.ysin-hint { font-size: 12px; color: rgba(255, 255, 255, .72); line-height: 18px; }
+.ysin-dmg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(0, 0, 0, .7); }
+.ysin-dmg > div { background: rgba(50, 50, 50, .4); text-align: center; padding: 3px 0; }
 .ysin-dmg-num { font-size: 15px; color: #fff; line-height: 20px; }
-.ysin-notice { text-align: right; font-size: 12px; color: #c2d4e6; padding-top: 2px; }
-.ysin-notice strong { color: #8ec5f2; font-weight: 500; }
-
 /* loading / 失败 / 无数据：与伤害表同款的一行小字 */
-.ysin-status { padding: 14px 20px; font-size: 13px; color: #a9bccd; }
+.ysin-status { padding: 14px 20px; font-size: 13px; color: rgba(255, 255, 255, .72); }
 .ysin-status.err { color: #e8a0a0; }

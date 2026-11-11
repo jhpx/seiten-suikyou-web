@@ -1,61 +1,32 @@
 /* ============================================================================
  * rubric.css · 评分规则下拉
  *
- * .arti-class-title.has-select / .arti-rubric-*：多套规则时把评分卡底部的细条就地换成下拉。
+ * .arti-rubric-select：多套规则时，把板块标题栏里的静态规则名换成下拉。
+ * 控件外壳 .block-control 在 detail-base.css 的「评分板块」一节，那里管尺寸、
+ * 边框、暖金和 V 形箭头；本文件只留下拉本身的透明底、字体、禁用态与选项色。
  *
  * 来源：style.css:1918-1970（由原 style.css / miao.css 按行区间拆出，规则内容未改写）
  * 加载顺序：第 13 / 17 个。index.html 里的 <link> 顺序就是层叠顺序，
  * 后面的文件覆盖前面同特异性的规则；调整顺序前请先看 docs 里的顺序契约。
  * ============================================================================ */
-/* ───────────────────────── 明细页：评分规则下拉（复用原「评分规则」细条，185×25） ─────────────────────────
- * 多套规则的角色，把 .arti-class-title 那条细条就地变成「评分规则」标签 + 下拉；单套仍是静态规则名。
- * 自动模式下选项文案是「自动：<匹配到的规则名>」，一眼看出匹配到哪条。 */
-.arti-class-title.has-select {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 6px;
-  text-align: left;
-}
-/* 「评分规则」标签：这一行是解释评分的出处，标签本身保持次要（浅米色小字），
-   把份量让给后面的规则名。
-   ⚠️ 这里没写 font-weight，字重是继承条子的 600 —— 历史上有过一条
-      `.arti-stat .arti-rubric-label { font-weight:400 }` 想把它压细，但 label 早已
-      挪进 `.arti-note-row`、祖先链里没有 `.arti-stat`，那条从没匹配上过，已删。
-      要真把标签压细，得用 `.arti-class-title .arti-rubric-label`。 */
-.arti-rubric-label { flex: none; font-size: 11px; line-height: 1; color: #d3cdc0; white-space: nowrap; }
+/* 自动模式下选项文案是「自动：<匹配到的规则名>」，一眼看出匹配到哪条。
+   单套规则不换下拉，标题栏里留静态规则名。 */
 .arti-rubric-select {
-  flex: 1;
-  min-width: 0;
-  height: 22px;
-  box-sizing: border-box;
-  /* 下内边距 2px 不是随手写的：原生 select 里文字天生坐在偏下的位置，和左边
-     「评分规则」标签（11px 小字）并排时看着往下掉一格。抬 1px 让它俩视觉齐平。
-     ⚠️ 用 padding-bottom 而不是 position/top 或 transform：
-        · top/transform 会把整块（含右侧小三角）一起挪走 → 箭头飞高；
-        · padding-bottom 只压内容区，箭头是 background-position 居中的，原地不动。
-     ⚠️ 改成 3px 才会再升 1px（实测 1px 和 2px 效果相同）—— Chrome 对 select
-        内部文字按整像素排版，没有半像素这一档，所以这里最小步进就是 1px。 */
-  padding: 0 14px 2px 2px;
-  /* 下拉框不另起底色：透明，透出 .arti-class-title 那层（它的底色在 miao.css
-     的「评分区底色」一节统一管）。这样两块永远同色，不会调深一方后露馅。 */
+  /* 下拉框不另起底色：透明，透出 .block-control 那层深底 */
   background-color: transparent;
-  /* 右侧小三角：纯背景图，不改结构（颜色里的 # 要转义成 %23） */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M2 4l3 3 3-3' fill='none' stroke='%23cfc7b0' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 2px center;
-  background-size: 9px 9px;
   border: none;
-  /* 规则名是「评分从哪来的」唯一线索：字号提到 13px、纯白、半粗。
-     条子只有 185px，放不下时 fitSelectText() 会逐档退字号，最长也不会被切半个字。 */
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
   font-family: inherit;
   text-align: left;
   appearance: none;
   -webkit-appearance: none;
   cursor: pointer;
+  /* 规则名是「评分从哪来的」唯一线索；标题栏里的控件最多 200px，
+     放不下时 fitSelectText() 会逐档退字号，最长也不会被切半个字。
+     ⚠️ 这里的字号/颜色会被后面的 .block-control select 覆盖成暖金，
+        留在这一层是为了让这个 select 单独用时也读得清。 */
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
 }
 .arti-rubric-select:disabled { opacity: .6; }
 .arti-rubric-select option { background: #1a1f2b; color: #e7e0d0; }

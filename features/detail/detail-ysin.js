@@ -1,12 +1,15 @@
 /*
- * 明细页的 YSIN 独立评分板块：夹在装备卡与伤害计算之间。
+ * 明细页的 YSIN 评分板块：与喵喵评分平级的第二个板块，夹在它和伤害计算之间。
  *
- * 与 miao 那套完全分开：不换算分数、不共用评级与档位色。视觉规格见
- * docs/wireframe/05-ysin.html —— 左 185px 两个分数加三行汇总，右侧四列词条对照
- * 与同一技能的三个伤害读数，右下只写规则归属与「仅供参考与娱乐」。
+ * 两段式与喵喵完全同构：深标题栏（板块名 + 流派控件 + 评估对象）→ 全透内容。
+ * 内容里是左 185px 两个分数加三行汇总、右侧四列词条对照与三个伤害读数，
+ * 免责句只是内容末尾靠右的一行小字，不再单做一条深色尾带。
+ * 板块外壳在 detail-base.css 的 .score-block 共用规格里，本文件只建内部。
+ * 内部配色与行高对齐 miao 的评分卡（score-card.css），视觉规格见 docs/wireframe/05-ysin.html。
  *
- * 后端一次返回这个角色的全部流派，切流派只重画数字、不再发请求；
- * 标题条的「评估对象」必须跟着流派一起换，不能写成静态文案。
+ * 与 miao 那套完全分开：不换算分数、不共用评级与档位色。
+ * 流派控件坐在标题栏，因为换流派会重算整块的词条与伤害；后端一次返回全部流派，
+ * 切换只重画数字、不再发请求。标题栏的「评估对象」也必须跟着流派一起换。
  *
  * 和 loadDamage 一样是异步填坑：回来时用户可能已经点了别的角色或切了语言，
  * 填之前核对 state.selectedAvatarId 与容器是否还挂在文档上。
@@ -48,12 +51,49 @@ async function loadYsin (av, box) {
   requestAnimationFrame(fitDetailScale)
 }
 
-/* loading / 失败 / 无数据三种「只有一行字」的状态共用一个外壳，仍然带标题条 */
+/* 标题栏：竖条 + 板块名 + 流派控件 + 右侧评估对象。
+   没有流派数据的三种状态也走这里，控件显示破折号占位，标题栏高度就不跳。 */
+function ysinHead (view) {
+  const head = el('div', 'score-block-head')
+  head.append(el('span', 'dot'), el('span', 'name', T('ysinSection')))
+
+  const schools = view?.schools?.length ? view.schools : null
+  const ctl = el('div', 'block-control' + (schools ? ' has-select' : ''))
+  ctl.append(el('span', 'ctl-label', T('ysinSchool')))
+  let sel = null
+  if (schools) {
+    sel = el('select', 'ctl-select')
+    sel.setAttribute('aria-label', T('ysinSchool'))
+    for (const s of schools) {
+      const o = el('option', '', s.name)
+      o.value = s.id
+      sel.append(o)
+    }
+    ctl.append(sel)
+  } else {
+    ctl.append(el('span', 'ctl-value', '—'))
+  }
+  head.append(ctl)
+
+  const object = el('div', 'meta')
+  head.append(object)
+  return { head, sel, object }
+}
+
+/* 内容末尾的一行免责句：全透背景，不是独立的尾行 */
+function ysinNotice () {
+  const notice = el('div', 'block-notice')
+  richText(notice, T('ysinNotice'))
+  return notice
+}
+
+/* loading / 失败 / 无数据也保持完整的两段式外壳，避免加载完成时整块跳形 */
 function ysinStatus (text, err = false) {
-  const card = el('div', 'ysin-card')
-  const head = el('div', 'ysin-head')
-  head.append(el('div', 'ysin-title', T('ysinSection')))
-  card.append(head, el('div', 'ysin-status' + (err ? ' err' : ''), text))
+  const card = el('div', 'score-block ysin')
+  const { head } = ysinHead(null)
+  const body = el('div', 'score-block-body')
+  body.append(el('div', 'ysin-status' + (err ? ' err' : ''), text), ysinNotice())
+  card.append(head, body)
   return card
 }
 
@@ -78,17 +118,13 @@ function kvRow (label, store, key) {
 }
 
 function renderYsinCard (view) {
-  const card = el('div', 'ysin-card')
+  const card = el('div', 'score-block ysin')
+  const { head, sel, object } = ysinHead(view)
 
-  const head = el('div', 'ysin-head')
-  head.append(el('div', 'ysin-title', T('ysinSection')))
-  const object = el('div', 'ysin-object')
-  head.append(object)
-  card.append(head)
-
+  const blockBody = el('div', 'score-block-body')
   const body = el('div', 'ysin-body')
 
-  /* ── 左卡 ── */
+  /* ── 左栏 ── */
   const left = el('div', 'ysin-left')
   const heroNums = {}
   const heroes = el('div', 'ysin-heroes')
@@ -107,27 +143,15 @@ function renderYsinCard (view) {
   )
   left.append(summary)
 
-  const schoolRow = el('div', 'ysin-school')
-  schoolRow.append(el('span', '', T('ysinSchool')))
-  const sel = el('select')
-  sel.setAttribute('aria-label', T('ysinSchool'))
-  for (const s of view.schools) {
-    const o = el('option', '', s.name)
-    o.value = s.id
-    sel.append(o)
-  }
-  schoolRow.append(sel)
-  left.append(schoolRow)
-
-  /* 底部细条：默认整套到底是什么装备，来自网站，跟着流派换 */
+  /* 底部细条：这套「基准配装」就是 dmgDefault 的计算配置，来自网站、跟着流派换。
+     文字只是身份说明，真正当分母的是右栏「默认整套」那格数值。 */
   const foot = el('div', 'ysin-foot')
   left.append(foot)
 
-  /* ── 右卡 ── */
+  /* ── 右栏 ── */
   const right = el('div', 'ysin-right')
   const grid = el('div', 'ysin-grid')
   right.append(grid)
-  right.append(el('div', 'ysin-hint', T('ysinDmgHint')))
 
   const dmgNums = {}
   const dmgBox = el('div', 'ysin-dmg')
@@ -145,13 +169,9 @@ function renderYsinCard (view) {
   }
   right.append(dmgBox)
 
-  /* 右下只说规则归属与娱乐用途，不写公式 —— 这套规则是闭源的 */
-  const notice = el('div', 'ysin-notice')
-  richText(notice, T('ysinNotice'))
-  right.append(notice)
-
   body.append(left, right)
-  card.append(body)
+  blockBody.append(body, ysinNotice())
+  card.append(head, blockBody)
 
   /* 切流派：只换数字，不重建 select、不重新发请求 */
   function paint (id) {
@@ -166,8 +186,13 @@ function renderYsinCard (view) {
     kvNums.total.textContent = n1(view.total)
     kvNums.counted.textContent = n1(view.counted)
     kvNums.bench.textContent = n1(s.benchTotal)
-    /* 细条只有 185px，不加「默认整套」前缀（右卡那一格已经写了标签），不然必被截断 */
-    foot.textContent = [s.wText, s.aText].filter(Boolean).join(' · ')
+    /* 185px 装不下「前缀 + 配装」一整句：内联会折行，把「4件」两个字孤零零甩到第二行。
+       索性拆成上下两行 —— 标签一行、配装一行，都在细条内居中，标签不会被拆开。
+       用 replaceChildren 而不是 textContent，切流派时高亮标签才不会被冲掉。 */
+    foot.replaceChildren(
+      el('div', 'ysin-foot-label', T('ysinBasisGear')),
+      el('div', 'ysin-foot-gear', [s.wText, s.aText].filter(Boolean).join(' · '))
+    )
 
     grid.replaceChildren(...gridCells(s))
     dmgNums.dmgYou.textContent = dmg(s.dmgYou)

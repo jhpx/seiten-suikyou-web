@@ -9,15 +9,13 @@
  * ============================================================================ */
 /* ───────────────────────── 圣遗物总分卡 (.arti-mark-cont) ───────────────────────── */
 
-/* clip-path 只裁**下缘**（负值＝向外扩，所以左右和上方 2px 投影保留）：
-   左卡的 `0 0 1px #ccc` 高光 + `2px 2px 4px` 投影会在底边外侧多出 5px，
-   和右侧网格平切的底边对不上，看着像左边多出一截。裁到 107px 底边后，
-   两侧底缘落在同一行；底部 1px 亮线由 .arti-class-title 自己补（见下）。 */
-.arti-mark-cont { display: flex; clip-path: inset(-8px -8px 0 -8px); }
+/* 评分卡和词条网格直接相接：早先左卡的 `0 0 1px #ccc` 高光 + `2px 2px 4px` 投影
+   会在底边多出 5px，才需要 clip-path 裁下缘。现在整块小格统一「无亮边、无投影、
+   只靠 1px 暗缝分格」，投影与裁切都不需要了。 */
+.arti-mark-cont { display: flex; }
 .arti-stat {
   width: 185px;
   flex: none;
-  box-shadow: 0 0 1px 0 #ccc, 2px 2px 4px 0 rgba(50, 50, 50, .8);
   display: flex;
   flex-direction: column;
 }
@@ -51,28 +49,8 @@
   font-weight: bold;
 }
 .arti-stat span { font-size: 12px; line-height: 20px; color: #bbb; }
-/* 评分规则那一行：这是「分数怎么来的」的唯一出处。单规则角色直接显示「评分规则：xxx」；
-   多规则角色会换成标签 + 下拉（.has-select），下拉字号在 style.css 里。
-   它现在是最下面「说明行」的左半栏：185px 和上面的评分卡、统计行左栏同一列。
-   ⚠️ 高度 26px 与右半栏的免责句、以及上面统计行完全一致，两条横线的底边才齐。 */
-.arti-class-title {
-  width: 185px;
-  flex: none;
-  height: 26px; line-height: 26px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #fff;
-  text-align: left;
-  padding-left: 8px;
-  text-shadow: 0 0 2px #000;
-  /* 底色不在这里写 —— 见文末「评分区底色」那一节，整张卡的底色只有一个出处。 */
-  /* 底缘那 1px 亮线要和右侧统计格（inset 0 -1px 0 rgba(255,255,255,.26)）完全一致，
-     否则同一行里左边是纯深色、右边带一条灰线，看着底边就是齐不了。 */
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .26);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* 评分规则控件与免责句已挪到板块的标题栏 / 页脚（见 detail-base.css 的「评分板块」一节），
+   评分卡内部只留「总分 + 词条 → 有效词条 + 五件部件」两行数字，不再夹说明文字。 */
 /* 第 10 个副词条已并进上面的统一 3 列网格（10 词条 = 4 行 × 3 列 = 12 格），
    不再单独做溢出格 —— 旧的 .arti-overflow 样式已删。 */
 
@@ -125,41 +103,11 @@
   padding: 0 3px;
   white-space: nowrap;
 }
-/* ── 最下面一行：左「评分规则」+ 右「喵喵规则免责句」──────────────
-   这两句都是「分数怎么来的」的说明，合成一条独立行沉到底；紧贴词条网格的
-   那条统计行（.arti-parts-row）因此在它上面。分栏宽度和上面两行完全一致。
-   两块各用各的底色（见文末「评分区底色」）：左条压到最黑、右条只压一层，
-   深浅不同是有意的 —— 左边是「选哪套规则」（可交互），右边是一句免责声明。
-   免责句仍是半透明白字 + 金色的「喵喵版规则」+ 顶边那条黑分隔线。
-   ⚠️ 顶边用 inset box-shadow 而不是 border-top：border 会多占 1px，
-      同一行里左栏 26px、右栏 27px，底边就差一级台阶。 */
-.arti-note-row {
-  display: flex;
-  margin-top: 1px;
-}
-.arti-notice {
-  flex: 1;
-  min-width: 0;
-  height: 26px;
-  line-height: 26px;
-  font-size: 12px;
-  /* 这一行不跟左卡拼信息，整句自己居中 */
-  text-align: center;
-  padding: 0 6px;
-  color: rgba(255, 255, 255, .85);
-  box-shadow:
-    inset 0 1px 0 rgba(0, 0, 0, .7),
-    inset 0 -1px 0 rgba(255, 255, 255, .26);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.arti-notice strong { color: #ffd866; }
-
 /* ── 紧贴词条网格的一行：左「有效词条」+ 右「五件部件」──────────────
-   左栏 185px 与 .arti-stat 同宽，右栏 flex:1 与 .arti-info 同宽；
-   下面那条说明行也是同样的分栏，三行纵向起点完全一致。
-   ⚠️ 用 flex 分栏而不是写死 390px：画布缩放时两栏始终跟上面两栏同起点。 */
+   左栏 185px 与 .arti-stat 同宽，右栏 flex:1 与 .arti-info 同宽，两行起点一致。
+   ⚠️ 用 flex 分栏而不是写死 390px：画布缩放时两栏始终跟上面两栏同起点。
+   ⚠️ 原来这行每格都有 inset 亮白描边，比上面所有格子都抢眼；现在统一去掉，
+      分格只靠 .parts-grid 容器自己的 1px 暗缝（底色见文末「评分区底色」）。 */
 .arti-parts-row {
   display: flex;
   margin-top: 1px;
@@ -169,7 +117,6 @@
   height: 26px;
   line-height: 26px;
   font-size: 13px;
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .26);
 }
 /* 左栏 185px，和上面的评分卡、下面的说明行左栏同一列 —— 三行左边界对齐。
    ⚠️ 底色见文末「评分区底色」，这里只管版式；别在别处另写一个 background，
@@ -182,9 +129,6 @@
   justify-content: space-between;
   padding: 0 8px;
   white-space: nowrap;
-  box-shadow:
-    inset 1px 0 0 rgba(255, 255, 255, .26),
-    inset 0 -1px 0 rgba(255, 255, 255, .26);
 }
 .arti-parts-row .parts-total span.title {
   color: #fff;
@@ -325,11 +269,9 @@
  *      · 够深（.7 以上）  → **偏黑**，白字对比也够
  *    调色时别只盯数值，要拿真实角色页看（探针 + 截图，别肉眼估）。
  *
- * 三行从上到下、由浅到深（视觉上「轻 → 压住」）：
+ * 两行从上到下、由浅到深（视觉上「轻 → 压住」）：
  *   第一行  总分卡 / 词条格        → .4     最浅，透出元素色打底
  *   第二行  有效词条 / 五件部件    → .72    明确压黑，缝 .85 分格
- *   第三行  评分规则（左）         → .78    最底一行，比第二行再黑一档
- *           免责句（右）           → .55    只压一层；与左条深浅不同是有意的
  */
 
 /* —— 第一行：总分卡 + 词条网格 —— */
@@ -345,9 +287,3 @@
 /* 部件网格容器比格子再深一档，露出 1px 暗缝把五格分开 */
 .arti-parts-row .parts-grid { background: rgba(0, 0, 0, .85); }
 
-/* —— 第三行左：评分规则条 —— */
-/* 多规则角色的下拉框 .arti-rubric-select 是 transparent，会透出这层色，跟着一起黑 */
-.arti-note-row .arti-class-title { background: rgba(0, 0, 0, .78); }
-
-/* —— 第三行右：免责句 —— */
-.arti-note-row .arti-notice { background: rgba(0, 0, 0, .55); }
