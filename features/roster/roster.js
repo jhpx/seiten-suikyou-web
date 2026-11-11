@@ -172,11 +172,17 @@ function renderRoster () {
      用 UID 级时间去说单个角色有多新，会把 10 月 6 号的老数据说成刚抓的。 */
   $('footmeta').textContent = `${T('scoredAt')} ${view?.fetchedAt || '—'}`
 
-  /* 纯首屏：从没查过任何账号（state.view 还是 null）。给一句引导就够，
-     别用「这个账号里没有可评分的角色」—— 人家根本还没账号呢，那话看着像 bug。 */
+  /* 没有视图可分两种情况：
+     ① 从没查过任何账号 —— 给一句引导就够；
+     ② 刚查过但库里没有这个 uid —— 别再说「还没有查询任何账号」（明明刚查过），
+        告诉用户点「刷新」抓一份。 */
   if (!view) {
     const ph = el('div', 'placeholder')
-    ph.append(el('p', '', T('noUid')), el('p', 'dim', T('noUidHint')))
+    if (state.missingUid) {
+      ph.append(el('p', '', T('noData')), el('p', 'dim', T('noDataHint')))
+    } else {
+      ph.append(el('p', '', T('noUid')), el('p', 'dim', T('noUidHint')))
+    }
     box.append(ph)
     return
   }

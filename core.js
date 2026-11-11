@@ -87,6 +87,9 @@ export const state = {
   locale: 'chs',
   uid: null,
   view: null,
+  /* 刚查过、但库里没有数据的 uid。首页据此把占位文案从「还没查过」换成「点刷新抓取」；
+     查到数据或换成别的错误时清空。 */
+  missingUid: null,
   selectedAvatarId: null,
   busy: false,
   ui: {},

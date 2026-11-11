@@ -59,17 +59,28 @@ function readUid () {
   return Number(raw)
 }
 
-async function loadUid (uid, { keepSelection = false } = {}) {
+/* 读本地库。页面打开（含带 uid 的链接）走这里，不碰 enka。
+   fallback = 线上刷新失败后的兜底：本地有数据就显示并说明「看的是缓存」；
+   本地也没有时保留「刷新失败」的提示，不要让 no_data 把它清掉。 */
+async function loadUid (uid, { keepSelection = false, fallback = false } = {}) {
   if (!keepSelection) state.selectedAvatarId = null
   showLoading(T('reading'))
   try {
     const view = await api(uidApiUrl(uid))
+    state.missingUid = null
     persistUid(uid)
     applyView(view)
+    if (fallback) banner(T('fetchFailLocal', { time: view.fetchedAt || '—' }), 'err')
   } catch (e) {
     state.view = null
+    state.missingUid = (fallback || e?.code === 'no_data') ? uid : null
     renderAll()
-    banner(e?.code === 'bad_uid' ? T('badUid') : e.message, 'err')
+    /* 后端的 message 是给接口调用方看的（例如 no_data 会写上 refresh 的接口路径），
+       不能直接甩给用户。认识的 code 一律换成界面文案，认不出的才用原始 message。
+       no_data 不进提示条：首页的空状态会直接说「点刷新」，再说一遍就重了。 */
+    if (fallback) banner(e?.code === 'no_data' ? T('fetchFail') : T('readFail', { uid }), 'err')
+    else if (e?.code === 'no_data') banner('')
+    else banner(e?.code === 'bad_uid' ? T('badUid') : e.message, 'err')
   }
 }
 
@@ -95,8 +106,10 @@ async function fetchUid (uid) {
     /* 原始错误（含 microgg/enka 各自原因、超时 ms 等）只进控制台给排查用，别原样甩给用户 ——
        用户看到的是下方统一的友好提示。 */
     console.error('[fetch] 刷新失败：', e?.message)
-    banner(e?.code === 'bad_uid' ? T('badUid') : T('fetchFail'), 'err')
-    if (state.uid) await loadUid(state.uid, { keepSelection: true })
+    if (e?.code === 'bad_uid') banner(T('badUid'), 'err')
+    /* 线上失败 → 用**这次输入的 uid** 的本地缓存兜底，不是 state.uid（那可能是上一个账号）。
+       同一个账号刷新时保留已选角色，换号查询时清掉。 */
+    else await loadUid(uid, { keepSelection: state.uid === uid, fallback: true })
   } finally {
     state.busy = false
     btn.disabled = false
@@ -139,10 +152,12 @@ async function boot () {
   }
 }
 
+/* 回车和「刷新」是同一个动作：先拉线上最新，失败再回退到本地缓存。
+   页面打开/带 uid 的链接才走纯本地读取（loadUid），这样分享链接不消耗抓取额度。 */
 $('query').addEventListener('submit', (e) => {
   e.preventDefault()
   const uid = readUid()
-  if (uid != null) loadUid(uid)
+  if (uid != null) fetchUid(uid)
 })
 $('fetch').addEventListener('click', () => {
   const uid = readUid()
