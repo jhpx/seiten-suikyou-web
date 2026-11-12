@@ -226,8 +226,7 @@ function buildProfileDetail (av, head) {
     li.append(title, el('span', 'val', '+' + a.value))
     allUl.append(li)
   }
-  /* 不足 3 的倍数时补空格，保证每行都是满的 3 格 */
-  while (allUl.children.length % 3 !== 0) allUl.append(el('li'))
+
   allWrap.append(allUl)
   infoBox.append(allWrap)
   const markCont = el('div', 'arti-mark-cont')
