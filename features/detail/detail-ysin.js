@@ -184,7 +184,8 @@ function renderYsinCard (view) {
     heroNums.sub.textContent = n1(s.subScore)
     heroNums.gear.textContent = n1(s.gearScore)
     kvNums.total.textContent = n1(view.total)
-    kvNums.counted.textContent = n1(view.counted)
+    /* 网站那格「词条」按流派变：不打反应的流派不计精通，扣掉武器与套装加成 */
+    kvNums.counted.textContent = n1(s.tagTotal)
     kvNums.bench.textContent = n1(s.benchTotal)
     /* 185px 装不下「前缀 + 配装」一整句：内联会折行，把「4件」两个字孤零零甩到第二行。
        索性拆成上下两行 —— 标签一行、配装一行，都在细条内居中，标签不会被拆开。
